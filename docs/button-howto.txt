@@ -1,0 +1,15 @@
+To create a button:
+
+	* log into salesforce and click setup
+	* click Build -> Customize
+	* Go to the object you want it to appear on (Lead, Contact, etc.)
+	* Hit Buttons, Links, and Actions
+	* Create the button
+
+	The easiest is to pop up a URL back to our site. Use the
+	find_by_salesforce_id routes to find the user. Fill in the
+	ID using the placeholder from salesforce.
+
+	* Go to the page you want to view it on and hit edit layout.
+	* Drag the button into the desired location.
+	* Press save.

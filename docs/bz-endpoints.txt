@@ -1,0 +1,28 @@
+These endpoints are used for the integration. Be sure to hit
+settings -> security -> remote site settings on Salesforce and
+add our domain for these to be available in all places.
+
+## USER INTERACTIVE ENDPOINTS ##
+
+These will prompt the user to log in if required and are meant to be used
+by a user in a browser pop-up window, not by API. They can also be accessed
+manually for testing, but the design is optimized for a popup created from
+Salesforce and it may attempt to automatically close the window with javascript
+when completing its task; it assumes the parent window is temporary.
+
+Pulls the BZ user info page:
+
+/admin/users/find_by_salesforce_id/{!Item.Id}
+
+
+Pulls the enroll confirmation page
+
+/admin/users/enroll_by_salesforce_id/{!Item.Id}
+
+## API ENDPOINTS ##
+
+These are meant to be used from APEX api and require a magic token to be
+present for the request to be processed. The magic token takes the place
+of a login requirement, but is not considered especially secure - it
+is more to prevent random web crawlers from firing off activity than
+to be real security.
