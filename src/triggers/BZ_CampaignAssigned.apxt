@@ -1,0 +1,54 @@
+// Runs when a Contact is added to a Campaign and the appropriate Tasks are queued and actions taken.
+trigger BZ_CampaignAssigned on CampaignMember (before insert) {
+    System.Debug('BZ_CampaignAssigned: begin trigger');
+    
+    List<Task> tasksToAdd = new List<Task>(); 
+    
+    // BTODO: this is a Proof of concept assuming just one CampaignMember, however, this code
+    // needs to be bulkified so that it doesn't need to be rewritten in the future
+    // if CampaignMembers are added in batches
+  for (CampaignMember cm : Trigger.new)
+    {
+      Id contactId = cm.ContactId;
+        //System.debug('BZ_CampaignAssigned: contactId='+contactId);
+        Contact contact = [SELECT Id, Name From Contact Where Id = :contactId];
+        //System.debug('BZ_CampaignAssigned: contact='+contact);
+        Id campaignId = cm.CampaignId;
+        //System.debug('BZ_CampaignAssigned: campaignId='+campaignId);
+        Campaign campaign = [SELECT Id, OwnerId, Intro_Email_Template__c 
+                             FROM Campaign WHERE Id = :campaignId];
+        //System.debug('BZ_CampaignAssigned: campaign='+campaign);                     
+        User owner = [SELECT Id FROM User WHERE Id = :campaign.OwnerId];
+        //System.debug('BZ_CampaignAssigned: owner='+owner);                     
+        String emailTemplate = campaign.Intro_Email_Template__c; // BTODO: this object may change once we get it to be a picklist?  Does SF have an object for email templates?
+        //System.debug('BZ_CampaignAssigned: emailTemplate='+emailTemplate);                     
+        
+        Task t = new Task(
+            OwnerId = owner.Id,           // Assigned To
+            Subject = 'Send Intro Email To ' + contact.Name,
+            ActivityDate = Date.today(),      // Due Date
+            WhoId = contactId,            // Name
+            WhatId = campaignId,          // Related To
+            EmailTemplate__c = emailTemplate);    // Email Template To Send
+    tasksToAdd.add(t);  
+        System.debug('BZ_CampaignAssigned: Adding new Task: '+ t);
+    }
+    
+    insert tasksToAdd;
+    
+    // BTODO: below is the beginnings of a bulkified version of the code
+    /*List<Id> contactIds = new List<Id>();
+    List<Id> campaignIds = new List<Id>();   
+        
+    for(CampaignMember member : Trigger.new) {
+        contactIds.add(member.ContactId);
+        campaignIds.add(member.CampaignId);
+    }
+    List<Contact> contacts = [SELECT Id FROM Contact WHERE Id in :contactIds ORDER BY Id];
+    List<Campaign> campaigns = [SELECT Id FROM Campaign WHERE Id in :campaignIds ORDER BY Id];
+    
+    System.debug(contacts.size());
+    System.debug(campaigns.size());*/
+    
+    //Map<Id, Campaign> contactIdToCampaign = new Map<Id, Campaign>();
+}
