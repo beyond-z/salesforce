@@ -1,0 +1,22 @@
+@isTest 
+private class BZ_CampaignAssigned_TEST {
+    static testMethod void validateCampaignAssigned() {
+    Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner1', OwnerId=userInfo.getUserId(), Best_Email__c='testco1@bz.org');
+    insert campaignOwner;
+        Contact contact = new Contact(FirstName='Test', LastName='User1', Best_Email__c='testuser1@bz.org');
+        insert contact;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = new Campaign(Name='Test Prospective LCs Campaign', OwnerId=campaignOwner.OwnerId, Intro_Email_Template__c='Test LC Intro Email');
+        insert campaign;
+        
+        CampaignMember cm = new CampaignMember();
+        cm.CampaignId=campaign.Id;
+        cm.ContactId=contact.Id;
+        
+        // This fires the trigger we're testing.
+        insert cm;
+        
+        // BTODO: check that the appropriate behavior happened.
+    }
+}
