@@ -1,0 +1,33 @@
+@isTest 
+private class BZ_CampaignActive_TEST {
+    static testMethod void validateCampaignActive() {
+        Contact contact1 = new Contact(FirstName='Test', LastName='User1', Best_Email__c='testuser1@bz.org');
+        insert contact1;
+        Contact contact2 = new Contact(FirstName='Test', LastName='User2', Best_Email__c='testuser2@bz.org');
+        insert contact2;
+        
+        Campaign campaign = new Campaign(Name='Test Prospective LCs Campaign Active');
+        insert campaign;
+        
+        CampaignMember cm1 = new CampaignMember();
+        cm1.CampaignId=campaign.Id;
+        cm1.ContactId=contact1.Id;
+        cm1.Apply_Button_Enabled__c=FALSE;
+        insert cm1;
+        
+        CampaignMember cm2 = new CampaignMember();
+        cm2.CampaignId=campaign.Id;
+        cm2.ContactId=contact2.Id;
+        cm2.Apply_Button_Enabled__c=FALSE;
+        insert cm2;
+        
+        // Fires the trigger we're testing.
+        campaign.IsActive = TRUE;
+        update campaign;
+      
+        CampaignMember cm1_updated = [SELECT Id, Apply_Button_Enabled__c FROM CampaignMember WHERE Id = :cm1.Id];
+        System.assertEquals(cm1_updated.Apply_Button_Enabled__c, TRUE);
+        CampaignMember cm2_updated = [SELECT Id, Apply_Button_Enabled__c FROM CampaignMember WHERE Id = :cm2.Id];
+        System.assertEquals(cm2_updated.Apply_Button_Enabled__c,cm2_updated TRUE);
+    }
+}
