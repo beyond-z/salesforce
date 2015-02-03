@@ -2,12 +2,13 @@
 // Apply Now Enabled checkbox updated to match.  This way we can open or close all applications
 // for a Campaign using the Active field.  Note that the Apply Now Enabled checkbox controls
 // whether the Apply Now button is visible on the website.
-trigger BZ_CampaignActive on Campaign (before insert, before update) {
+trigger BZ_CampaignActive on Campaign (before update) {
     //System.Debug('BZ_CampaignActive: begin trigger');
     for (Campaign campaign : Trigger.new)
     {
-        if (campaign.Id != null)
-            {
+        // Only run this if the Active field changes.
+        if (Trigger.oldMap.get(campaign.Id).IsActive != campaign.IsActive)
+        {
             System.Debug('BZ_CampaignActive: trigger processing campaign: ' + campaign);
             List<CampaignMember> cms = [SELECT Id FROM CampaignMember WHERE CampaignId=:campaign.Id];
             for(CampaignMember cm : cms)
@@ -15,10 +16,7 @@ trigger BZ_CampaignActive on Campaign (before insert, before update) {
                 cm.Apply_Button_Enabled__c = campaign.IsActive;
             }
             update cms;
-        }
-        else
-        {
-            //System.Debug('BZ_CampaignActive: campaign skipped b/c it\'s being created: ' + campaign);
+            System.Debug('BZ_CampaignActive: updated '+cms.size()+' CampaignMember.Apply_Button_Enabled__c field(s)');
         }
     }
 }
