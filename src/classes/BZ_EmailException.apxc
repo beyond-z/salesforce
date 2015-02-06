@@ -1,0 +1,1 @@
+public class BZ_EmailException extends Exception {}
