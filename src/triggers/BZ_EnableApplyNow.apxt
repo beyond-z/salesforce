@@ -1,0 +1,11 @@
+trigger BZ_EnableApplyNow on CampaignMember (after update) {
+	String yesList;
+	String noList;
+	for(CampaignMember cm : Trigger.new) {
+		if(cm.Apply_Button_Enabled__c)
+			yesList += ',' + cm.LeadId;
+		else
+			noList += ',' + cm.LeadId;
+	}
+	BZ_Notifications.notifyApplyNow(yesList, noList);
+}

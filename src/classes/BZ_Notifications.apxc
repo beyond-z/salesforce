@@ -1,0 +1,14 @@
+global class BZ_Notifications {
+	@future (callout=true)
+	public static void notifyApplyNow(String yesList, String noList) {
+		BZ_Settings__c settings = BZ_Settings__c.getInstance('bz');
+		String base_url = settings.base_url__c;
+
+		Http http = new Http();
+		HttpRequest request = new HttpRequest();
+		request.setEndpoint(base_url + '/salesforce/change_apply_now?magic_token=test&yes_list=' + yesList + '&no_list=' + noList);
+		request.setMethod('GET');
+		HttpResponse response = http.send(request);
+		response.getBody();
+	}
+}

@@ -26,3 +26,10 @@ present for the request to be processed. The magic token takes the place
 of a login requirement, but is not considered especially secure - it
 is more to prevent random web crawlers from firing off activity than
 to be real security.
+
+The magic token is a url param named magic_token.
+
+API endpoints are found in the SalesforceController. We currently have
+
+change_apply_now - takes a yes_list and a no_list which is a comma-separated list
+of Lead IDs

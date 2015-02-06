@@ -1,0 +1,8 @@
+@isTest 
+private class BZ_Notifications_TEST {
+    static testMethod void validateNotificationSends() {
+    	BZ_Notifications.notifyApplyNow('', '');
+	// FIXME: how do we actually ensure it sends? can we just
+	// depend on it throwing an exception or something if it fails?
+    }
+}
