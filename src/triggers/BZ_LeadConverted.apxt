@@ -3,11 +3,11 @@ trigger BZ_LeadConverted on Lead (before update) {
 	for (Lead lead : Trigger.new) {
 		if(lead.IsConverted != Trigger.oldMap.get(lead.Id).IsConverted) {
 			if (lead.IsConverted) {
-				changes += ',' = lead.Id + ':' + lead.ConvertedContactId;
+				changes += ',' + lead.Id + ':' + lead.ConvertedContactId;
 			}
 		}
 	}
 
-	if(changes.length())
+	if(changes.length() > 0)
 		BZ_Notifications.recordConvertedLeads(changes);
 }
