@@ -1,12 +1,12 @@
-trigger BZ_EnableApplyNow on CampaignMember (after update) {
-	String yesList;
-	String noList;
+trigger BZ_EnableApplyNow on CampaignMember (before update) {
+	String yesList = '';
+	String noList = '';
 	for(CampaignMember cm : Trigger.new) {
 		if(cm.Apply_Button_Enabled__c != Trigger.oldMap.get(cm.Id).Apply_Button_Enabled__c) {
 			if(cm.Apply_Button_Enabled__c)
-				yesList += ',' + cm.LeadId;
+				yesList += ',' + cm.ContactId;
 			else
-				noList += ',' + cm.LeadId;
+				noList += ',' + cm.ContactId;
 		}
 	}
 	if(yesList.length() > 0 || noList.length() > 0)

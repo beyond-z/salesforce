@@ -1,5 +1,5 @@
 trigger BZ_LeadConverted on Lead (before update) {
-	String changes;
+	String changes = '';
 	for (Lead lead : Trigger.new) {
 		if(lead.IsConverted != Trigger.oldMap.get(lead.Id).IsConverted) {
 			if (lead.IsConverted) {
