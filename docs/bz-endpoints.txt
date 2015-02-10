@@ -33,3 +33,6 @@ API endpoints are found in the SalesforceController. We currently have
 
 change_apply_now - takes a yes_list and a no_list which is a comma-separated list
 of Lead IDs
+
+record_converted_leads - takes a changes which is a comma-separated list of
+leadid:contactid mappings.
