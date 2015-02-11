@@ -1,0 +1,95 @@
+/**
+ * Provides the fields that allow choosing the Email Templates associated
+ * with a Campaign.  This effectively enables the picklist dropdowns to be dynamically
+ * pulled from the Email Templates.  Note that only Email Templates prefixed with 
+ * "BZ" are shown.
+ */
+public class BZ_CampaignEmailTemplates {
+      
+    private final Campaign m_campaign;
+    private final List<SelectOption> m_options;
+    
+    /**
+     * The selected Intro Email Template.
+     */
+    public string introEmailTemplate {
+        get; set;
+    }
+    
+    /**
+     * The selected App Open Email Template.
+     */
+    public string appOpenEmailTemplate {
+        get; set;
+    }
+    
+    /**
+     * The selected App Waitlisted Email Template.
+     */
+    public string appWaitlistedEmailTemplate {
+        get; set;
+    }
+    
+    /**
+     * The selected App Accepted Email Template.
+     */
+    public string appAcceptedEmailTemplate {
+        get; set;
+    }
+    
+    /**
+     * The selected App Rejected Email Template.
+     */
+    public string appRejectedEmailTemplate {
+        get; set;
+    }
+  
+    public BZ_CampaignEmailTemplates(ApexPages.StandardController controller) {
+        m_campaign = [select Id, Intro_Email_Template__c, 
+                        App_Accepted_Email_Template__c, App_Open_Email_Template__c, 
+                        App_Rejected_Email_Template__c, App_Waitlisted_Email_Template__c  
+                      from Campaign where id = :ApexPages.currentPage().getParameters().get('id')];
+        
+        //System.debug('m_campaign = ' + m_campaign);
+        
+        m_options = getEmailTemplatesImpl();
+        
+    introEmailTemplate = m_campaign.Intro_Email_Template__c;
+    appOpenEmailTemplate = m_campaign.App_Open_Email_Template__c;
+        appWaitlistedEmailTemplate = m_campaign.App_Waitlisted_Email_Template__c;
+        appAcceptedEmailTemplate = m_campaign.App_Accepted_Email_Template__c;
+        appRejectedEmailTemplate = m_campaign.App_Rejected_Email_Template__c;
+    }
+    
+    /**
+     * Save the current values back to the Campaign object in the database.
+     */
+    public PageReference save() {
+        m_campaign.Intro_Email_Template__c = introEmailTemplate;
+        m_campaign.App_Accepted_Email_Template__c = appAcceptedEmailTemplate;
+        m_campaign.App_Open_Email_Template__c = appOpenEmailTemplate;
+        m_campaign.App_Rejected_Email_Template__c = appRejectedEmailTemplate;
+        m_campaign.App_Waitlisted_Email_Template__c = appWaitlistedEmailTemplate;       
+        update m_campaign;
+        return null;
+    }
+    
+    /**
+     * Returns the list of all Beyond Z email templates, determined if they are prefixed
+     * with "BZ"
+     */
+    public List<SelectOption> getEmailTemplates(){
+        return m_options;
+  }
+    
+    private List<SelectOption> getEmailTemplatesImpl() {
+        List<SelectOption> options= new List<SelectOption>();
+        List<EmailTemplate> templates = [SELECT Id, Name, DeveloperName from EmailTemplate 
+                                         WHERE Name LIKE 'BZ%'ORDER BY Name];
+        options.add(new SelectOption('','--None--'));
+        for(EmailTemplate et : templates) {
+            options.add(new SelectOption(et.DeveloperName, et.Name));
+    }
+    return options;
+    }
+}

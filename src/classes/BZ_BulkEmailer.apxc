@@ -14,16 +14,16 @@ public class BZ_BulkEmailer {
                                   AND OwnerId = :sender.Id    // Assigned To
                                   AND EmailTemplate__c != null ]; // Email Template To Send
 
-        System.Debug('BZ_BulkEmailer: emailsTasks.size() = '+emailTasks.size());
+//        System.Debug('BZ_BulkEmailer: emailsTasks.size() = '+emailTasks.size());
 //        System.Debug('BZ_BulkEmailer: emailTasks.get(0) = ' + emailTasks.get(0));
         
         Integer emailsSent = 0;
         for(Task et : emailTasks)
         {
           // send the email template to each Name
-          Contact recipient = [SELECT Id, Best_Email__c FROM Contact WHERE Id = :et.WhoId];
+          Contact recipient = [SELECT Id, Email FROM Contact WHERE Id = :et.WhoId];
             //System.Debug('BZ_BulkEmailer: recipient = ' + recipient);
-            String[] recipients = new String[]{recipient.Best_Email__c};
+            String[] recipients = new String[]{recipient.Email};
             BZ_SendTemplatedEmail.sendTemplatedEmail(
                 recipients, null, et.EmailTemplate__c, recipient.Id, et.WhatId, null, TRUE, null);
           emailsSent++;

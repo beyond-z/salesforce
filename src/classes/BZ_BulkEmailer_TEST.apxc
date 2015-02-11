@@ -11,9 +11,7 @@ private class BZ_BulkEmailer_TEST {
                                       timezonesidkey='America/Los_Angeles', username='TestEmail.Sender2@bz.org');
         insert anotherSender;
         
-        // BTODO: if I only set BestEmail and not Email, it breaks the SingleEmailMessage.
-        // Write a workflow to have EMail always set to Best Email.  This will also fix the Lead conversion i think
-        Contact recipient = new Contact(FirstName='TestEmail', LastName='Recipient', Best_Email__c='TestEmail.Recipient@bz.org');//, Email='TestEmail.Recipient@bz.org');
+        Contact recipient = new Contact(FirstName='TestEmail', LastName='Recipient', Email='TestEmail.Recipient@bz.org');
         insert recipient;
         Campaign campaign = new Campaign(Name='Test Send Queued Emails Campaign1');
         insert campaign;
