@@ -53,10 +53,6 @@ private class BZ_BulkEmailer_TEST {
         emailsSent = BZ_BulkEmailer.SendMyQueuedEmails(campaign, sender);
         
         System.assertEquals(2, emailsSent, 'Expected 2 emails to be sent, not'+emailsSent);
-        // BTODO: figure out why this isn't working.
-        //System.assertEquals('Completed', t1.Status);
-    //System.assertEquals('Completed', t2.Status);
-    //
-    // BTODO: test that it doesn't pick up Completed tasks.
+        // BTODO: test that the tasks are deleted.
     }
 }

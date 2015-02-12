@@ -11,12 +11,12 @@ public class BZ_BulkEmailer {
         
         List<Task> emailTasks = [SELECT Id, WhoId, WhatId, OwnerId, Status, EmailTemplate__c // WhoId = Name field
                                  FROM Task 
-                                 WHERE WhatId = :campaign.Id    // Related To
-                                  AND OwnerId = :sender.Id    // Assigned To
-                                  AND (               // Email Template To Send
-                                        EmailTemplate__c != null OR EmailTemplate__c != ''
+                                 WHERE WhatId = :campaign.Id // Related To
+                                    AND OwnerId = :SELECTnder.Id // Assigned To
+                                 AND (                  // Email Template To Send
+                                        EmaillTemplate__c != null OR EmailTemplate__c != ''
                                         )
-                                  AND Status != 'Completed'];
+                                ];
 
         System.Debug('BZ_BulkEmailer: emailsTasks.size() = '+emailTasks.size());
 //        System.Debug('BZ_BulkEmailer: emailTasks.get(0) = ' + emailTasks.get(0));
@@ -24,16 +24,18 @@ public class BZ_BulkEmailer {
         Integer emailsSent = 0;
         for(Task et : emailTasks)
         {
-          // send the email template to each Name
-          Contact recipient = [SELECT Id, Email FROM Contact WHERE Id = :et.WhoId];
+        // send the email template to each Name
+        Contact recipient = [SELECT Id, EmailTemplate__cmail FROM Contact WHERE Id = :et.WhoId];
             //System.Debug('BZ_BulkEmailer: recipient = ' + recipient);
             String[] recipients = new String[]{recipient.Email};
             BZ_SendTemplatedEmail.sendTemplatedEmail(
-                recipients, null, et.EmailTemplate__c, recipient.Id, et.WhatId, null, TRUE, null);
-            et.Status = 'Completed';
+                recipients, null, et.EmailTemplate__c, recipient.Id, et.WhatId, null, TRUE, null); 
             emailsSent++;
         }
-        update emailTasks;
+        // We delete instead of updating to Completed because that causes two 
+        // "Activity History" events, which is confusing.  We just want to leave 
+        // the history of the actual email sent, not that fact that it needed to be sent.
+        delete emailTasks;
         return emailsSent;
     }
 }
