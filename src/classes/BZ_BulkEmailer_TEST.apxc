@@ -1,0 +1,58 @@
+@isTest 
+private class BZ_BulkEmailer_TEST {
+    static testMethod void validateSendMyQueuedEmails() {
+        //System.Debug('BZ_BulkEmailer_TEST: begin');
+        
+        User sender = [SELECT Id FROM User Where Id = :System.UserInfo.getUserId()];    
+        Profile p = [select id from profile where name='Standard User'];
+        User anotherSender = new User(alias = 'testSnd2', email='TestEmail.Sender2@bz.org',
+                                      emailencodingkey='UTF-8', lastname='TestSender2', languagelocalekey='en_US',
+                                      localesidkey='en_US', profileid = p.Id,
+                                      timezonesidkey='America/Los_Angeles', username='TestEmail.Sender2@bz.org');
+        insert anotherSender;
+        
+        Contact recipient = new Contact(FirstName='TestEmail', LastName='Recipient', Email='TestEmail.Recipient@bz.org');
+        insert recipient;
+        Campaign campaign = new Campaign(Name='Test Send Queued Emails Campaign1');
+        insert campaign;
+        Campaign anotherCampaign = new Campaign(Name='Test Send Queued Emails Campaign2');
+        insert anotherCampaign;
+        
+        String et1DeveloperName='TestEmailTemplateToSend1';
+        String et2DeveloperName='TestEmailTemplateToSend2';
+        
+        Task t1 = new Task(Subject='Test Send Email Task1', OwnerId=sender.Id, WhoId=recipient.Id, WhatId=campaign.Id, EmailTemplate__c=et1DeveloperName);
+        insert t1;
+        Task t2 = new Task(Subject='Test Send Email Task2', OwnerId=sender.Id, WhoId=recipient.Id, WhatId=campaign.Id, EmailTemplate__c=et2DeveloperName);
+        insert t2;
+        Task t3_ignored = new Task(Subject='Test Send Email Task3 -- Should be ignored', OwnerId=sender.Id, WhoId=recipient.Id, WhatId=campaign.Id);
+        insert t3_ignored;
+        Task t4_ignored = new Task(Subject='Test Send Email Task4 -- Should be ignored', OwnerId=sender.Id, WhoId=recipient.Id, WhatId=anotherCampaign.Id, EmailTemplate__c='TestEmailTemplateToSend4');
+        insert t4_ignored;
+        Task t5_ignored = new Task(Subject='Test Send Email Task5 -- Should be ignored', OwnerId=anotherSender.Id, WhoId=recipient.Id, WhatId=campaign.Id, EmailTemplate__c='TestEmailTemplateToSend5');
+        insert t5_ignored;
+        
+        Integer emailsSent = 0;
+        
+        // We do the runAs() b/c of a bug in salesforce where the template is not actually created.  
+        // This, in conjunction with the startTest and stopTest below which forces the async future method 
+        // to run synchronously: 
+        // https://developer.salesforce.com/forums/ForumsMain?id=906F00000008wSQIAY
+        System.runAs(sender) 
+        {
+            Test.startTest();
+            // Note, this Util method is to avoid a MIXED_DML_OPERATION error described here: 
+            // http://www.tgerm.com/2012/04/mixeddmloperation-dml-operation-on.html        
+            BZ_Util.insertEmailTemplate('Test Email Template To Send1', et1DeveloperName, 'text', sender.Id);
+            BZ_Util.insertEmailTemplate('Test Email Template To Send2', et2DeveloperName, 'text', sender.Id);
+            Test.stopTest();
+        }
+        
+        // Run the test
+        //System.Debug('BZ_BulkEmailer_TEST: BZ_BulkEmailer.SendMyQueuedEmails(campaign='+campaign+', sender='+sender+')');
+        emailsSent = BZ_BulkEmailer.SendMyQueuedEmails(campaign, sender);
+        
+        System.assertEquals(2, emailsSent, 'Expected 2 emails to be sent, not'+emailsSent);
+        // BTODO: test that the tasks are deleted.
+    }
+}

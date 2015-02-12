@@ -1,0 +1,43 @@
+/**
+ * Custom Controller Extension to allow choosing the Email Template on a Task
+ * that should be sent when the "Send My Queued Emails" button is pressed for a Campaign.
+ */
+public class BZ_EmailTemplateToSendField {
+      
+    private final Task m_task;
+    private final List<SelectOption> m_options;
+    
+    /**
+     * The selected Email Template To Send.
+     */
+    public string emailTemplateToSend {
+        get; set;
+    }
+    
+    public BZ_EmailTemplateToSendField(ApexPages.StandardController controller) {
+        m_task = [select Id, EmailTemplate__c
+                  from Task where Id = :ApexPages.currentPage().getParameters().get('id')];
+        
+        //System.debug('m_task = ' + m_task);
+        
+        m_options = BZ_EmailTemplateProvider.getEmailTemplates();
+    emailTemplateToSend = m_task.EmailTemplate__c;
+    }
+    
+    /**
+     * Save the current values back to the Task object in the database.
+     */
+    public PageReference save() {
+        m_task.EmailTemplate__c = emailTemplateToSend;
+        update m_task;
+        return null;
+    }
+    
+    /**
+     * Returns the list of all Beyond Z email templates, determined if they are prefixed
+     * with "BZ"
+     */
+    public List<SelectOption> getEmailTemplates(){
+        return m_options;
+  }
+}

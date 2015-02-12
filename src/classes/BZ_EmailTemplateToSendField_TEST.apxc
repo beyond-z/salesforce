@@ -1,0 +1,22 @@
+@isTest 
+private class BZ_EmailTemplateToSendField_TEST {
+    static testMethod void validateEmailTemplateToSend() {
+        Task t = new Task(Subject='Test Email Template To Send Task');
+        insert t;
+      ApexPages.StandardController sc = new ApexPages.standardController(t);
+            
+        PageReference pageRef = Page.BZ_EmailTemplateToSendField;
+        Test.setCurrentPage(pageRef);
+        ApexPages.currentPage().getParameters().put('id', t.id);
+        
+      BZ_EmailTemplateToSendField emailTemplateToSendObj = new BZ_EmailTemplateToSendField(sc);
+        List<SelectOption> options = emailTemplateToSendObj.getEmailTemplates();
+        
+        string newTemplate = options.get(1).getValue();
+        emailTemplateToSendObj.emailTemplateToSend = newTemplate;
+        emailTemplateToSendObj.save();
+        
+    Task updatedTask = [SELECT Id, EmailTemplate__c From Task WHERE Id = :t.Id];
+        System.assert(updatedTask.EmailTemplate__c == newTemplate);
+    }
+}

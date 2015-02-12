@@ -1,0 +1,41 @@
+// Class to aid the “Send My Queued Emails” button which looks for Tasks with the “Email Template To Send” field set, that are assigned to the current user (button pusher), and that are related to the associated Campaign
+public class BZ_BulkEmailer {
+    
+    // Sends queued emails to all users with associated Tasks for the specified Campaign
+    // that are Assigned To the specified User and have their Email Template To Send field set.
+    // Marks the Tasks as Complete when the emails are sent.
+    // Returns the number of emails sent.
+    public static Integer SendMyQueuedEmails(Campaign campaign, User sender)
+    {
+        System.debug('BZ_BulkEmailer.SendMyQueuedEmails('+campaign+','+sender+'): begin');
+        
+        List<Task> emailTasks = [SELECT Id, WhoId, WhatId, OwnerId, Status, EmailTemplate__c // WhoId = Name field
+                                 FROM Task 
+                                 WHERE WhatId = :campaign.Id // Related To
+                                    AND OwnerId = :SELECTnder.Id // Assigned To
+                                 AND (                  // Email Template To Send
+                                        EmaillTemplate__c != null OR EmailTemplate__c != ''
+                                        )
+                                ];
+
+        System.Debug('BZ_BulkEmailer: emailsTasks.size() = '+emailTasks.size());
+//        System.Debug('BZ_BulkEmailer: emailTasks.get(0) = ' + emailTasks.get(0));
+        
+        Integer emailsSent = 0;
+        for(Task et : emailTasks)
+        {
+        // send the email template to each Name
+        Contact recipient = [SELECT Id, EmailTemplate__cmail FROM Contact WHERE Id = :et.WhoId];
+            //System.Debug('BZ_BulkEmailer: recipient = ' + recipient);
+            String[] recipients = new String[]{recipient.Email};
+            BZ_SendTemplatedEmail.sendTemplatedEmail(
+                recipients, null, et.EmailTemplate__c, recipient.Id, et.WhatId, null, TRUE, null); 
+            emailsSent++;
+        }
+        // We delete instead of updating to Completed because that causes two 
+        // "Activity History" events, which is confusing.  We just want to leave 
+        // the history of the actual email sent, not that fact that it needed to be sent.
+        delete emailTasks;
+        return emailsSent;
+    }
+}

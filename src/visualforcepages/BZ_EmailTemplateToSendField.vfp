@@ -1,0 +1,23 @@
+<!-- This shows up as a field on a Task to control the EmailTemplate that will be sent
+     when the "Send My Queued Emails" button is pressed for this campaign. -->
+<apex:page standardController="Task" extensions="BZ_EmailTemplateToSendField">
+    <apex:form >
+        <apex:pageBlock >
+            <style type="text/css">
+                .noWrap { white-space: nowrap; }
+            </style>
+            <apex:pageBlockSection columns="1">
+                <apex:pageblockSectionItem helpText="The Email Template that will be sent when the Send My Queued Emails button is pressed.">
+                    <apex:outputLabel value="Email Template To Send" styleClass="noWrap"/>
+                    <apex:outputPanel layout="block">
+                        <apex:outputPanel layout="block"/>
+                        <apex:selectList size="1" value="{!emailTemplateToSend}">
+                            <apex:selectoptions value="{!EmailTemplates}"/>
+                        </apex:selectList>
+                        <apex:commandButton value="Save" action="{!save}"/>
+                    </apex:outputPanel>
+                </apex:pageblockSectionItem>
+            </apex:pageBlockSection>
+        </apex:pageBlock>
+    </apex:form>
+</apex:page>

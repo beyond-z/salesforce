@@ -1,0 +1,66 @@
+<!-- TODO: Ideally, we would have one visualforce component / control
+    that we can reuse for each field that needs to reference an EmailTemplate.
+    Unfortunatly, I'm a complete salesforce noob and ended up doing this b/c 
+    I spent too much time trying to figure out a cleaner way.  E.g. something like this:
+    http://sunil02kumar.blogspot.com/2015/01/creating-custom-lookup-field-in-vf-page.html
+    http://bobbuzzard.blogspot.com/2010/09/visualforce-lookup.html 
+    http://blog.jeffdouglas.com/2011/08/12/roll-your-own-salesforce-lookup-popup-window/
+  -->
+
+<apex:page standardController="Campaign" extensions="BZ_CampaignEmailTemplates">
+    <apex:form >
+        <apex:commandButton value="Save" action="{!save}"/>
+        <apex:pageBlock >
+            <style type="text/css">
+          .noWrap { white-space: nowrap; }
+      </style>
+            <apex:pageBlockSection columns="1">
+                <apex:pageblockSectionItem helpText="Email template sent to new users">
+                    <apex:outputLabel value="Intro Email Template" styleClass="noWrap"/>
+                    <apex:outputPanel layout="block">
+            <apex:outputPanel layout="block"/>
+                        <apex:selectList size="1" value="{!introEmailTemplate}">
+                            <apex:selectoptions value="{!EmailTemplates}"/>
+                        </apex:selectList>
+                    </apex:outputPanel>
+                </apex:pageblockSectionItem>   
+                <apex:pageblockSectionItem helpText="Email template to notify people that applications are open and they can Apply">
+                    <apex:outputLabel value="App Open Email Template" styleClass="noWrap"/>
+                    <apex:outputPanel layout="block">
+            <apex:outputPanel layout="block"/>
+                        <apex:selectList size="1" value="{!appOpenEmailTemplate}">
+                            <apex:selectoptions value="{!EmailTemplates}"/>
+                        </apex:selectList>
+                    </apex:outputPanel>
+                </apex:pageblockSectionItem> 
+                <apex:pageblockSectionItem helpText="Email template sent to waitlisted users">
+                    <apex:outputLabel value="App Waitlisted Email Template" styleClass="noWrap"/>
+                    <apex:outputPanel layout="block">
+            <apex:outputPanel layout="block"/>
+                        <apex:selectList size="1" value="{!appWaitlistedEmailTemplate}">
+                            <apex:selectoptions value="{!EmailTemplates}"/>
+                        </apex:selectList>
+                    </apex:outputPanel>
+                </apex:pageblockSectionItem> 
+                <apex:pageblockSectionItem helpText="Email template sent to accepted users">
+                    <apex:outputLabel value="App Accepted Email Template" styleClass="noWrap"/>
+                    <apex:outputPanel layout="block">
+            <apex:outputPanel layout="block"/>
+                        <apex:selectList size="1" value="{!appAcceptedEmailTemplate}">
+                            <apex:selectoptions value="{!EmailTemplates}"/>
+                        </apex:selectList>
+                    </apex:outputPanel>
+                </apex:pageblockSectionItem> 
+                <apex:pageblockSectionItem helpText="Email template sent to rejected users">
+                    <apex:outputLabel value="App Rejected Email Template" styleClass="noWrap"/>
+                    <apex:outputPanel layout="block">
+            <apex:outputPanel layout="block"/>
+                        <apex:selectList size="1" value="{!appRejectedEmailTemplate}">
+                            <apex:selectoptions value="{!EmailTemplates}"/>
+                        </apex:selectList>
+                    </apex:outputPanel>
+                </apex:pageblockSectionItem> 
+            </apex:pageBlockSection>
+        </apex:pageBlock>
+    </apex:form>
+</apex:page>

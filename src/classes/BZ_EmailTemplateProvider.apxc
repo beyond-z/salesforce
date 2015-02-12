@@ -1,0 +1,17 @@
+public class BZ_EmailTemplateProvider {
+    
+    /**
+     * Returns the list of all Beyond Z email templates, determined if they are prefixed
+     * with "BZ"
+     */
+    public static List<SelectOption> getEmailTemplates() {
+        List<SelectOption> options= new List<SelectOption>();
+        List<EmailTemplate> templates = [SELECT Id, Name, DeveloperName from EmailTemplate 
+                                         WHERE Name LIKE 'BZ%'ORDER BY Name];
+        options.add(new SelectOption('','--None--'));
+        for(EmailTemplate et : templates) {
+            options.add(new SelectOption(et.DeveloperName, et.Name));
+    }
+    return options;
+    }
+}

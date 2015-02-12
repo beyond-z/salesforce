@@ -20,9 +20,11 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
         //System.debug('BZ_CampaignAssigned: campaign='+campaign);                     
         User owner = [SELECT Id FROM User WHERE Id = :campaign.OwnerId];
         //System.debug('BZ_CampaignAssigned: owner='+owner);                     
-        String emailTemplate = campaign.Intro_Email_Template__c; // BTODO: this object may change once we get it to be a picklist?  Does SF have an object for email templates?
+        String emailTemplate = campaign.Intro_Email_Template__c;
         //System.debug('BZ_CampaignAssigned: emailTemplate='+emailTemplate);                     
-        
+
+        // BTODO: fail if the Campaign doesn't have it's Intro_Email_Template__c set, e.g. set to '';
+
         Task t = new Task(
             OwnerId = owner.Id,           // Assigned To
             Subject = 'Send Intro Email To ' + contact.Name,
@@ -30,7 +32,7 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
             WhoId = contactId,            // Name
             WhatId = campaignId,          // Related To
             EmailTemplate__c = emailTemplate);    // Email Template To Send
-    tasksToAdd.add(t);  
+        tasksToAdd.add(t);  
         System.debug('BZ_CampaignAssigned: Adding new Task: '+ t);
     }
     
