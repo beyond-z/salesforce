@@ -10,15 +10,15 @@
 <apex:page standardController="Campaign" extensions="BZ_CampaignEmailTemplates">
     <apex:form >
         <apex:commandButton value="Save" action="{!save}"/>
-        <apex:pageBlock>
+        <apex:pageBlock >
             <style type="text/css">
           .noWrap { white-space: nowrap; }
       </style>
             <apex:pageBlockSection columns="1">
                 <apex:pageblockSectionItem helpText="Email template sent to new users">
                     <apex:outputLabel value="Intro Email Template" styleClass="noWrap"/>
-                    <apex:outputPanel styleClass="requiredInput" layout="block">
-            <apex:outputPanel styleClass="requiredBlock" layout="block"/>
+                    <apex:outputPanel layout="block">
+            <apex:outputPanel layout="block"/>
                         <apex:selectList size="1" value="{!introEmailTemplate}">
                             <apex:selectoptions value="{!EmailTemplates}"/>
                         </apex:selectList>
@@ -26,8 +26,8 @@
                 </apex:pageblockSectionItem>   
                 <apex:pageblockSectionItem helpText="Email template to notify people that applications are open and they can Apply">
                     <apex:outputLabel value="App Open Email Template" styleClass="noWrap"/>
-                    <apex:outputPanel styleClass="requiredInput" layout="block">
-                        <apex:outputPanel styleClass="requiredBlock" layout="block"/>
+                    <apex:outputPanel layout="block">
+            <apex:outputPanel layout="block"/>
                         <apex:selectList size="1" value="{!appOpenEmailTemplate}">
                             <apex:selectoptions value="{!EmailTemplates}"/>
                         </apex:selectList>
@@ -35,8 +35,8 @@
                 </apex:pageblockSectionItem> 
                 <apex:pageblockSectionItem helpText="Email template sent to waitlisted users">
                     <apex:outputLabel value="App Waitlisted Email Template" styleClass="noWrap"/>
-                    <apex:outputPanel styleClass="requiredInput" layout="block">
-                        <apex:outputPanel styleClass="requiredBlock" layout="block"/>
+                    <apex:outputPanel layout="block">
+            <apex:outputPanel layout="block"/>
                         <apex:selectList size="1" value="{!appWaitlistedEmailTemplate}">
                             <apex:selectoptions value="{!EmailTemplates}"/>
                         </apex:selectList>
@@ -44,8 +44,8 @@
                 </apex:pageblockSectionItem> 
                 <apex:pageblockSectionItem helpText="Email template sent to accepted users">
                     <apex:outputLabel value="App Accepted Email Template" styleClass="noWrap"/>
-                    <apex:outputPanel styleClass="requiredInput" layout="block">
-                        <apex:outputPanel styleClass="requiredBlock" layout="block"/>
+                    <apex:outputPanel layout="block">
+            <apex:outputPanel layout="block"/>
                         <apex:selectList size="1" value="{!appAcceptedEmailTemplate}">
                             <apex:selectoptions value="{!EmailTemplates}"/>
                         </apex:selectList>
@@ -53,8 +53,8 @@
                 </apex:pageblockSectionItem> 
                 <apex:pageblockSectionItem helpText="Email template sent to rejected users">
                     <apex:outputLabel value="App Rejected Email Template" styleClass="noWrap"/>
-                    <apex:outputPanel styleClass="requiredInput" layout="block">
-                        <apex:outputPanel styleClass="requiredBlock" layout="block"/>
+                    <apex:outputPanel layout="block">
+            <apex:outputPanel layout="block"/>
                         <apex:selectList size="1" value="{!appRejectedEmailTemplate}">
                             <apex:selectoptions value="{!EmailTemplates}"/>
                         </apex:selectList>
