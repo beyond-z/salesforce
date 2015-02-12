@@ -1,0 +1,19 @@
+/**
+ * Custom Controller that responds to the "Send My Queued Emails" button
+ * and sends the Email Template specified in the "Email Template To Send" 
+ * field on all Tasks open for this associated Campaign that are assigned 
+ * to the person pushing the button.
+ */
+public class BZ_SendMyQueuedEmails {
+    private Campaign m_campaign;
+    
+    public BZ_SendMyQueuedEmails(ApexPages.StandardController controller){
+      m_campaign = (Campaign)controller.getRecord();    
+    }
+    
+    public void run(){
+        Id senderId = UserInfo.getUserId();
+        User sender = [SELECT Id from User Where Id = :senderId];
+      BZ_BulkEmailer.SendMyQueuedEmails(m_campaign, sender);
+    }
+}
