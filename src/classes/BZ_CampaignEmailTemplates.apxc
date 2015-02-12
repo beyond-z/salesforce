@@ -52,7 +52,7 @@ public class BZ_CampaignEmailTemplates {
         
         //System.debug('m_campaign = ' + m_campaign);
         
-        m_options = getEmailTemplatesImpl();
+        m_options = BZ_EmailTemplateProvider.getEmailTemplates();
         
     introEmailTemplate = m_campaign.Intro_Email_Template__c;
     appOpenEmailTemplate = m_campaign.App_Open_Email_Template__c;
@@ -81,15 +81,4 @@ public class BZ_CampaignEmailTemplates {
     public List<SelectOption> getEmailTemplates(){
         return m_options;
   }
-    
-    private List<SelectOption> getEmailTemplatesImpl() {
-        List<SelectOption> options= new List<SelectOption>();
-        List<EmailTemplate> templates = [SELECT Id, Name, DeveloperName from EmailTemplate 
-                                         WHERE Name LIKE 'BZ%'ORDER BY Name];
-        options.add(new SelectOption('','--None--'));
-        for(EmailTemplate et : templates) {
-            options.add(new SelectOption(et.DeveloperName, et.Name));
-    }
-    return options;
-    }
 }

@@ -21,7 +21,6 @@ private class BZ_BulkEmailer_TEST {
         String et1DeveloperName='TestEmailTemplateToSend1';
         String et2DeveloperName='TestEmailTemplateToSend2';
         
-        // BTODO: need to change the EmailTemplate__c from a string to an object that holds the template name and developer name.
         Task t1 = new Task(Subject='Test Send Email Task1', OwnerId=sender.Id, WhoId=recipient.Id, WhatId=campaign.Id, EmailTemplate__c=et1DeveloperName);
         insert t1;
         Task t2 = new Task(Subject='Test Send Email Task2', OwnerId=sender.Id, WhoId=recipient.Id, WhatId=campaign.Id, EmailTemplate__c=et2DeveloperName);
