@@ -1,0 +1,27 @@
+Use this guide to set up settings:
+http://www.sfdc99.com/2014/03/02/change-your-code-on-the-fly-using-custom-settings/
+
+Settings our code expects. Remember, the API name used in the code will
+be these names with a __c appended at the end.
+
+The instance name is 'bz'.
+
+class BZ_Settings {
+	/// The base url used to communicate with the beyondz.org site.
+	/// It should contain protocol and domain, but no ending slash.
+	///
+	/// Remember, this is beyondz.org, NOT canvas.
+	///
+	/// For example, http://staging.beyondz.org
+	/// or https://www.beyondz.org
+	String base_url;
+
+	/// The magic token is a random alphanumeric string that serves
+	/// like a password between Salesforce and our server. It isn't
+	/// true security, it can be intercepted by man-in-the-middle
+	/// attacks and may be stored in server logs, but it should keep
+	/// casual and accidental URL scrapers from setting off our processes.
+	///
+	/// It must match on the Salesforce settings side and on the BZ environment.
+	String magic_token;
+}
