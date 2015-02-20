@@ -9,31 +9,12 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
     // if CampaignMembers are added in batches
   for (CampaignMember cm : Trigger.new)
     {
-      Id contactId = cm.ContactId;
-        //System.debug('BZ_CampaignAssigned: contactId='+contactId);
-        Contact contact = [SELECT Id, Name From Contact Where Id = :contactId];
-        //System.debug('BZ_CampaignAssigned: contact='+contact);
-        Id campaignId = cm.CampaignId;
-        //System.debug('BZ_CampaignAssigned: campaignId='+campaignId);
-        Campaign campaign = [SELECT Id, OwnerId, Intro_Email_Template__c 
-                             FROM Campaign WHERE Id = :campaignId];
-        //System.debug('BZ_CampaignAssigned: campaign='+campaign);                     
-        User owner = [SELECT Id FROM User WHERE Id = :campaign.OwnerId];
-        //System.debug('BZ_CampaignAssigned: owner='+owner);                     
-        String emailTemplate = campaign.Intro_Email_Template__c;
-        //System.debug('BZ_CampaignAssigned: emailTemplate='+emailTemplate);                     
-
-        // BTODO: fail if the Campaign doesn't have it's Intro_Email_Template__c set, e.g. set to '';
-
-        Task t = new Task(
-            OwnerId = owner.Id,           // Assigned To
-            Subject = 'Send Intro Email To ' + contact.Name,
-            ActivityDate = Date.today(),      // Due Date
-            WhoId = contactId,            // Name
-            WhatId = campaignId,          // Related To
-            EmailTemplate__c = emailTemplate);    // Email Template To Send
-        tasksToAdd.add(t);  
-        System.debug('BZ_CampaignAssigned: Adding new Task: '+ t);
+        Task t = BZ_QueueEmailTaskHelper.createEmailTask(cm, 'Send Intro Email', 'Intro_Email_Template__c');
+    if (t!=null)
+        {
+      tasksToAdd.add(t);  
+          System.debug('BZ_CampaignAssigned: Adding new Task: '+ t);
+        }
     }
     
     insert tasksToAdd;
