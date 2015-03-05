@@ -1,9 +1,10 @@
 @isTest 
 private class BZ_BulkEmailer_TEST {
+    
     static testMethod void validateSendMyQueuedEmails() {
-        //System.Debug('BZ_BulkEmailer_TEST: begin');
+        //System.Debug('BZ_BulkEmailer_TEST:validateSendMyQueuedEmails() begin');
         
-        User sender = [SELECT Id FROM User Where Id = :System.UserInfo.getUserId()];    
+        User sender = [SELECT Id FROM User Where Id = :System.UserInfo.getUserId()];
         Profile p = [select id from profile where name='Standard User'];
         User anotherSender = new User(alias = 'testSnd2', email='TestEmail.Sender2@bz.org',
                                       emailencodingkey='UTF-8', lastname='TestSender2', languagelocalekey='en_US',
@@ -52,7 +53,94 @@ private class BZ_BulkEmailer_TEST {
         //System.Debug('BZ_BulkEmailer_TEST: BZ_BulkEmailer.SendMyQueuedEmails(campaign='+campaign+', sender='+sender+')');
         emailsSent = BZ_BulkEmailer.SendMyQueuedEmails(campaign, sender);
         
-        System.assertEquals(2, emailsSent, 'Expected 2 emails to be sent, not'+emailsSent);
-        // BTODO: test that the tasks are deleted.
+        System.assertEquals(2, emailsSent, 'Expected 2 emails to be sent, not '+emailsSent);
+// BTODO: test that the tasks are deleted.
+    }
+    
+    static testMethod void validateSendQueuedApplicationDecisions() {
+        System.Debug('BZ_BulkEmailer_TEST.validateSendQueuedApplicationDecisions(): begin');
+        
+        List<Contact> testContacts = new List<Contact>();
+        Contact waitlistedRecipient = new Contact(FirstName='TestWaitlistedEmail', LastName='Recipient', Email='TestWaitlistedEmail.Recipient@bz.org');
+        testContacts.add(waitlistedRecipient);
+        Contact acceptedRecipient = new Contact(FirstName='TestAcceptedEmail', LastName='Recipient', Email='TestAcceptedEmail.Recipient@bz.org');
+        testContacts.add(acceptedRecipient);
+        Contact rejectedRecipient = new Contact(FirstName='TestRejectedEmail', LastName='Recipient', Email='TestRejectedEmail.Recipient@bz.org');
+        testContacts.add(rejectedRecipient);
+        Contact rejectedRecipient_decisionAlreadySent = new Contact(FirstName='TestRejectedEmailAlreadySent', LastName='Recipient', Email='TestRejectedEmailAlreadySent.Recipient@bz.org');
+        testContacts.add(rejectedRecipient_decisionAlreadySent);
+        Contact rejectedRecipient_anotherCampaign = new Contact(FirstName='TestRejectedEmailAnotherCampaign', LastName='Recipient', Email='TestRejectedEmailAnotherCampaign.Recipient@bz.org');
+        testContacts.add(rejectedRecipient_anotherCampaign);
+        Contact recipientNoStatusSet = new Contact(FirstName='TestAppDecisionNoStatus', LastName='Recipient', Email='TestAppDecisionNoStatus.Recipient@bz.org');
+        testContacts.add(recipientNoStatusSet);
+        Contact interviewRequestedRecipient = new Contact(FirstName='TestAppDecisionInterviewRequested', LastName='Recipient', Email='TestAppDecisionInterviewRequested.Recipient@bz.org');
+        testContacts.add(interviewRequestedRecipient);
+        insert testContacts;
+        
+        String waitlistedEmailDeveloperName='TestWaitlistedEmailTemplateToSend';
+        String acceptedEmailDeveloperName='TestAcceptedEmailTemplateToSend';
+        String rejectedEmailDeveloperName='TestRejectedEmailTemplateToSend';
+        
+        Campaign campaign = new Campaign(Name='Test Send Queued App Decisions Campaign1', 
+                                         App_Waitlisted_Email_Template__c=waitlistedEmailDeveloperName,
+                                         App_Accepted_Email_Template__c=acceptedEmailDeveloperName,
+                                         App_Rejected_Email_Template__c=rejectedEmailDeveloperName,
+                                         Intro_Email_Template__c='tmp1'
+                                        );
+        insert campaign;  
+        Campaign anotherCampaign = new Campaign(Name='Test Send Queued App Decisions Campaign2', 
+                                         App_Waitlisted_Email_Template__c=waitlistedEmailDeveloperName,
+                                         App_Accepted_Email_Template__c=acceptedEmailDeveloperName,
+                                         App_Rejected_Email_Template__c=rejectedEmailDeveloperName,
+                                         Intro_Email_Template__c='tmp2'
+                                        );
+        insert anotherCampaign;  
+        
+        List<CampaignMember> testCms = new List<CampaignMember>();
+        CampaignMember waitlistedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=waitlistedRecipient.Id, Application_Status__c='Waitlisted');
+        testCms.add(waitlistedCm);
+        CampaignMember acceptedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=acceptedRecipient.Id, Application_Status__c='Accepted');
+        testCms.add(acceptedCm);
+        CampaignMember rejectedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=rejectedRecipient.Id, Application_Status__c='Rejected');
+        testCms.add(rejectedCm);
+        CampaignMember rejectedCm_decisionAlreadySent = new CampaignMember(CampaignId=campaign.Id, ContactId=rejectedRecipient_decisionAlreadySent.Id, Application_Status__c='Rejected', Application_Decision_Sent__c=TRUE);
+        testCms.add(rejectedCm_decisionAlreadySent);
+        CampaignMember noStatusSetCm_expectNoEmailSent = new CampaignMember(CampaignId=campaign.Id, ContactId=recipientNoStatusSet.Id);
+        testCms.add(noStatusSetCm_expectNoEmailSent);
+        CampaignMember interviewRequestedCm_expectNoEmailSent = new CampaignMember(CampaignId=campaign.Id, ContactId=interviewRequestedRecipient.Id, Application_Status__c='Interview Requested');
+        testCms.add(interviewRequestedCm_expectNoEmailSent);
+        CampaignMember rejectedCm_anotherCampaign = new CampaignMember(CampaignId=anotherCampaign.Id, ContactId=rejectedRecipient_anotherCampaign.Id, Application_Status__c='Rejected');
+        testCms.add(rejectedCm_anotherCampaign);
+        insert testCms;
+        
+        Integer emailsSent = 0;
+        
+        // We do the runAs() b/c of a bug in salesforce where the template is not actually created.  
+        // This, in conjunction with the startTest and stopTest below which forces the async future method 
+        // to run synchronously: 
+        // https://developer.salesforce.com/forums/ForumsMain?id=906F00000008wSQIAY
+        User sender = [SELECT Id FROM User Where Id = :System.UserInfo.getUserId()];
+        System.runAs(sender) 
+        {
+            Test.startTest();
+            // Note, this Util method is to avoid a MIXED_DML_OPERATION error described here: 
+            // http://www.tgerm.com/2012/04/mixeddmloperation-dml-operation-on.html        
+            BZ_Util.insertEmailTemplate('Test Waitlisted Email Template', waitlistedEmailDeveloperName, 'text', sender.Id);
+            BZ_Util.insertEmailTemplate('Test Accepted Email Template', acceptedEmailDeveloperName, 'text', sender.Id);
+            BZ_Util.insertEmailTemplate('Test Rejected Email Template', rejectedEmailDeveloperName, 'text', sender.Id);
+            Test.stopTest();
+        }
+        
+        // Run the test
+        System.Debug('BZ_BulkEmailer_TEST: BZ_BulkEmailer.SendQueuedApplicationDecisions(campaign='+campaign+')');
+        emailsSent = BZ_BulkEmailer.SendQueuedApplicationDecisions(campaign);
+        
+        System.assertEquals(3, emailsSent, 'Expected 3 emails to be sent, not '+emailsSent);
+        CampaignMember waitlistedCmResult = [SELECT Application_Decision_Sent__c FROM CampaignMember WHERE Id = :waitlistedCm.Id];
+        System.assertEquals(TRUE, waitlistedCmResult.Application_Decision_Sent__c);
+        CampaignMember acceptedCmResult = [SELECT Application_Decision_Sent__c FROM CampaignMember WHERE Id = :acceptedCm.Id];
+        System.assertEquals(TRUE, acceptedCmResult.Application_Decision_Sent__c);
+        CampaignMember rejectedCmResult = [SELECT Application_Decision_Sent__c FROM CampaignMember WHERE Id = :rejectedCm.Id];
+        System.assertEquals(TRUE, rejectedCmResult.Application_Decision_Sent__c);
     }
 }

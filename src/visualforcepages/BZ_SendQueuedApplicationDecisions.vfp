@@ -1,0 +1,9 @@
+<!-- Page that handles the "Send Queued Application Decisions" button. -->
+<apex:page standardController="Campaign" extensions="BZ_SendQueuedApplicationDecisions" action="{!run}">
+  <apex:form >
+    <apex:outputPanel >
+    <apex:outputText value="Emails sent!  Look under the Activity History section to see what was sent."/>
+  <!--<apex:commandLink action="{!ApexPages.currentPage().getParameters().get('retURL')}"/>-->
+    </apex:outputPanel>
+    </apex:form>
+</apex:page>
