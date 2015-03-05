@@ -1,7 +1,7 @@
 @isTest 
 private class BZ_BulkEmailer_TEST {
     static testMethod void validateSendMyQueuedEmails() {
-        //System.Debug('BZ_BulkEmailer_TEST: begin');
+        //System.Debug('BZ_BulkEmailer_TEST:validateSendMyQueuedEmails() begin');
         
         User sender = [SELECT Id FROM User Where Id = :System.UserInfo.getUserId()];    
         Profile p = [select id from profile where name='Standard User'];
@@ -52,7 +52,64 @@ private class BZ_BulkEmailer_TEST {
         //System.Debug('BZ_BulkEmailer_TEST: BZ_BulkEmailer.SendMyQueuedEmails(campaign='+campaign+', sender='+sender+')');
         emailsSent = BZ_BulkEmailer.SendMyQueuedEmails(campaign, sender);
         
-        System.assertEquals(2, emailsSent, 'Expected 2 emails to be sent, not'+emailsSent);
-        // BTODO: test that the tasks are deleted.
+        System.assertEquals(2, emailsSent, 'Expected 2 emails to be sent, not '+emailsSent);
+    // BTODO: test that the tasks are deleted.
+    }
+    
+    
+    static testMethod void validateSendQueuedApplicationDecisions() {
+        System.Debug('BZ_BulkEmailer_TEST.validateSendQueuedApplicationDecisions(): begin');
+        
+        Contact waitlistedRecipient = new Contact(FirstName='TestWaitlistedEmail', LastName='Recipient', Email='TestWaitlistedEmail.Recipient@bz.org');
+        insert waitlistedRecipient;
+        Contact acceptedRecipient = new Contact(FirstName='TestAcceptedEmail', LastName='Recipient', Email='TestAcceptedEmail.Recipient@bz.org');
+        insert acceptedRecipient;
+        Contact rejectedRecipient = new Contact(FirstName='TestRejectedEmail', LastName='Recipient', Email='TestRejectedEmail.Recipient@bz.org');
+        insert rejectedRecipient;
+        
+        String waitlistedEmailDeveloperName='TestWaitlistedEmailTemplateToSend';
+        String acceptedEmailDeveloperName='TestAcceptedEmailTemplateToSend';
+        String rejectedEmailDeveloperName='TestRejectedEmailTemplateToSend';
+        
+        Campaign campaign = new Campaign(Name='Test Send Queued App Decisions Campaign1', 
+                                         App_Waitlisted_Email_Template__c=waitlistedEmailDeveloperName,
+                                         App_Accepted_Email_Template__c=acceptedEmailDeveloperName,
+                                         App_Rejected_Email_Template__c=rejectedEmailDeveloperName,
+                                         Intro_Email_Template__c='tmpasfaf'
+                                        );
+        insert campaign;        
+        
+        CampaignMember waitlistedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=waitlistedRecipient.Id, Application_Status__c='Waitlisted');
+        insert waitlistedCm;
+        CampaignMember acceptedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=acceptedRecipient.Id, Application_Status__c='Accepted');
+        insert acceptedCm;
+        CampaignMember rejectedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=rejectedRecipient.Id, Application_Status__c='Rejected');
+        insert rejectedCm;
+        
+        Integer emailsSent = 0;
+        
+        // We do the runAs() b/c of a bug in salesforce where the template is not actually created.  
+        // This, in conjunction with the startTest and stopTest below which forces the async future method 
+        // to run synchronously: 
+        // https://developer.salesforce.com/forums/ForumsMain?id=906F00000008wSQIAY
+        User sender = [SELECT Id FROM User Where Id = :System.UserInfo.getUserId()];    
+        System.runAs(sender) 
+        {
+            Test.startTest();
+            // Note, this Util method is to avoid a MIXED_DML_OPERATION error described here: 
+            // http://www.tgerm.com/2012/04/mixeddmloperation-dml-operation-on.html        
+            BZ_Util.insertEmailTemplate('Test Waitlisted Email Template', waitlistedEmailDeveloperName, 'text', sender.Id);
+            BZ_Util.insertEmailTemplate('Test Accepted Email Template', acceptedEmailDeveloperName, 'text', sender.Id);
+            BZ_Util.insertEmailTemplate('Test Rejected Email Template', rejectedEmailDeveloperName, 'text', sender.Id);
+            Test.stopTest();
+        }
+        
+        // Run the test
+        System.Debug('BZ_BulkEmailer_TEST: BZ_BulkEmailer.SendQueuedApplicationDecisions(campaign='+campaign+')');
+        emailsSent = BZ_BulkEmailer.SendQueuedApplicationDecisions(campaign);
+        
+        System.assertEquals(3, emailsSent, 'Expected 3 emails to be sent, not '+emailsSent);
+        // BTODO: add campaign members without their app status set
+        // BTODO: add campaign member for other campaigns with their app status set and make sure those emails are not sent.
     }
 }
