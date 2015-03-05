@@ -17,9 +17,9 @@ public class BZ_BulkEmailer {
         
         List<Task> emailTasks = [SELECT Id, WhoId, WhatId, OwnerId, Status, EmailTemplate__c // WhoId = Name field
                                  FROM Task 
-                                 WHERE WhatId = :campaign.Id    // Related To
-                                  AND OwnerId = :sender.Id    // Assigned To
-                                  AND (               // Email Template To Send
+                                 WHERE WhatId = :campaign.Id // Related To
+                                 AND OwnerId = :sender.Id // Assignedigned To
+                                 AND ( // Email Template To Send
                                         EmailTemplate__c != null OR EmailTemplate__c != ''
                                         )
                                 ];
@@ -30,7 +30,7 @@ public class BZ_BulkEmailer {
         Integer emailsSent = 0;
         for(Task et : emailTasks)
         {
-          // send the email template to each Name
+        // send the email   template to each Name
             Contact recipient = [SELECT Id, Email FROM Contact WHERE Id = :et.WhoId];
             //System.Debug('BZ_BulkEmailer: recipient = ' + recipient);
             String[] recipients = new String[]{recipient.Email};
@@ -60,6 +60,7 @@ public class BZ_BulkEmailer {
         List<CampaignMember> waitlistedUsers = 
             [SELECT CampaignId, ContactId, Contact.Email FROM CampaignMember 
              WHERE CampaignId = :campaign.Id AND
+                   Application_Decision_Sent__c = FALSE AND
                    Application_Status__c = 'Waitlisted'
             ];
         System.debug('BZ_BulkEmailer.SendQueuedApplicationDecisions: waitlistedUsers.size() = '+waitlistedUsers.size());
@@ -68,6 +69,7 @@ public class BZ_BulkEmailer {
         List<CampaignMember> acceptedUsers = 
             [SELECT CampaignId, ContactId, Contact.Email FROM CampaignMember 
              WHERE CampaignId = :campaign.Id AND
+                   Application_Decision_Sent__c = FALSE AND
                    Application_Status__c = 'Accepted'
             ];
         System.debug('BZ_BulkEmailer.SendQueuedApplicationDecisions: acceptedUsers.size() = '+acceptedUsers.size());
@@ -76,13 +78,13 @@ public class BZ_BulkEmailer {
         List<CampaignMember> rejectedUsers = 
             [SELECT CampaignId, ContactId, Contact.Email FROM CampaignMember 
              WHERE CampaignId = :campaign.Id AND
+                   Application_Decision_Sent__c = FALSE AND
                    Application_Status__c = 'Rejected'
             ];
         System.debug('BZ_BulkEmailer.SendQueuedApplicationDecisions: rejectedUsers.size() = '+rejectedUsers.size());
         //System.Debug('BZ_BulkEmailer.SendQueuedApplicationDecisions: rejectedUsers.get(0).Contact.Email = ' + rejectedUsers.get(0).Contact.Email);
 
         Integer emailsSent = 0;
-        
         for(CampaignMember cm : waitlistedUsers)
         {
             String[] recipients = new String[]{cm.Contact.Email};
@@ -90,7 +92,9 @@ public class BZ_BulkEmailer {
                 recipients, null, campaign.App_Waitlisted_Email_Template__c, 
                 cm.ContactId, cm.CampaignId, null, TRUE, null); 
             emailsSent++;
+            cm.Application_Decision_Sent__c = TRUE;
         }
+        update waitlistedUsers;
         
         for(CampaignMember cm : acceptedUsers)
         {
@@ -99,7 +103,9 @@ public class BZ_BulkEmailer {
                 recipients, null, campaign.App_Accepted_Email_Template__c, 
                 cm.ContactId, cm.CampaignId, null, TRUE, null); 
             emailsSent++;
+            cm.Application_Decision_Sent__c = TRUE;
         }
+        update acceptedUsers;
         
         for(CampaignMember cm : rejectedUsers)
         {
@@ -108,7 +114,9 @@ public class BZ_BulkEmailer {
                 recipients, null, campaign.App_Rejected_Email_Template__c, 
                 cm.ContactId, cm.CampaignId, null, TRUE, null); 
             emailsSent++;
+            cm.Application_Decision_Sent__c = TRUE;
         }
+        update rejectedUsers;
         return emailsSent;
     }
 }
