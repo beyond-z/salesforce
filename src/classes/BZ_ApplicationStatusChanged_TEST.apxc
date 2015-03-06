@@ -1,6 +1,6 @@
 @isTest 
 private class BZ_ApplicationStatusChanged_TEST {
-  static testMethod void validateInterviewRequested() {
+static testMethod void validateInterviewRequested() {
         Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_asc1', OwnerId=userInfo.getUserId(), Best_Email__c='testcmpown_asc1@bz.org');
         insert campaignOwner;
         Contact contact = new Contact(FirstName='Test', LastName='AppStatChanged1', Best_Email__c='testappstatchanged1@bz.org');
@@ -9,7 +9,9 @@ private class BZ_ApplicationStatusChanged_TEST {
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
         String emailTemplateName = 'Test Interview Requested Email';
         String emailTemplateDeveloperName = 'Test_Interview_Requested_Email';
-        Campaign campaign = new Campaign(Name='Test Prospective Students Campaign', OwnerId=campaignOwner.OwnerId, App_Interview_Requested_Email_Template__c=emailTemplateName);
+        Campaign campaign = new Campaign(Name='Test Prospective Students Campaign', OwnerId=campaignOwner.OwnerId, 
+                                         App_Interview_Requested_Email_Template__c=emailTemplateName,
+                                         Intro_Email_Template__c='blah');
         insert campaign;
         
         CampaignMember cm = new CampaignMember();
@@ -22,7 +24,38 @@ private class BZ_ApplicationStatusChanged_TEST {
         cm.Application_Status__c = 'Interview Requested';
         update cm;
     
-      // BTODO: check that the appropriate behavior happened.
+        List<Task> resultingTasks = [SELECT Id, WhoId, WhatId FROM Task
+                                    WHERE WhoId=:cm.ContactId AND 
+                                          WhatId=:cm.CampaignId AND
+                                          Subject LIKE '%Send Interview Request Email%'];
+        System.assert(resultingTasks.size()==1, 'Expected Task to be created to Map the cohort');
+    }
+    
+    static testMethod void validateAcceptedQueuesMapCohortTask() {
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_aqmct1', OwnerId=userInfo.getUserId(), Best_Email__c='testcmpown_aqmct1@bz.org');
+        insert campaignOwner;
+        Contact contact = new Contact(FirstName='Test', LastName='AppStatChangedToAccepted1', Best_Email__c='testappstatchangedtoaccepted1@bz.org');
+        insert contact;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = new Campaign(Name='Test Prospective Students Campaign', OwnerId=campaignOwner.OwnerId,
+                                        Intro_Email_Template__c='blah');
+        insert campaign;
+        
+        CampaignMember cm = new CampaignMember();
+        cm.CampaignId=campaign.Id;
+        cm.ContactId=contact.Id;
+       
+        insert cm;
+        
+        // This fires the trigger we're testing.
+        cm.Application_Status__c = 'Accepted';
+        update cm;
+    
+        List<Task> resultingTasks = [SELECT Id, WhoId, WhatId FROM Task
+                                    WHERE WhoId=:cm.ContactId AND 
+                                          WhatId=:cm.CampaignId AND
+                                          Subject LIKE '%Map cohort%'];
+        System.assert(resultingTasks.size()==1, 'Expected Task to be created to Map the cohort');
     }
 }
-
