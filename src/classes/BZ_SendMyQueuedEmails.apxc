@@ -6,14 +6,33 @@
  */
 public class BZ_SendMyQueuedEmails {
     private Campaign m_campaign;
+    private String m_resultMessage;
+    private boolean m_hasRun;
     
     public BZ_SendMyQueuedEmails(ApexPages.StandardController controller){
-      m_campaign = (Campaign)controller.getRecord();    
+      m_campaign = (Campaign)controller.getRecord(); 
+        m_hasRun = false;
+        m_resultMessage = '';
+    }
+    
+    public String getResultMessage(){
+        return m_resultMessage;
+    }
+    
+    public boolean getHasRun(){
+        return m_hasRun;
     }
     
     public void run(){
         Id senderId = UserInfo.getUserId();
         User sender = [SELECT Id from User Where Id = :senderId];
-      BZ_BulkEmailer.SendMyQueuedEmails(m_campaign, sender);
+      Integer emailsSent = BZ_BulkEmailer.SendMyQueuedEmails(m_campaign, sender);
+        if (emailsSent > 0){
+            m_resultMessage = emailsSent + ' Emails sent!  Look under the Activity History section to see what was sent.';
+        }
+        else {
+            m_resultMessage = 'No emails found to send.';
+        }
+        m_hasRun = true;
     }
 }

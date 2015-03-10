@@ -1,9 +1,20 @@
 <!-- Page that handles the "Send Queued Application Decisions" button. -->
-<apex:page standardController="Campaign" extensions="BZ_SendQueuedApplicationDecisions" action="{!run}">
-  <apex:form >
-    <apex:outputPanel >
-    <apex:outputText value="Emails sent!  Look under the Activity History section to see what was sent."/>
+<apex:page standardController="Campaign" extensions="BZ_SendQueuedApplicationDecisions">
+  <apex:form>
+    <apex:pageBlock id="buttons" rendered="{!hasRun==false}">
+        <apex:pageMessages id="messages"/>
+        <apex:pageMessage severity="confirm" title="Are you sure?" summary="You are about to send FINAL application decision emails in bulk to members of this campaign. If you're sure you want to do this hit Send." />
+        <apex:pageBlockSection>
+            <apex:pageBlockSectionItem>
+            <apex:commandButton action="{!run}" value="Send" />
+            <apex:commandButton action="{!cancel}" value="Cancel" />
+            </apex:pageBlockSectionItem>
+        </apex:pageBlockSection>
+    </apex:pageBlock>
+    <apex:outputPanel id="resultmessage">
+        {!resultMessage}
+        <apex:commandButton action="{!cancel}" value="OK" rendered="{!hasRun}" />
   <!--<apex:commandLink action="{!ApexPages.currentPage().getParameters().get('retURL')}"/>-->
     </apex:outputPanel>
-    </apex:form>
+    </apex:form>    
 </apex:page>

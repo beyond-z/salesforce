@@ -6,6 +6,8 @@
  */
 public class BZ_SendQueuedApplicationDecisions {
     private Campaign m_campaign;
+    private String m_resultMessage;
+    private boolean m_hasRun;
     
     public BZ_SendQueuedApplicationDecisions(ApexPages.StandardController controller){
         // The addFields call is becuase these fields are required by the functionality 
@@ -13,11 +15,28 @@ public class BZ_SendQueuedApplicationDecisions {
         // FATAL_ERROR System.SObjectException: SObject row was retrieved via SOQL without querying the requested field
         controller.addFields(new String[]{'App_Waitlisted_Email_Template__c','App_Accepted_Email_Template__c','App_Rejected_Email_Template__c'});
         m_campaign = (Campaign)controller.getRecord();
+        m_hasRun = false;
+        m_resultMessage = '';
+    }
+    
+    public String getResultMessage(){
+        return m_resultMessage;
+    }
+    
+    public boolean getHasRun(){
+        return m_hasRun;
     }
     
     public void run(){
         Id senderId = UserInfo.getUserId();
         User sender = [SELECT Id from User Where Id = :senderId];
-      BZ_BulkEmailer.SendQueuedApplicationDecisions(m_campaign);
+        Integer emailsSent = BZ_BulkEmailer.SendQueuedApplicationDecisions(m_campaign);
+        if (emailsSent > 0){
+            m_resultMessage = emailsSent + ' Emails sent!  Look under the Activity History section to see what was sent.';
+        }
+        else {
+            m_resultMessage = 'No decisions found to send.';
+        }
+        m_hasRun = true;
     }
 }
