@@ -1,0 +1,3 @@
+When creating an app, be sure to ask for full access AND offline access.
+
+Create -> Connected apps -> Name -> Edit -> can change scope there.

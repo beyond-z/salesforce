@@ -1,0 +1,41 @@
+Lead:
+	LEAD
+	Administrative Information
+		BZ_User_Id
+		Signup_Date
+		Came_From_to_Visit_Site
+		User_Type
+		University_Name
+		Anticipated_Graduation
+		Profession_Title
+		Started_College
+		Interested_in_opening_BZ
+		BZ_Region
+
+	CAMPAIGN MEMBER
+		Middle_Name
+		Accepts_Text
+		Undergrad_University
+		Undergraduate_Year
+		Major
+		GPA
+		Grad_University
+		Graduate_Year
+		LinkedIn
+		Resume
+		African_American
+		Asian_American
+		Latino
+		Native_Alaskan
+		Native_American
+		Native_Hawaiian
+		Pacific_Islander
+		White
+		Multi_Ethnic
+		Identify_As_Person_Of_Color
+		Identify_As_Low_Income
+		Identify_As_First_Gen
+		Hometown
+		Twitter
+		Website
+
