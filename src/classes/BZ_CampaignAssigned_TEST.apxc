@@ -1,13 +1,13 @@
 @isTest 
 private class BZ_CampaignAssigned_TEST {
     static testMethod void validateCampaignAssigned() {
-    Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner1', OwnerId=userInfo.getUserId(), Best_Email__c='testco1@bz.org');
+    Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner1', OwnerId=userInfo.getUserId());
     insert campaignOwner;
-        Contact contact = new Contact(FirstName='Test', LastName='User1', Best_Email__c='testuser1@bz.org');
+        Contact contact = new Contact(FirstName='Test', LastName='User1');
         insert contact;
         
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
-        Campaign campaign = new Campaign(Name='Test Prospective LCs Campaign', OwnerId=campaignOwner.OwnerId, Intro_Email_Template__c='Test LC Intro Email');
+        Campaign campaign = new Campaign(Name='Test Prospective LCs Campaign', OwnerId=campaignOwner.OwnerId, Intro_Email_Template__c='Test LC Intro Email', Type='Leadership Coaches');
         insert campaign;
         
         CampaignMember cm = new CampaignMember();
@@ -17,6 +17,13 @@ private class BZ_CampaignAssigned_TEST {
         // This fires the trigger we're testing.
         insert cm;
         
-        // BTODO: check that the appropriate behavior happened.
+        CampaignMember updatedCm = [SELECT Id, ContactId, CampaignId FROM CampaignMember WHERE Id=:cm.Id];
+        Contact updatedContact = [SELECT Id, Volunteer_Information__c FROM Contact WHERE Id=:updatedCm.ContactId];
+        System.assert(updatedContact.Volunteer_Information__c == 'LC Pipeline', 'When a Contact is added to an LC Campaign, their Volunteer Information should be set.');
+        List<Task> resultingTasks = [SELECT Id, WhoId, WhatId FROM Task
+                                     WHERE WhoId=:updatedCm.ContactId AND
+                                           WhatId=:updatedCm.CampaignId AND
+                                           Subject LIKE '%Send Intro Email%'];
+        System.assert(resultingTasks.size()==1, 'Expected Task to be created to Send Intro Email');
     }
 }

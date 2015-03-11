@@ -6,16 +6,35 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
     System.Debug('BZ_CampaignAssigned: begin trigger');
     
     List<Task> tasksToAdd = new List<Task>(); 
+    List<Contact> contactsToUpdate = new List<Contact>();
     
     for (CampaignMember cm : Trigger.new)
     {
-        Task t = BZ_TaskFactory.createEmailTask(cm, 'Send Intro Email', 'Intro_Email_Template__c');
-        if (t!=null)
-        {
-            tasksToAdd.add(t); 
-            System.debug('BZ_CampaignAssigned: Adding new Task: '+ t);
+        Campaign campaign = [SELECT Id, Type FROM Campaign WHERE Id=:cm.CampaignId];
+        //System.debug('BZ_CampaignAssigned: campaign='+campaign);
+        Contact contact = [SELECT Id, Volunteer_Information__c, Participant_Information__c
+                           FROM Contact WHERE Id=:cm.ContactId];
+        //System.debug('BZ_CampaignAssigned: contact='+contact);
+        boolean isProgramRelatedCampaign = false;
+        if (campaign.Type == 'Leadership Coaches') {
+            contact.Volunteer_Information__c = 'LC Pipeline';
+            isProgramRelatedCampaign = true;
+        } else if (campaign.Type == 'Program Participants'){
+            contact.Participant_Information__c = 'Participant Pipeline';
+            isProgramRelatedCampaign = true;
+        }
+        
+        if (isProgramRelatedCampaign){   
+            contactsToUpdate.add(contact);
+            
+            Task t = BZ_TaskFactory.createEmailTask(cm, 'Send Intro Email', 'Intro_Email_Template__c');
+            if (t!=null)
+            {
+                tasksToAdd.add(t);  
+                System.debug('BZ_CampaignAssigned: Adding new Task: '+ t);
+            }
         }
     }
-    
+    update contactsToUpdate;
     insert tasksToAdd;
 }

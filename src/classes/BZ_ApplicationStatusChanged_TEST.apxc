@@ -1,9 +1,9 @@
 @isTest 
 private class BZ_ApplicationStatusChanged_TEST {
-static testMethod void validateInterviewRequested() {
-        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_asc1', OwnerId=userInfo.getUserId(), Best_Email__c='testcmpown_asc1@bz.org');
+  static testMethod void validateInterviewRequested() {
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_asc1', OwnerId=userInfo.getUserId());
         insert campaignOwner;
-        Contact contact = new Contact(FirstName='Test', LastName='AppStatChanged1', Best_Email__c='testappstatchanged1@bz.org');
+        Contact contact = new Contact(FirstName='Test', LastName='AppStatChanged1');
         insert contact;
         
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
@@ -31,15 +31,15 @@ static testMethod void validateInterviewRequested() {
         System.assert(resultingTasks.size()==1, 'Expected Task to be created to Map the cohort');
     }
     
-    static testMethod void validateAcceptedQueuesMapCohortTask() {
-        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_aqmct1', OwnerId=userInfo.getUserId(), Best_Email__c='testcmpown_aqmct1@bz.org');
+    static testMethod void validateAccepted() {
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_aqmct1', OwnerId=userInfo.getUserId());
         insert campaignOwner;
-        Contact contact = new Contact(FirstName='Test', LastName='AppStatChangedToAccepted1', Best_Email__c='testappstatchangedtoaccepted1@bz.org');
+        Contact contact = new Contact(FirstName='Test', LastName='AppStatChangedToAccepted1');
         insert contact;
         
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
         Campaign campaign = new Campaign(Name='Test Prospective Students Campaign', OwnerId=campaignOwner.OwnerId,
-                                        Intro_Email_Template__c='blah');
+                                        Type='Leadership Coaches', Intro_Email_Template__c='blah');
         insert campaign;
         
         CampaignMember cm = new CampaignMember();
@@ -57,5 +57,8 @@ static testMethod void validateInterviewRequested() {
                                           WhatId=:cm.CampaignId AND
                                           Subject LIKE '%Map cohort%'];
         System.assert(resultingTasks.size()==1, 'Expected Task to be created to Map the cohort');
+        
+        Contact updatedContact = [SELECT Id, Volunteer_Information__c FROM Contact WHERE Id=:cm.ContactId];
+        System.assert(updatedContact.Volunteer_Information__c == 'Current LC', 'When a Contact is Accepted, their Volunteer Information should be set.');
     }
 }

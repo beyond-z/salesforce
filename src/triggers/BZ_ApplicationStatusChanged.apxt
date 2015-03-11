@@ -6,6 +6,7 @@ trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
         if (Trigger.oldMap.get(cm.Id).Application_Status__c != cm.Application_Status__c)
         {
             List<Task> tasksToAdd = new List<Task>();
+            List<Contact> contactsToUpdate = new List<Contact>();
         
             // If the app status is changed to Interview Requested, 
             // queue up a task with the Email Template To Send set to notify 
@@ -21,15 +22,29 @@ trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
                 }
             }
             else if(cm.Application_Status__c == 'Accepted')
-            {
+            {   
                 Task t = BZ_TaskFactory.createTask(cm, 'Map cohort for {0}');
                 if (t!=null)
                 {
                     tasksToAdd.add(t);
                     System.debug('BZ_ApplicationStatusChanged: Adding new Task: '+ t);
                 }
+                
+                Campaign campaign = [SELECT Id, Type FROM Campaign WHERE Id=:cm.CampaignId];
+                //System.debug('BZ_CampaignAssigned: campaign='+campaign);
+                Contact contact = [SELECT Id, Volunteer_Information__c, Participant_Information__c
+                                   FROM Contact WHERE Id=:cm.ContactId];
+                //System.debug('BZ_CampaignAssigned: contact='+contact);
+                if (campaign.Type == 'Leadership Coaches') {
+                    contact.Volunteer_Information__c = 'Current LC';
+                    contactsToUpdate.add(contact);
+                } else if (campaign.Type == 'Program Participants'){
+                    contact.Participant_Information__c = 'Participant';
+                    contactsToUpdate.add(contact);
+                }
             }
             insert tasksToAdd;
+            update contactsToUpdate;
         }
     }
 }
