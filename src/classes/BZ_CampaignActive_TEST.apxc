@@ -1,9 +1,9 @@
 @isTest 
 private class BZ_CampaignActive_TEST {
     static testMethod void validateCampaignActive() {
-        Contact contact1 = new Contact(FirstName='Test', LastName='User1', Best_Email__c='testuser1@bz.org');
+        Contact contact1 = new Contact(FirstName='Test', LastName='User1');
         insert contact1;
-        Contact contact2 = new Contact(FirstName='Test', LastName='User2', Best_Email__c='testuser2@bz.org');
+        Contact contact2 = new Contact(FirstName='Test', LastName='User2');
         insert contact2;
         
         Campaign campaign = new Campaign(Name='Test Prospective LCs Campaign Active');
