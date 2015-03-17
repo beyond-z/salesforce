@@ -1,0 +1,31 @@
+ /**
+ * Custom Controller that responds to the "Sync Contacts To LMS" button on a Campaign.
+ * This button takes all Confirmed CampaignMembers and updates our Learning
+ * Management System enrollments based on their Student and Leadership Coach
+ * relationships.
+ */
+public class BZ_SyncToLMS {
+    private Campaign m_campaign;
+    private String m_resultMessage;
+    private boolean m_hasRun;
+    
+    public BZ_SyncToLMS(ApexPages.StandardController controller){
+      m_campaign = (Campaign)controller.getRecord(); 
+        m_hasRun = false;
+        m_resultMessage = '';
+    }
+    
+    public String getResultMessage(){
+        return m_resultMessage;
+    }
+    
+    public boolean getHasRun(){
+        return m_hasRun;
+    }
+    
+    public void run(){
+        BZ_Notifications.syncToLMS(m_campaign.Id);
+        m_resultMessage = 'Done!  The confirmed CampaignMembers are now updated in the Learning Management System (e.g. Canvas) and should be able to login.';
+        m_hasRun = true;
+    }
+}
