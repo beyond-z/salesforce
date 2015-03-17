@@ -1,31 +1,55 @@
-global class BZ_Notifications {
-	/// The lists are a comma-separated set of object Ids which should be set
-	@future (callout=true)
-	public static void notifyApplyNow(String yesList, String noList) {
-		BZ_Settings__c settings = BZ_Settings__c.getInstance('bz');
-		String base_url = settings.base_url__c;
-		String magic_token = settings.magic_token__c;
-
-		Http http = new Http();
-		HttpRequest request = new HttpRequest();
-		request.setEndpoint(base_url + '/salesforce/change_apply_now?magic_token='+magic_token+'&yes_list=' + yesList + '&no_list=' + noList);
-		request.setMethod('GET');
-		HttpResponse response = http.send(request);
-		response.getBody();
-	}
-
-	/// The format of changes is old:new,old:new,etc.
-	@future (callout=true)
-	public static void recordConvertedLeads(String changes) {
-		BZ_Settings__c settings = BZ_Settings__c.getInstance('bz');
-		String base_url = settings.base_url__c;
-		String magic_token = settings.magic_token__c;
-
-		Http http = new Http();
-		HttpRequest request = new HttpRequest();
-		request.setEndpoint(base_url + '/salesforce/record_converted_leads?magic_token='+magic_token+'&changes=' + changes);
-		request.setMethod('GET');
-		HttpResponse response = http.send(request);
-		response.getBody();
-	}
+/**
+ * Handles notifying the beyondz.org platform of Salesforce related actions.
+ */
+global class BZ_Notifications { 
+    /**
+     * The lists are a comma-separated set of object Ids which should be set 
+     */
+    @future (callout=true) 
+    public static void notifyApplyNow(String yesList, String noList) { 
+        BZ_Settings__c settings = BZ_Settings__c.getInstance('bz'); 
+        String base_url = settings.base_url__c; 
+        String magic_token = settings.magic_token__c; 
+        Http http = new Http(); 
+        HttpRequest request = new HttpRequest(); 
+        request.setEndpoint(base_url + '/salesforce/change_apply_now?magic_token='+magic_token+'&yes_list=' + yesList + '&no_list=' + noList); 
+        request.setMethod('GET'); 
+        HttpResponse response = http.send(request); 
+        response.getBody(); 
+    } 
+    
+    /**
+     * The format of changes is old:new,old:new,etc. 
+     */
+    @future (callout=true) 
+    public static void recordConvertedLeads(String changes) { 
+        BZ_Settings__c settings = BZ_Settings__c.getInstance('bz'); 
+        String base_url = settings.base_url__c; 
+        String magic_token = settings.magic_token__c; 
+        Http http = new Http(); 
+        HttpRequest request = new HttpRequest(); 
+        request.setEndpoint(base_url + '/salesforce/record_converted_leads?magic_token='+magic_token+'&changes=' + changes); 
+        request.setMethod('GET'); 
+        HttpResponse response = http.send(request); 
+        response.getBody(); 
+    } 
+    
+    /**
+     * Notifies the beyondz.org platform to pull all Confirmed CampaignMembers
+     * for the specified Campaign and to update our Learning
+     * Management System enrollments based on their 
+     * Student and Leadership Coach relationships.
+     */
+    @future (callout=true) 
+    public static void syncToLMS(Id campaignId) {
+        BZ_Settings__c settings = BZ_Settings__c.getInstance('bz'); 
+        String base_url = settings.base_url__c; 
+        String magic_token = settings.magic_token__c; 
+        Http http = new Http(); 
+        HttpRequest request = new HttpRequest(); 
+        request.setEndpoint(base_url + '/salesforce/sync_to_lms?magic_token='+magic_token+'&campaignId=' + campaignId); 
+        request.setMethod('GET'); 
+        HttpResponse response = http.send(request); 
+        response.getBody(); 
+    }
 }
