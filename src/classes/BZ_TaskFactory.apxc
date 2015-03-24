@@ -41,6 +41,8 @@ public class BZ_TaskFactory {
             Task t = new Task(
                 OwnerId = owner.Id,           // Assigned To
                 Subject = taskSubjectPrefix + ' To ' + contact.Name,
+                IsReminderSet = true,
+                ReminderDateTime = System.now(),
                 ActivityDate = Date.today(),      // Due Date
                 WhoId = contactId,            // Name
                 WhatId = campaignId,          // Related To
@@ -72,9 +74,33 @@ public class BZ_TaskFactory {
         Task t = new Task(
                 OwnerId = owner.Id,           // Assigned To
                 Subject = System.String.format(taskSubjectPattern, new String[]{contact.Name}),
+                IsReminderSet = true,
+                ReminderDateTime = System.now(),
                 ActivityDate = Date.today(),      // Due Date
                 WhoId = contactId,            // Name
                 WhatId = campaignId);               // Related To
+        return t;
+    }
+    
+    /**
+     * Creates Tasks for the owner of the Lead.
+     * 
+     * taskSubjectPattern is the Subject of the Task where the name of the Lead
+     * is added in the location that you specify.  You specify the location with a single
+     * replacement token used with String.format(String,List<String>) method.  
+     * e.g. createTask(lead, 'The person {0} needs something to happen')
+     */
+    public static Task createTask(Lead lead, String taskSubjectPattern, String description) {
+        // For some reason, the Lead.Name is null in a create trigger: https://developer.salesforce.com/forums/ForumsMain?id=906F00000008yQ5IAI
+        String name = lead.FirstName + ' ' + lead.LastName;
+        Task t = new Task(
+                OwnerId = lead.OwnerId,           // Assigned To
+                Subject = System.String.format(taskSubjectPattern, new String[]{name}),
+                Description = description,
+                IsReminderSet = true,
+                ReminderDateTime = System.now(),
+                ActivityDate = Date.today(),      // Due Date
+                WhoId = lead.Id);                     // Name
         return t;
     }
 }
