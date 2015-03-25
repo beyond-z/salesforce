@@ -7,14 +7,31 @@ Lead:
 		User_Type
 		University_Name
 		Anticipated_Graduation
-		Profession_Title
 		Started_College
 		Interested_in_opening_BZ
 		BZ_Region
 
-	CAMPAIGN MEMBER
+	CONTACT
 		Middle_Name
 		Accepts_Text
+		University_Name
+		LinkedIn
+		Grad_University
+		Graduate_Year
+		Grad_Degree
+
+	CAMPAIGN MEMBER
+		Grad_Degree
+		Summer
+		Post_Grad
+		Why_BZ
+		Community_Connection
+		Passions_Expertise
+		Meaningful_Activity
+		Experience_LICs
+		Eligible
+		GPA_Circumstances
+		Other_Commitments
 		Undergrad_University
 		Undergraduate_Year
 		Major
@@ -39,3 +56,9 @@ Lead:
 		Twitter
 		Website
 
+
+REMOVE:
+	Contact:
+		Profession_Title
+	Contact Manager:
+		Accepts_Text
