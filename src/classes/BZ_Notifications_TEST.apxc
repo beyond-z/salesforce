@@ -13,7 +13,8 @@ private class BZ_Notifications_TEST {
     }
     
     static testMethod void validateSyncToLMSNotification() { 
-        Id arbitraryCampaignId = '10';
+	// needs to look like a real ID even if it does nothing
+        Id arbitraryCampaignId = '7011700000056Pf';
         BZ_Notifications.syncToLMS(arbitraryCampaignId); 
         // FIXME: how do we actually ensure it sends? can we just 
         // depend on it throwing an exception or something if it fails? 
