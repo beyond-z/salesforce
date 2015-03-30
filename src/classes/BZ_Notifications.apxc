@@ -11,7 +11,7 @@ global class BZ_Notifications {
 	// settings isn't available when testing and we don't
 	// want to do http callouts on test anyway; it'd change
 	// real application state.
-	if(settings == NULL) return;
+	if(Test.isRunningTest()) return;
         String base_url = settings.base_url__c; 
         String magic_token = settings.magic_token__c; 
         Http http = new Http(); 
@@ -28,7 +28,7 @@ global class BZ_Notifications {
     @future (callout=true) 
     public static void recordConvertedLeads(String changes) { 
         BZ_Settings__c settings = BZ_Settings__c.getInstance('bz'); 
-	if(settings == NULL) return;
+	if(Test.isRunningTest()) return;
         String base_url = settings.base_url__c; 
         String magic_token = settings.magic_token__c; 
         Http http = new Http(); 
@@ -48,7 +48,7 @@ global class BZ_Notifications {
     @future (callout=true) 
     public static void syncToLMS(Id campaignId) {
         BZ_Settings__c settings = BZ_Settings__c.getInstance('bz'); 
-	if(settings == NULL) return;
+	if(Test.isRunningTest()) return;
         String base_url = settings.base_url__c; 
         String magic_token = settings.magic_token__c; 
         Http http = new Http(); 
