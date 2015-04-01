@@ -1,4 +1,12 @@
 Lead:
+	CAMPAIGN
+		Which_Form   # coach or student. Which application form to show
+		Which_Program # prefilled as program_col; aka "Applying For". Which program is this applciation for? The value here is put in the spreadsheet so it should be unique for each campaign but not necessarily human-readabnle
+		Program_Title # human-readable
+		Program_Site  # human-readable
+		Request_Availability # checkbox, if set, MeetingTimes must be present
+		Meeting_Times # plain text, multi-line, one item per line
+
 	LEAD
 	Administrative Information
 		BZ_User_Id
