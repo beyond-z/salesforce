@@ -7,12 +7,50 @@ trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
         {
             List<Task> tasksToAdd = new List<Task>();
             List<Contact> contactsToUpdate = new List<Contact>();
-        
+
+            if(cm.Application_Status__c == 'Submitted')
+            { 
+                Contact contact = [SELECT Id, Phone, Accepts_Text__c, 
+                                  Grad_University__c, Graduate_Year__c, Grad_Degree__c, Undergrad_University__c,
+                                  Middle_Name__c, Hometown__c, Twitter__c, Website__c, 
+                                  African_American__c, Asian_American__c, Latino__c, 
+                                  Native_Alaskan__c, Native_American__c, Native_Hawaiian__c, 
+                                  Pacific_Islander__c, White__c, Multi_Ethnic__c, Other_Race__c, 
+                                  Identify_As_First_Gen__c, Identify_As_Low_Income__c, 
+                                  Identify_As_Person_Of_Color__c, Pell_Grant_Recipient__c
+                                  FROM Contact WHERE Id=:cm.ContactId];
+                //contact.Phone = cm.Contact.Phone;
+                contact.Accepts_Text__c = cm.Accepts_Text__c;
+                contact.Grad_University__c = cm.Grad_University__c;
+                contact.Graduate_Year__c = cm.Graduate_Year__c;
+                contact.Grad_Degree__c = cm.Grad_Degree__c;
+                contact.Undergrad_University__c = cm.Undergrad_University__c;
+                contact.Middle_Name__c = cm.Middle_Name__c;
+                contact.Hometown__c = cm.Hometown__c;
+                contact.Twitter__c = cm.Twitter__c;
+                contact.Website__c = cm.Website__c;
+                contact.African_American__c = cm.African_American__c;
+                contact.Asian_American__c = cm.Asian_American__c;
+                contact.Latino__c = cm.Latino__c;
+                contact.Native_Alaskan__c = cm.Native_Alaskan__c;
+                contact.Native_American__c = cm.Native_American__c;
+                contact.Native_Hawaiian__c = cm.Native_Hawaiian__c;
+                contact.Pacific_Islander__c = cm.Pacific_Islander__c;
+                contact.White__c = cm.White__c;
+                contact.Multi_Ethnic__c = cm.Multi_Ethnic__c;
+                contact.Other_Race__c = cm.Other_Race__c;
+                contact.Identify_As_First_Gen__c = cm.Identify_As_First_Gen__c;
+                contact.Identify_As_Low_Income__c = cm.Identify_As_Low_Income__c;
+                contact.Identify_As_Person_Of_Color__c = cm.Identify_As_Person_Of_Color__c;
+                contact.Pell_Grant_Recipient__c = cm.Pell_Grant_Recipient__c;
+
+                contactsToUpdate.add(contact);
+            }
             // If the app status is changed to Interview Requested, 
             // queue up a task with the Email Template To Send set to notify 
             // the user that we are requesting an interview with them.
             //System.debug('BZ_ApplicationStatusChanged: cm.Application_Status__c=' + cm.Application_Status__c);
-            if (cm.Application_Status__c == 'Interview Requested')
+            else if (cm.Application_Status__c == 'Interview Requested')
             {
                 Task t = BZ_TaskFactory.createEmailTask(cm, 'Send Interview Request Email', 'App_Interview_Requested_Email_Template__c');
                 if (t!=null)
