@@ -22,21 +22,21 @@ Lead:
 
 	CONTACT
 		Accepts_Text
-    Anticipated_Graduation
-    BZ_Region
-    BZ_User_Id
-    Came_From_to_Visit_Site
-    Industry
-    Interested_In
-    Interested_in_opening_BZ
-    Keep Informed
-    Middle_Name
-    Signup_Date
-    Started College
+		Anticipated_Graduation
+		BZ_Region
+		BZ_User_Id
+		Came_From_to_Visit_Site
+		Industry
+		Interested_In
+		Interested_in_opening_BZ
+		Keep Informed
+		Middle_Name
+		Signup_Date
+		Started College
 		Twitter
-    Undergrad_University 
+		Undergrad_University 
 		Website
-    LinkedIn
+		LinkedIn
 		Grad_University
 		Graduate_Year
 		Grad_Degree
@@ -49,11 +49,11 @@ Lead:
 		Pacific_Islander
 		White
 		Multi_Ethnic
-    Other_Race
-    Identify_As_Person_Of_Color
+		Other_Race
+		Identify_As_Person_Of_Color
 		Identify_As_Low_Income
 		Identify_As_First_Gen
-    Pell_Grant_Recipient
+		Pell_Grant_Recipient
 			
 	CAMPAIGN MEMBER
 		Grad_Degree
@@ -84,18 +84,17 @@ Lead:
 		Pacific_Islander
 		White
 		Multi_Ethnic
-    Other_Race
+		Phone # note: this is distinct from the built-in Phone; it is Phone__c in the api
+		Other_Race
 		Identify_As_Person_Of_Color
 		Identify_As_Low_Income
 		Identify_As_First_Gen
-    Pell_Grant_Recipient
+		Pell_Grant_Recipient
 		Hometown
 		Twitter
 		Website
-    Anticipated_Graduation
-    Started_College
-    
-
+		Anticipated_Graduation
+		Started_College
 
 REMOVE:
 	Contact:
