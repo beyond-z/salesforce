@@ -73,6 +73,7 @@ Lead:
 		Grad_University
 		Graduate_Year
 		LinkedIn
+		Digital_Footprint_2
 		Resume
 		African_American
 		Asian_American
@@ -84,6 +85,8 @@ Lead:
 		White
 		Multi_Ethnic
 		Phone # note: this is distinct from the built-in Phone; it is Phone__c in the api
+		City # ditto
+		State # ditto
 		Other_Race
 		Identify_As_Person_Of_Color
 		Identify_As_Low_Income
