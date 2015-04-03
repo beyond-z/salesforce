@@ -6,7 +6,7 @@ private class BZ_CampaignActive_TEST {
         Contact contact2 = new Contact(FirstName='Test', LastName='User2');
         insert contact2;
         
-        Campaign campaign = new Campaign(Name='Test Prospective LCs Campaign Active');
+        Campaign campaign = BZ_CampaignFactory_TEST.create();
         insert campaign;
         
         CampaignMember cm1 = new CampaignMember();
@@ -24,10 +24,10 @@ private class BZ_CampaignActive_TEST {
         // Fires the trigger we're testing.
         campaign.IsActive = TRUE;
         update campaign;
-      
-        CampaignMember cm1_updated = [SELECT Id, Apply_Button_Enabled__c FROM CampaignMember WHERE Id = :cm1.Id];
+
+            CampaignMember cm1_updated = [SELECT Id, Apply_Button_Enabled__c FROM CampaignMember WHERE Id = :cm1.Id];
         System.assertEquals(cm1_updated.Apply_Button_Enabled__c, TRUE);
         CampaignMember cm2_updated = [SELECT Id, Apply_Button_Enabled__c FROM CampaignMember WHERE Id = :cm2.Id];
-        System.assertEquals(cm2_updated.Apply_Button_Enabled__c,cm2_updated TRUE);
+System.assertEquals(cm2_updated.Apply_Button_Enabled__c, TRUE);    
     }
 }

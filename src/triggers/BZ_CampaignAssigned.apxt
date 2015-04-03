@@ -26,12 +26,12 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
         
         if (isProgramRelatedCampaign){   
             contactsToUpdate.add(contact);
-            
+                        
             Task t = BZ_TaskFactory.createEmailTask(cm, 'Send Intro Email', 'Intro_Email_Template__c');
             if (t!=null)
             {
-                tasksToAdd.add(t);  
-                System.debug('BZ_CampaignAssigned: Adding new Task: '+ t);
+                tasksToAdd.add(t); 
+                 System.debug('BZ_CampaignAssigned: Adding new Task: '+ t);
             }
         }
     }

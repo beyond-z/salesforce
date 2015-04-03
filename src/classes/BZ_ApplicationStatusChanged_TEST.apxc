@@ -9,9 +9,8 @@ private class BZ_ApplicationStatusChanged_TEST {
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
         String emailTemplateName = 'Test Interview Requested Email';
         String emailTemplateDeveloperName = 'Test_Interview_Requested_Email';
-        Campaign campaign = new Campaign(Name='Test Prospective Students Campaign', OwnerId=campaignOwner.OwnerId, 
-                                         App_Interview_Requested_Email_Template__c=emailTemplateName,
-                                         Intro_Email_Template__c='blah');
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        campaign.App_Interview_Requested_Email_Template__c = emailTemplateName;
         insert campaign;
         
         CampaignMember cm = new CampaignMember();
@@ -38,8 +37,7 @@ private class BZ_ApplicationStatusChanged_TEST {
         insert contact;
         
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
-        Campaign campaign = new Campaign(Name='Test Prospective Students Campaign', OwnerId=campaignOwner.OwnerId,
-                                        Type='Leadership Coaches', Intro_Email_Template__c='blah');
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
         insert campaign;
         
         CampaignMember cm = new CampaignMember();
@@ -69,8 +67,7 @@ private class BZ_ApplicationStatusChanged_TEST {
         insert contact;
         
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
-        Campaign campaign = new Campaign(Name='Test Prospective Students Campaign', OwnerId=campaignOwner.OwnerId,
-                                        Type='Leadership Coaches', Intro_Email_Template__c='blah');
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
         insert campaign;
         
         CampaignMember cm = new CampaignMember();

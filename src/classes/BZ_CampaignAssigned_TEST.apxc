@@ -1,13 +1,13 @@
 @isTest 
 private class BZ_CampaignAssigned_TEST {
     static testMethod void validateCampaignAssigned() {
-    Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner1', OwnerId=userInfo.getUserId());
-    insert campaignOwner;
-        Contact contact = new Contact(FirstName='Test', LastName='User1');
+Contact campaignOwner = new     Contact(FirstName='Test', LastName='CampaignOwner1', OwnerId=userInfo.getUserId());
+insert campaignOwner;
+        Contact contact = new Contact(FirstName='Test_Interview_Requested_Email', LastName='User1');
         insert contact;
         
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
-        Campaign campaign = new Campaign(Name='Test Prospective LCs Campaign', OwnerId=campaignOwner.OwnerId, Intro_Email_Template__c='Test LC Intro Email', Type='Leadership Coaches');
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
         insert campaign;
         
         CampaignMember cm = new CampaignMember();
@@ -17,9 +17,10 @@ private class BZ_CampaignAssigned_TEST {
         // This fires the trigger we're testing.
         insert cm;
         
-        CampaignMember updatedCm = [SELECT Id, ContactId, CampaignId FROM CampaignMember WHERE Id=:cm.Id];
-        Contact updatedContact = [SELECT Id, Volunteer_Information__c FROM Contact WHERE Id=:updatedCm.ContactId];
+        CampaignMember updatedCm = [SELECT Id, ContactId, CampaignId, Started_College__c, Anticipated_Graduation__c FROM CampaignMember WHERE Id=:cm.Id];
+        Contact updatedContact = [SELECT Id, Volunteer_Information__c, Started_College__c, Anticipated_Graduation__c FROM Contact WHERE Id=:updatedCm.ContactId];
         System.assert(updatedContact.Volunteer_Information__c == 'LC Pipeline', 'When a Contact is added to an LC Campaign, their Volunteer Information should be set.');
+
         List<Task> resultingTasks = [SELECT Id, WhoId, WhatId FROM Task
                                      WHERE WhoId=:updatedCm.ContactId AND
                                            WhatId=:updatedCm.CampaignId AND

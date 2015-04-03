@@ -15,3 +15,12 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
     ...
     
 ```
+
+Commonly created test objects should be done through a helper/factory class.  
+This way, when validation rules are added in the future you only have to change 
+how you create the objects to conform to the rules in one spot.
+```
+private class BZ_SomeTestClass_TEST {
+    Campaign c = CampaignFactory.create();
+}
+```
