@@ -1,6 +1,6 @@
 Lead:
 	CAMPAIGN
-		Which_Form   # coach or student. Which application form to show
+		Application_Type   # coach or student. Which application form to show
 		Program_Title # human-readable
 		Program_Site  # human-readable
 		Request_Availability # checkbox, if set, MeetingTimes must be present
@@ -62,7 +62,7 @@ Lead:
 		Community_Connection
 		Passions_Expertise
 		Meaningful_Activity
-		Experience_LICs
+		Relevant_Experience
 		Eligible
 		GPA_Circumstances
 		Other_Commitments
@@ -72,7 +72,7 @@ Lead:
 		GPA
 		Grad_University
 		Graduate_Year
-		LinkedIn
+		Digital_Footprint
 		Digital_Footprint_2
 		Resume
 		African_American
@@ -84,9 +84,6 @@ Lead:
 		Pacific_Islander
 		White
 		Multi_Ethnic
-		Phone # note: this is distinct from the built-in Phone; it is Phone__c in the api
-		City # ditto
-		State # ditto
 		Other_Race
 		Identify_As_Person_Of_Color
 		Identify_As_Low_Income
