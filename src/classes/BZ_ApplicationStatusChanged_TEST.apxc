@@ -1,6 +1,6 @@
 @isTest 
 private class BZ_ApplicationStatusChanged_TEST {
-static testMethod void validateInterviewRequested() {
+  static testMethod void validateInterviewRequested() {
         Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_asc1', OwnerId=userInfo.getUserId());
         insert campaignOwner;
         Contact contact = new Contact(FirstName='Test', LastName='AppStatChanged1');

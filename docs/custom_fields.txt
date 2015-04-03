@@ -1,7 +1,6 @@
 Lead:
 	CAMPAIGN
-		Which_Form   # coach or student. Which application form to show
-		Which_Program # prefilled as program_col; aka "Applying For". Which program is this applciation for? The value here is put in the spreadsheet so it should be unique for each campaign but not necessarily human-readabnle
+		Application_Type   # coach or student. Which application form to show
 		Program_Title # human-readable
 		Program_Site  # human-readable
 		Request_Availability # checkbox, if set, MeetingTimes must be present
@@ -10,7 +9,8 @@ Lead:
 	LEAD
 	Administrative Information
 		BZ_User_Id
-		Signup_Date
+    Interested_In
+    Signup_Date
 		Came_From_to_Visit_Site
 		User_Type
 		University_Name
@@ -20,14 +20,40 @@ Lead:
 		BZ_Region
 
 	CONTACT
-		Middle_Name
 		Accepts_Text
-		University_Name
+		Anticipated_Graduation
+		BZ_Region
+		BZ_User_Id
+		Came_From_to_Visit_Site
+		Industry
+		Interested_In
+		Interested_in_opening_BZ
+		Keep Informed
+		Middle_Name
+		Signup_Date
+		Started College
+		Twitter
+		Undergrad_University 
+		Website
 		LinkedIn
 		Grad_University
 		Graduate_Year
 		Grad_Degree
-
+		African_American
+		Asian_American
+		Latino
+		Native_Alaskan
+		Native_American
+		Native_Hawaiian
+		Pacific_Islander
+		White
+		Multi_Ethnic
+		Other_Race
+		Identify_As_Person_Of_Color
+		Identify_As_Low_Income
+		Identify_As_First_Gen
+		Pell_Grant_Recipient
+			
 	CAMPAIGN MEMBER
 		Grad_Degree
 		Summer
@@ -36,7 +62,7 @@ Lead:
 		Community_Connection
 		Passions_Expertise
 		Meaningful_Activity
-		Experience_LICs
+		Relevant_Experience
 		Eligible
 		GPA_Circumstances
 		Other_Commitments
@@ -46,7 +72,8 @@ Lead:
 		GPA
 		Grad_University
 		Graduate_Year
-		LinkedIn
+		Digital_Footprint
+		Digital_Footprint_2
 		Resume
 		African_American
 		Asian_American
@@ -57,13 +84,16 @@ Lead:
 		Pacific_Islander
 		White
 		Multi_Ethnic
+		Other_Race
 		Identify_As_Person_Of_Color
 		Identify_As_Low_Income
 		Identify_As_First_Gen
+		Pell_Grant_Recipient
 		Hometown
 		Twitter
 		Website
-
+		Anticipated_Graduation
+		Started_College
 
 REMOVE:
 	Contact:
