@@ -1,0 +1,24 @@
+/**
+ * This is a factory to create Campaign instances when running tests.
+ */
+public class BZ_CampaignFactory_TEST {
+
+    public static Campaign create(){
+        return create(userInfo.getUserId());
+    }
+    
+    public static Campaign create(Id ownerId){
+        return create(ownerId, 'Leadership Coaches');
+    }
+
+    public static Campaign create(Id ownerId, String type){
+        return new Campaign(Name='Test Campaign', OwnerId=ownerId, 
+                            Intro_Email_Template__c='Test Intro Email Template', 
+                            Type=type, 
+                            Application_Type__c='student', 
+                            Program_Title__c='Blah', 
+                            Program_Site__c='Meh', 
+                            Target_Course_ID_In_LMS__c='2');
+    }
+
+}

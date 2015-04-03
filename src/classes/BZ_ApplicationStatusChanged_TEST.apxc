@@ -1,6 +1,6 @@
 @isTest 
 private class BZ_ApplicationStatusChanged_TEST {
-  static testMethod void validateInterviewRequested() {
+static testMethod void validateInterviewRequested() {
         Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_asc1', OwnerId=userInfo.getUserId());
         insert campaignOwner;
         Contact contact = new Contact(FirstName='Test', LastName='AppStatChanged1');
@@ -9,9 +9,8 @@ private class BZ_ApplicationStatusChanged_TEST {
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
         String emailTemplateName = 'Test Interview Requested Email';
         String emailTemplateDeveloperName = 'Test_Interview_Requested_Email';
-        Campaign campaign = new Campaign(Name='Test Prospective Students Campaign', OwnerId=campaignOwner.OwnerId, 
-                                         App_Interview_Requested_Email_Template__c=emailTemplateName,
-                                         Intro_Email_Template__c='blah');
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        campaign.App_Interview_Requested_Email_Template__c = emailTemplateName;
         insert campaign;
         
         CampaignMember cm = new CampaignMember();
@@ -38,8 +37,7 @@ private class BZ_ApplicationStatusChanged_TEST {
         insert contact;
         
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
-        Campaign campaign = new Campaign(Name='Test Prospective Students Campaign', OwnerId=campaignOwner.OwnerId,
-                                        Type='Leadership Coaches', Intro_Email_Template__c='blah');
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
         insert campaign;
         
         CampaignMember cm = new CampaignMember();
@@ -60,5 +58,109 @@ private class BZ_ApplicationStatusChanged_TEST {
         
         Contact updatedContact = [SELECT Id, Volunteer_Information__c FROM Contact WHERE Id=:cm.ContactId];
         System.assert(updatedContact.Volunteer_Information__c == 'Current LC', 'When a Contact is Accepted, their Volunteer Information should be set.');
+    }
+    
+    static testMethod void validateSubmitted() {
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_ascts1', OwnerId=userInfo.getUserId());
+        insert campaignOwner;
+        Contact contact = new Contact(FirstName='Test', LastName='AppStatChangedToToSubmitted1');
+        insert contact;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        insert campaign;
+        
+        CampaignMember cm = new CampaignMember();
+        cm.CampaignId=campaign.Id;
+        cm.ContactId=contact.Id;
+       
+        insert cm;
+        
+//        String phone = '5551235555';
+//        cm.Contact.Phone = phone;
+        boolean acceptsText = true;
+        cm.Accepts_Text__c = acceptsText;
+        String gradU = 'SmartTownUsa';
+        cm.Grad_University__c = gradU;
+        String gradY = '2051';
+        cm.Graduate_Year__c = gradY;
+        String gradD = 'TheInternet';
+        cm.Grad_Degree__c = gradD;
+        String uGrad = 'CatU';
+        cm.Undergrad_University__c = uGrad;
+        String middleName = 'Danger';
+        cm.Middle_Name__c = middleName;
+        String hometown = 'bumfrick';
+        cm.Hometown__c = hometown;
+        String twitter = 'wordisborn';
+        cm.Twitter__c = twitter;
+        String website = 'https://rickybobby.com/numberone';
+        cm.Website__c = website;
+        boolean africanA = true;
+        cm.African_American__c = africanA;
+        boolean asianA = true;
+        cm.Asian_American__c = asianA;
+        boolean latino = true;
+        cm.Latino__c = latino;
+        boolean nAlaska = true;
+        cm.Native_Alaskan__c = nAlaska;
+        boolean nAmerican = true;
+        cm.Native_American__c = nAmerican;
+        boolean nHaw = true;
+        cm.Native_Hawaiian__c = nHaw;
+        boolean pacI = true;
+        cm.Pacific_Islander__c = pacI;
+        boolean whitie = true;
+        cm.White__c = whitie;
+        boolean multiE = true;
+        cm.Multi_Ethnic__c = multiE;
+        String oRace = 'Sephardic batman rasta female';
+        cm.Other_Race__c = oRace;
+        boolean firstGen = true;
+        cm.Identify_As_First_Gen__c = firstGen;
+        boolean lowInc = true;
+        cm.Identify_As_Low_Income__c = lowInc;
+        boolean poc = true;
+        cm.Identify_As_Person_Of_Color__c = poc;
+        boolean pellG = true;
+        cm.Pell_Grant_Recipient__c = pellG;
+        
+        // This fires the trigger we're testing.
+        cm.Application_Status__c = 'Submitted';
+        update cm;
+    
+        Contact updatedContact = [SELECT Id, Phone, Accepts_Text__c, 
+                                  Grad_University__c, Graduate_Year__c, Grad_Degree__c, Undergrad_University__c,
+                                  Middle_Name__c, Hometown__c, Twitter__c, Website__c, 
+                                  African_American__c, Asian_American__c, Latino__c, 
+                                  Native_Alaskan__c, Native_American__c, Native_Hawaiian__c, 
+                                  Pacific_Islander__c, White__c, Multi_Ethnic__c, Other_Race__c, 
+                                  Identify_As_First_Gen__c, Identify_As_Low_Income__c, 
+                                  Identify_As_Person_Of_Color__c, Pell_Grant_Recipient__c
+                                  FROM Contact WHERE Id=:cm.ContactId];
+        //System.assert(updatedContact.Phone == phone, 'Phone not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Accepts_Text__c == acceptsText, 'Accepts_Text__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Grad_University__c == gradU, 'Grad_University__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Graduate_Year__c == gradY, 'Graduate_Year__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Grad_Degree__c == gradD, 'Grad_Degree__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Undergrad_University__c == uGrad, 'Undergrad_University__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Middle_Name__c == middleName, 'Middle_Name__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Hometown__c == hometown, 'Hometown__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Twitter__c == twitter, 'Twitter__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Website__c == website, 'Website__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.African_American__c == africanA, 'African_American__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Asian_American__c == asianA, 'Asian_American__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Latino__c == latino, 'Latino__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Native_Alaskan__c == nAlaska, 'Native_Alaskan__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Native_American__c == nAmerican, 'Native_American__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Native_Hawaiian__c == nHaw, 'Native_Hawaiian__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Pacific_Islander__c == pacI, 'Pacific_Islander__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.White__c == whitie, 'White__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Multi_Ethnic__c == multiE, 'Multi_Ethnic__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Other_Race__c == oRace, 'Other_Race__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Identify_As_First_Gen__c == firstGen, 'Identify_As_First_Gen__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Identify_As_Low_Income__c == lowInc, 'Identify_As_Low_Income__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Identify_As_Person_Of_Color__c == poc, 'Identify_As_Person_Of_Color__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Pell_Grant_Recipient__c == pellG, 'Pell_Grant_Recipient__c not updated on Contact when set on Campaign Member.');
     }
 }
