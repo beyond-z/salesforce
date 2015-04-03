@@ -1,23 +1,23 @@
 @isTest 
 private class BZ_CampaignEmailTemplates_TEST {
     static testMethod void validateCampaignEmailTemplates() {
-        Campaign campaign = new Campaign(Name='Test Campaign Email Templates');
+        Campaign campaign = BZ_CampaignFactory_TEST.create();
         insert campaign;
-      ApexPages.StandardController sc = new ApexPages.standardController(campaign);
+    ApexPages.StandardController sc = new ApexPages.standardController(campaign);
             
         PageReference pageRef = Page.BZ_CampaignEmailTemplates;
         Test.setCurrentPage(pageRef);
         ApexPages.currentPage().getParameters().put('id', campaign.id);
         
-      BZ_CampaignEmailTemplates templatesObj = new BZ_CampaignEmailTemplates(sc);
+    BZ_CampaignEmailTemplates templatesObj = new BZ_CampaignEmailTemplates(sc);
         List<SelectOption> options = templatesObj.getEmailTemplates();
         
         boolean skippedFirstOption = false; // We want to skip the first '--None--' option
         for(SelectOption o : options){
             if (skippedFirstOption) {
-              System.assert(o.getValue().StartsWith('BZ'));
+            System.assert(o.getValue().StartsWith('BZ'));
             } else {
-                skippedFirstOption = true;
+                  skippedFirstOption = true;
             }
         }
         

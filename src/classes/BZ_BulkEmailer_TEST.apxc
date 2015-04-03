@@ -4,7 +4,7 @@ private class BZ_BulkEmailer_TEST {
     static testMethod void validateSendMyQueuedEmails() {
         //System.Debug('BZ_BulkEmailer_TEST:validateSendMyQueuedEmails() begin');
         
-        User sender = [SELECT Id FROM User Where Id = :System.UserInfo.getUserId()];
+        User sender = [SELECT Id FROM User Where Id = :System.UserInfo.getUserId()];    
         Profile p = [select id from profile where name='Standard User'];
         User anotherSender = new User(alias = 'testSnd2', email='TestEmail.Sender2@bz.org',
                                       emailencodingkey='UTF-8', lastname='TestSender2', languagelocalekey='en_US',
@@ -14,9 +14,10 @@ private class BZ_BulkEmailer_TEST {
         
         Contact recipient = new Contact(FirstName='TestEmail', LastName='Recipient', Email='TestEmail.Recipient@bz.org');
         insert recipient;
-        Campaign campaign = new Campaign(Name='Test Send Queued Emails Campaign1');
+        Campaign campaign = BZ_CampaignFactory_TEST.create();
         insert campaign;
-        Campaign anotherCampaign = new Campaign(Name='Test Send Queued Emails Campaign2');
+        Campaign anotherCampaign = BZ_CampaignFactory_TEST.create();
+        anotherCampaign.Name = 'Another Campaign';
         insert anotherCampaign;
         
         String et1DeveloperName='TestEmailTemplateToSend1';
@@ -54,7 +55,7 @@ private class BZ_BulkEmailer_TEST {
         emailsSent = BZ_BulkEmailer.SendMyQueuedEmails(campaign, sender);
         
         System.assertEquals(2, emailsSent, 'Expected 2 emails to be sent, not '+emailsSent);
-// BTODO: test that the tasks are deleted.
+    // BTODO: test that the tasks are deleted.
     }
     
     static testMethod void validateSendQueuedApplicationDecisions() {
@@ -81,20 +82,19 @@ private class BZ_BulkEmailer_TEST {
         String acceptedEmailDeveloperName='TestAcceptedEmailTemplateToSend';
         String rejectedEmailDeveloperName='TestRejectedEmailTemplateToSend';
         
-        Campaign campaign = new Campaign(Name='Test Send Queued App Decisions Campaign1', 
-                                         App_Waitlisted_Email_Template__c=waitlistedEmailDeveloperName,
-                                         App_Accepted_Email_Template__c=acceptedEmailDeveloperName,
-                                         App_Rejected_Email_Template__c=rejectedEmailDeveloperName,
-                                         Intro_Email_Template__c='tmp1'
-                                        );
-        insert campaign;  
-        Campaign anotherCampaign = new Campaign(Name='Test Send Queued App Decisions Campaign2', 
-                                         App_Waitlisted_Email_Template__c=waitlistedEmailDeveloperName,
-                                         App_Accepted_Email_Template__c=acceptedEmailDeveloperName,
-                                         App_Rejected_Email_Template__c=rejectedEmailDeveloperName,
-                                         Intro_Email_Template__c='tmp2'
-                                        );
-        insert anotherCampaign;  
+        Campaign campaign = BZ_CampaignFactory_TEST.create();
+        campaign.Name='Test Send Queued App Decisions Campaign1'; 
+        campaign.App_Waitlisted_Email_Template__c=waitlistedEmailDeveloperName;
+        campaign.App_Accepted_Email_Template__c=acceptedEmailDeveloperName;
+        campaign.App_Rejected_Email_Template__c=rejectedEmailDeveloperName;
+        insert campaign; 
+        
+        Campaign anotherCampaign = BZ_CampaignFactory_TEST.create();
+        anotherCampaign.Name='Test Send Queued App Decisions Campaign2'; 
+        anotherCampaign.App_Waitlisted_Email_Template__c=waitlistedEmailDeveloperName;
+        anotherCampaign.App_Accepted_Email_Template__c=acceptedEmailDeveloperName;
+        anotherCampaign.App_Rejected_Email_Template__c=rejectedEmailDeveloperName;
+        insert anotherCampaign;
         
         List<CampaignMember> testCms = new List<CampaignMember>();
         CampaignMember waitlistedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=waitlistedRecipient.Id, Application_Status__c='Waitlisted');
@@ -119,7 +119,7 @@ private class BZ_BulkEmailer_TEST {
         // This, in conjunction with the startTest and stopTest below which forces the async future method 
         // to run synchronously: 
         // https://developer.salesforce.com/forums/ForumsMain?id=906F00000008wSQIAY
-        User sender = [SELECT Id FROM User Where Id = :System.UserInfo.getUserId()];
+        User sender = [SELECT Id FROM User Where Id = :System.UserInfo.getUserId()];    
         System.runAs(sender) 
         {
             Test.startTest();
