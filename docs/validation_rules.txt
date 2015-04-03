@@ -1,0 +1,8 @@
+
+CAMPAIGN
+    RequiredApplicationType
+    RequiredMeetingTimes
+    RequiredProgramTitle
+    RequiredProgramSite
+    RequiredTargetCourse
+
