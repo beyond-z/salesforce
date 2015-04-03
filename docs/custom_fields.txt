@@ -85,6 +85,7 @@ Lead:
 		White
 		Multi_Ethnic
 		Other_Race
+		Birthdate
 		Identify_As_Person_Of_Color
 		Identify_As_Low_Income
 		Identify_As_First_Gen
