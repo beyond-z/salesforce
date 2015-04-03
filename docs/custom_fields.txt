@@ -32,10 +32,9 @@ Lead:
 		Middle_Name
 		Signup_Date
 		Started College
-		Twitter
+		Digital_Footprint
+		Digital_Footprint_2
 		Undergrad_University 
-		Website
-		LinkedIn
 		Grad_University
 		Graduate_Year
 		Grad_Degree
@@ -85,13 +84,12 @@ Lead:
 		White
 		Multi_Ethnic
 		Other_Race
+		Birthdate
 		Identify_As_Person_Of_Color
 		Identify_As_Low_Income
 		Identify_As_First_Gen
 		Pell_Grant_Recipient
 		Hometown
-		Twitter
-		Website
 		Anticipated_Graduation
 		Started_College
 

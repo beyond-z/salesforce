@@ -92,10 +92,10 @@ private class BZ_ApplicationStatusChanged_TEST {
         cm.Middle_Name__c = middleName;
         String hometown = 'bumfrick';
         cm.Hometown__c = hometown;
-        String twitter = 'wordisborn';
-        cm.Twitter__c = twitter;
+        String twitterUrl = 'https://twitter.com/wordisborn';
+        cm.Digital_Footprint_2__c = twitterUrl;
         String website = 'https://rickybobby.com/numberone';
-        cm.Website__c = website;
+        cm.Digital_Footprint__c = website;
         boolean africanA = true;
         cm.African_American__c = africanA;
         boolean asianA = true;
@@ -131,7 +131,7 @@ private class BZ_ApplicationStatusChanged_TEST {
     
         Contact updatedContact = [SELECT Id, Phone, Accepts_Text__c, 
                                   Grad_University__c, Graduate_Year__c, Grad_Degree__c, Undergrad_University__c,
-                                  Middle_Name__c, Hometown__c, Twitter__c, Website__c, 
+                                  Middle_Name__c, Hometown__c, Digital_Footprint__c, Digital_Footprint_2__c, 
                                   African_American__c, Asian_American__c, Latino__c, 
                                   Native_Alaskan__c, Native_American__c, Native_Hawaiian__c, 
                                   Pacific_Islander__c, White__c, Multi_Ethnic__c, Other_Race__c, 
@@ -146,8 +146,8 @@ private class BZ_ApplicationStatusChanged_TEST {
         System.assert(updatedContact.Undergrad_University__c == uGrad, 'Undergrad_University__c not updated on Contact when set on Campaign Member.');
         System.assert(updatedContact.Middle_Name__c == middleName, 'Middle_Name__c not updated on Contact when set on Campaign Member.');
         System.assert(updatedContact.Hometown__c == hometown, 'Hometown__c not updated on Contact when set on Campaign Member.');
-        System.assert(updatedContact.Twitter__c == twitter, 'Twitter__c not updated on Contact when set on Campaign Member.');
-        System.assert(updatedContact.Website__c == website, 'Website__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Digital_Footprint_2__c == twitterUrl, 'Digital_Footprint_2__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Digital_Footprint__c == website, 'Digital_Footprint__c not updated on Contact when set on Campaign Member.');
         System.assert(updatedContact.African_American__c == africanA, 'African_American__c not updated on Contact when set on Campaign Member.');
         System.assert(updatedContact.Asian_American__c == asianA, 'Asian_American__c not updated on Contact when set on Campaign Member.');
         System.assert(updatedContact.Latino__c == latino, 'Latino__c not updated on Contact when set on Campaign Member.');

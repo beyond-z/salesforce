@@ -12,7 +12,7 @@ trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
             { 
                 Contact contact = [SELECT Id, Phone, Accepts_Text__c, 
                                   Grad_University__c, Graduate_Year__c, Grad_Degree__c, Undergrad_University__c,
-                                  Middle_Name__c, Hometown__c, Twitter__c, Website__c, 
+                                  Middle_Name__c, Hometown__c, Digital_Footprint_2__c, Digital_Footprint__c, 
                                   African_American__c, Asian_American__c, Latino__c, 
                                   Native_Alaskan__c, Native_American__c, Native_Hawaiian__c, 
                                   Pacific_Islander__c, White__c, Multi_Ethnic__c, Other_Race__c, 
@@ -27,8 +27,8 @@ trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
                 contact.Undergrad_University__c = cm.Undergrad_University__c;
                 contact.Middle_Name__c = cm.Middle_Name__c;
                 contact.Hometown__c = cm.Hometown__c;
-                contact.Twitter__c = cm.Twitter__c;
-                contact.Website__c = cm.Website__c;
+                contact.Digital_Footprint_2__c = cm.Digital_Footprint_2__c;
+                contact.Digital_Footprint__c = cm.Digital_Footprint__c;
                 contact.African_American__c = cm.African_American__c;
                 contact.Asian_American__c = cm.Asian_American__c;
                 contact.Latino__c = cm.Latino__c;
