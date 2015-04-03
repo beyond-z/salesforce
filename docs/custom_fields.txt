@@ -34,8 +34,6 @@ Lead:
 		Started College
 		Twitter
 		Undergrad_University 
-		Website
-		LinkedIn
 		Grad_University
 		Graduate_Year
 		Grad_Degree
@@ -91,8 +89,6 @@ Lead:
 		Identify_As_First_Gen
 		Pell_Grant_Recipient
 		Hometown
-		Twitter
-		Website
 		Anticipated_Graduation
 		Started_College
 
