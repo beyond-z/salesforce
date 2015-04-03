@@ -32,7 +32,8 @@ Lead:
 		Middle_Name
 		Signup_Date
 		Started College
-		Twitter
+		Digital_Footprint
+		Digital_Footprint_2
 		Undergrad_University 
 		Grad_University
 		Graduate_Year
