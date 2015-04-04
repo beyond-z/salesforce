@@ -1,0 +1,21 @@
+@isTest 
+private class BZ_LeadConverted_TEST {
+    static testMethod void validateLeadConverted() {
+        User owner = [SELECT Id FROM User Where Id = :System.UserInfo.getUserId()];
+        String testCompany='Do The Impossible Inc.';
+        Lead l = new Lead(OwnerId=owner.Id, Company=testCompany, LeadSource='Website Signup', FirstName='Someone', LastName='New', Status='Open');
+        insert l;
+        Database.LeadConvert lc = new Database.LeadConvert();
+        lc.setLeadId(l.id);
+
+        test.startTest();
+        LeadStatus convertStatus = [Select Id, MasterLabel FROM LeadStatus WHERE IsConverted=true LIMIT 1];
+        lc.setConvertedStatus(convertStatus.MasterLabel);
+        Database.LeadConvertResult lcr = Database.convertLead(lc);
+        test.stopTest();
+        
+        Contact updatedContact = [SELECT Id, Company__c FROM Contact WHERE Id = :lcr.contactId];
+        System.assert(updatedContact.Company__c == testCompany, 'The Lead.Company field failed to be copied to Contact.Company__c');
+
+    }
+}

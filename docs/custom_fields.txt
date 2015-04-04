@@ -5,11 +5,12 @@ Lead:
 		Program_Site  # human-readable
 		Request_Availability # checkbox, if set, MeetingTimes must be present
 		Meeting_Times # plain text, multi-line, one item per line
-    Student_Id_In_App
+    Request_Student_Id__c 
 
 	LEAD
 	Administrative Information
 		BZ_User_Id
+    Comments_Or_Questions 
     Interested_In
     Signup_Date
 		Came_From_to_Visit_Site
@@ -26,6 +27,7 @@ Lead:
 		BZ_Region
 		BZ_User_Id
 		Came_From_to_Visit_Site
+    Company
 		Industry
 		Interested_In
 		Interested_in_opening_BZ
@@ -65,6 +67,7 @@ Lead:
 		Relevant_Experience
 		Eligible
 		GPA_Circumstances
+    Student_Id
 		Other_Commitments
 		Undergrad_University
 		Undergraduate_Year

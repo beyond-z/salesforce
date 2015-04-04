@@ -1,13 +1,35 @@
 trigger BZ_LeadConverted on Lead (before update) {
-	String changes = '';
-	for (Lead lead : Trigger.new) {
-		if(lead.IsConverted != Trigger.oldMap.get(lead.Id).IsConverted) {
-			if (lead.IsConverted) {
-				changes += ',' + lead.Id + ':' + lead.ConvertedContactId;
-			}
-		}
-	}
+    //System.debug('BZ_LeadConverted: begin trigger');
 
-	if(changes.length() > 0)
-		BZ_Notifications.recordConvertedLeads(changes);
+    // When a Lead is converted to a Contact, grab the new ContactId and let
+    // the bz.org platform know about it so that the User on the platform
+    // stays tied to the Contact
+    String changes = ''; 
+    List<Contact> contactsToUpdate = new List<Contact>();
+    for (Lead lead : Trigger.new) { 
+        if(lead.IsConverted != Trigger.oldMap.get(lead.Id).IsConverted) { 
+            if (lead.IsConverted) { 
+                System.debug('BZ_LeadConverted: processing converted lead, Name = '+lead.Name);
+                changes += ',' + lead.Id + ':' + lead.ConvertedContactId; 
+                        
+                // Normally, a Lead.Company field is mapped to Contact.Account Name by default.
+                // However, the NPSP uses what it calls the Household Account Model and 
+                // automatically populates Contact.AccountName with "<LastName> Household", 
+                // no matter what is in Lead.Company.  
+                // See https://powerofus.force.com/articles/Resource/NPSP-What-is-an-Account-Model#household
+                // For this reason, we use a custom Contact.Company__c to store the Company that a Lead 
+                // works for on a Contact.
+                if (lead.Company != null || lead.Company != '')
+                {
+                    //System.debug('BZ_LeadConverted: setting Contact.Company__c to ' + lead.Company);
+                    Contact contact = [SELECT Id, Company__c FROM Contact WHERE Id=:lead.ConvertedContactId];
+                    contact.Company__c = lead.Company;
+                    contactsToUpdate.add(contact);
+                }
+            } 
+        } 
+    } 
+    update contactsToUpdate;
+    if(changes.length() > 0) 
+        BZ_Notifications.recordConvertedLeads(changes); 
 }

@@ -3,10 +3,10 @@ CONTACT
     BZ_TranslateVolunteerUserType
     BZ_TranslateEmployerUserType
     BZ_TranslateUniversityUserType
-    
+
 CAMPAIGN
-    APPLICATION OPEN: Check email template
-    
+    BZ_CampaignActiveCheckEmailTemplate
+
 CAMPAIGN MEMBER
-    WEBSITE SIGNUP: Campaign Assigned Set Enable Apply Now
-    BZ: Copy Contact Fields
+    BZ_CampaignAssignedEnableApplyNow
+    BZ_CopyContactFields 
