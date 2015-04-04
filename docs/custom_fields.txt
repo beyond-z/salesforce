@@ -5,6 +5,7 @@ Lead:
 		Program_Site  # human-readable
 		Request_Availability # checkbox, if set, MeetingTimes must be present
 		Meeting_Times # plain text, multi-line, one item per line
+    Student_Id_In_App
 
 	LEAD
 	Administrative Information
