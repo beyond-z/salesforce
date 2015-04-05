@@ -126,7 +126,7 @@ private class BZ_ApplicationStatusChanged_TEST {
         cm.Pell_Grant_Recipient__c = pellG;
         
         // This fires the trigger we're testing.
-        cm.Candidate_Status__c = 'Submitted';
+        cm.Application_Status__c = 'Submitted';
         update cm;
     
         Contact updatedContact = [SELECT Id, Phone, Accepts_Text__c, 
