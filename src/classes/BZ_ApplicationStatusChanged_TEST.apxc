@@ -20,7 +20,7 @@ private class BZ_ApplicationStatusChanged_TEST {
         insert cm;
         
         // This fires the trigger we're testing.
-        cm.Application_Status__c = 'Interview Requested';
+        cm.Candidate_Status__c = 'Interview Requested';
         update cm;
     
         List<Task> resultingTasks = [SELECT Id, WhoId, WhatId FROM Task
@@ -47,7 +47,7 @@ private class BZ_ApplicationStatusChanged_TEST {
         insert cm;
         
         // This fires the trigger we're testing.
-        cm.Application_Status__c = 'Accepted';
+        cm.Candidate_Status__c = 'Accepted';
         update cm;
     
         List<Task> resultingTasks = [SELECT Id, WhoId, WhatId FROM Task
@@ -126,7 +126,7 @@ private class BZ_ApplicationStatusChanged_TEST {
         cm.Pell_Grant_Recipient__c = pellG;
         
         // This fires the trigger we're testing.
-        cm.Application_Status__c = 'Submitted';
+        cm.Candidate_Status__c = 'Submitted';
         update cm;
     
         Contact updatedContact = [SELECT Id, Phone, Accepts_Text__c, 
@@ -163,4 +163,5 @@ private class BZ_ApplicationStatusChanged_TEST {
         System.assert(updatedContact.Identify_As_Person_Of_Color__c == poc, 'Identify_As_Person_Of_Color__c not updated on Contact when set on Campaign Member.');
         System.assert(updatedContact.Pell_Grant_Recipient__c == pellG, 'Pell_Grant_Recipient__c not updated on Contact when set on Campaign Member.');
     }
+    
 }

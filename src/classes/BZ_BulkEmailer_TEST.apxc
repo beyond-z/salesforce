@@ -97,19 +97,19 @@ private class BZ_BulkEmailer_TEST {
         insert anotherCampaign;
         
         List<CampaignMember> testCms = new List<CampaignMember>();
-        CampaignMember waitlistedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=waitlistedRecipient.Id, Application_Status__c='Waitlisted');
+        CampaignMember waitlistedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=waitlistedRecipient.Id, Candidate_Status__c='Waitlisted');
         testCms.add(waitlistedCm);
-        CampaignMember acceptedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=acceptedRecipient.Id, Application_Status__c='Accepted');
+        CampaignMember acceptedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=acceptedRecipient.Id, Candidate_Status__c='Accepted');
         testCms.add(acceptedCm);
-        CampaignMember rejectedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=rejectedRecipient.Id, Application_Status__c='Rejected');
+        CampaignMember rejectedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=rejectedRecipient.Id, Candidate_Status__c='Rejected');
         testCms.add(rejectedCm);
-        CampaignMember rejectedCm_decisionAlreadySent = new CampaignMember(CampaignId=campaign.Id, ContactId=rejectedRecipient_decisionAlreadySent.Id, Application_Status__c='Rejected', Application_Decision_Sent__c=TRUE);
+        CampaignMember rejectedCm_decisionAlreadySent = new CampaignMember(CampaignId=campaign.Id, ContactId=rejectedRecipient_decisionAlreadySent.Id, Candidate_Status__c='Rejected', Application_Decision_Sent__c=TRUE);
         testCms.add(rejectedCm_decisionAlreadySent);
         CampaignMember noStatusSetCm_expectNoEmailSent = new CampaignMember(CampaignId=campaign.Id, ContactId=recipientNoStatusSet.Id);
         testCms.add(noStatusSetCm_expectNoEmailSent);
-        CampaignMember interviewRequestedCm_expectNoEmailSent = new CampaignMember(CampaignId=campaign.Id, ContactId=interviewRequestedRecipient.Id, Application_Status__c='Interview Requested');
+        CampaignMember interviewRequestedCm_expectNoEmailSent = new CampaignMember(CampaignId=campaign.Id, ContactId=interviewRequestedRecipient.Id, Candidate_Status__c='Interview Requested');
         testCms.add(interviewRequestedCm_expectNoEmailSent);
-        CampaignMember rejectedCm_anotherCampaign = new CampaignMember(CampaignId=anotherCampaign.Id, ContactId=rejectedRecipient_anotherCampaign.Id, Application_Status__c='Rejected');
+        CampaignMember rejectedCm_anotherCampaign = new CampaignMember(CampaignId=anotherCampaign.Id, ContactId=rejectedRecipient_anotherCampaign.Id, Candidate_Status__c='Rejected');
         testCms.add(rejectedCm_anotherCampaign);
         insert testCms;
         
