@@ -17,9 +17,9 @@ public class BZ_BulkEmailer {
         
         List<Task> emailTasks = [SELECT Id, WhoId, WhatId, OwnerId, Status, EmailTemplate__c // WhoId = Name field
                                  FROM Task 
-                                 WHERE WhatId = :campaign.Id // Related To
-                                 AND OwnerId = :sender.Id // Assignedigned To
-                                 AND ( // Email Template To Send
+                                 WHERE WhatId = :campaign.Id    // Related To
+                                  AND OwnerId = :sender.Id    // Assigned To
+                                  AND (               // Email Template To Send
                                         EmailTemplate__c != null OR EmailTemplate__c != ''
                                         )
                                 ];
@@ -30,7 +30,7 @@ public class BZ_BulkEmailer {
         Integer emailsSent = 0;
         for(Task et : emailTasks)
         {
-        // send the email   template to each Name
+          // send the email template to each Name
             Contact recipient = [SELECT Id, Email FROM Contact WHERE Id = :et.WhoId];
             //System.Debug('BZ_BulkEmailer: recipient = ' + recipient);
             String[] recipients = new String[]{recipient.Email};
@@ -61,7 +61,7 @@ public class BZ_BulkEmailer {
             [SELECT CampaignId, ContactId, Contact.Email FROM CampaignMember 
              WHERE CampaignId = :campaign.Id AND
                    Application_Decision_Sent__c = FALSE AND
-                   Application_Status__c = 'Waitlisted'
+                   Candidate_Status__c = 'Waitlisted'
             ];
         System.debug('BZ_BulkEmailer.SendQueuedApplicationDecisions: waitlistedUsers.size() = '+waitlistedUsers.size());
         //System.Debug('BZ_BulkEmailer.SendQueuedApplicationDecisions: waitlistedUsers.get(0).Contact.Email = ' + waitlistedUsers.get(0).Contact.Email);
@@ -70,7 +70,7 @@ public class BZ_BulkEmailer {
             [SELECT CampaignId, ContactId, Contact.Email FROM CampaignMember 
              WHERE CampaignId = :campaign.Id AND
                    Application_Decision_Sent__c = FALSE AND
-                   Application_Status__c = 'Accepted'
+                   Candidate_Status__c = 'Accepted'
             ];
         System.debug('BZ_BulkEmailer.SendQueuedApplicationDecisions: acceptedUsers.size() = '+acceptedUsers.size());
         //System.Debug('BZ_BulkEmailer.SendQueuedApplicationDecisions: acceptedUsers.get(0).Contact.Email = ' + acceptedUsers.get(0).Contact.Email);
@@ -79,7 +79,7 @@ public class BZ_BulkEmailer {
             [SELECT CampaignId, ContactId, Contact.Email FROM CampaignMember 
              WHERE CampaignId = :campaign.Id AND
                    Application_Decision_Sent__c = FALSE AND
-                   Application_Status__c = 'Rejected'
+                   Candidate_Status__c = 'Rejected'
             ];
         System.debug('BZ_BulkEmailer.SendQueuedApplicationDecisions: rejectedUsers.size() = '+rejectedUsers.size());
         //System.Debug('BZ_BulkEmailer.SendQueuedApplicationDecisions: rejectedUsers.get(0).Contact.Email = ' + rejectedUsers.get(0).Contact.Email);

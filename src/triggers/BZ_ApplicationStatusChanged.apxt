@@ -3,12 +3,12 @@ trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
     
     for (CampaignMember cm : Trigger.new)
     {
-        if (Trigger.oldMap.get(cm.Id).Application_Status__c != cm.Application_Status__c)
+        if (Trigger.oldMap.get(cm.Id).Candidate_Status__c != cm.Candidate_Status__c)
         {
             List<Task> tasksToAdd = new List<Task>();
             List<Contact> contactsToUpdate = new List<Contact>();
 
-            if(cm.Application_Status__c == 'Submitted')
+            if(cm.Candidate_Status__c == 'Submitted')
             { 
                 Contact contact = [SELECT Id, Phone, Accepts_Text__c, 
                                   Grad_University__c, Graduate_Year__c, Grad_Degree__c, Undergrad_University__c,
@@ -49,8 +49,8 @@ trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
             // If the app status is changed to Interview Requested, 
             // queue up a task with the Email Template To Send set to notify 
             // the user that we are requesting an interview with them.
-            //System.debug('BZ_ApplicationStatusChanged: cm.Application_Status__c=' + cm.Application_Status__c);
-            else if (cm.Application_Status__c == 'Interview Requested')
+            //System.debug('BZ_ApplicationStatusChanged: cm.Candidate_Status__c=' + cm.Candidate_Status__c);
+            else if (cm.Candidate_Status__c == 'Interview Requested')
             {
                 Task t = BZ_TaskFactory.createEmailTask(cm, 'Send Interview Request Email', 'App_Interview_Requested_Email_Template__c');
                 if (t!=null)
@@ -59,7 +59,7 @@ trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
                     System.debug('BZ_ApplicationStatusChanged: Adding new Task: '+ t);
                 }
             }
-            else if(cm.Application_Status__c == 'Accepted')
+            else if(cm.Candidate_Status__c == 'Accepted')
             {   
                 Task t = BZ_TaskFactory.createTask(cm, 'Map cohort for {0}');
                 if (t!=null)
