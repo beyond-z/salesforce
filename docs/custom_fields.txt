@@ -1,111 +1,129 @@
-Lead:
-	CAMPAIGN
-		Application_Type   # coach or student. Which application form to show
-		Program_Title # human-readable
-		Program_Site  # human-readable
-		Request_Availability # checkbox, if set, MeetingTimes must be present
-		Meeting_Times # plain text, multi-line, one item per line
-    Request_Student_Id__c 
+  BZ SETTINGS
+    Site base URL
+    Magic token
 
-	LEAD
-	Administrative Information
-		BZ_User_Id
-    Comments_Or_Questions 
-    Interested_In
-    Signup_Date
-		Came_From_to_Visit_Site
-		User_Type
-		University_Name
-		Anticipated_Graduation
-		Started_College
-		Interested_in_opening_BZ
-		BZ_Region
+  ACTIVITY
+    Email Template To Send
+
+  CAMPAIGN
+		Intro Email Template
+		Target Course ID In LMS
+		App Open Email Template
+		App Waitlisted Email Template
+		App Accepted Email Template
+		App Rejected Email Template
+		App Interview Requested Email Template
+		Application Type # coach or student. Which application form to show 
+		Program Title
+		Program Site
+		Request Availability # checkbox, if set, MeetingTimes must be present
+		Available Meeting Times # plain text, multi-line, one item per line 
+		Request Student Id
+
+  CAMPAIGN MEMBER
+		Apply Button Enabled
+		Candidate Status
+		Application Decision Sent
+		Middle Name
+		Undergrad University
+		Undergraduate Year
+		Major
+		Self-reported GPA
+		Grad University
+		Graduate Year
+		Digital Footprint
+		Resume
+		African American
+		Asian American
+		Latino
+		Native Alaskan
+		Native American
+		Native Hawaiian
+		Pacific Islander
+		White
+		Multi Ethnic
+		Identify As Person Of Color
+		Identify As Low Income
+		Identify As First Gen
+		Hometown
+		Section Name In LMS
+		Started College
+		Anticipated Graduation
+		Eligible
+		GPA Circumstances
+		Other Commitments
+		Accepts Text
+		Grad Degree
+		Summer
+		Post Grad
+		Why BZ
+		Community Connection
+		Passions / Expertise
+		Meaningful Activity
+		Relevant Experience
+		Other Race
+		Pell Grant Recipient
+		Digital Footprint 2
+		Birthdate
+		Student Id
+		Application Status
+		High School GPA
+		SAT Score
+		ACT Score
+		Conquered Challenge
+		Languages
+		Lead Sources
+		Additional Comments
 
 	CONTACT
-		Accepts_Text
-		Anticipated_Graduation
-		BZ_Region
-		BZ_User_Id
-		Came_From_to_Visit_Site
-    Company
-		Industry
-		Interested_In
-		Interested_in_opening_BZ
-		Keep Informed
-		Middle_Name
-		Signup_Date
+		Middle Name Contact
+		Accepts Text  Contact
+		Undergrad University  Contact
+		Grad University Contact
+		Graduate Year Contact
+		Grad Degree Contact
+		Anticipated Graduation  Contact
+		BZ Region Contact
+		BZ User Id  Contact
+		Came From to Visit Site Contact
+		Interested in opening BZ  Contact
+		Keep Informed Contact
+		Signup Date Contact
+		Started College Contact
+		User Type Contact
+		Interested In Contact
+		Industry  Contact
+		African American  Contact
+		Asian American  Contact
+		Latino  Contact
+		Native Alaskan  Contact
+		Native American Contact
+		Native Hawaiian Contact
+		Pacific Islander  Contact
+		White Contact
+		Multi Ethnic  Contact
+		Other Race  Contact
+		Identify As Person Of Color Contact
+		Identify As Low Income  Contact
+		Identify As First Gen  Contact
+		Pell Grant Recipient  Contact
+		Digital Footprint Contact
+		Digital Footprint 2 Contact
+		Company Contact
+		Hometown  Contact
+		Participant Information Contact
+		Volunteer Information Contact
+		
+	LEAD
+		BZ User Id
+		Signup Date
+		Came From to Visit Site
+		User Type
+		University Name
+		Anticipated Graduation
 		Started College
-		Digital_Footprint
-		Digital_Footprint_2
-    		High_School_GPA
-    		SAT_Score
-    		ACT_Score
-    		Conquered_Challenge
-    		Languages
-    		Lead_Sources
-    		Additional_Comments
-		Undergrad_University 
-		Grad_University
-		Graduate_Year
-		Grad_Degree
-		African_American
-		Asian_American
-		Latino
-		Native_Alaskan
-		Native_American
-		Native_Hawaiian
-		Pacific_Islander
-		White
-		Multi_Ethnic
-		Other_Race
-		Identify_As_Person_Of_Color
-		Identify_As_Low_Income
-		Identify_As_First_Gen
-		Pell_Grant_Recipient
-			
-	CAMPAIGN MEMBER
-		Grad_Degree
-		Summer
-		Post_Grad
-		Why_BZ
-		Community_Connection
-		Passions_Expertise
-		Meaningful_Activity
-		Relevant_Experience
-		Eligible
-		GPA_Circumstances
-    Student_Id
-		Other_Commitments
-		Undergrad_University
-		Undergraduate_Year
-		Major
-		GPA
-		Grad_University
-		Graduate_Year
-		Digital_Footprint
-		Digital_Footprint_2
-		Resume
-		African_American
-		Asian_American
-		Latino
-		Native_Alaskan
-		Native_American
-		Native_Hawaiian
-		Pacific_Islander
-		White
-		Multi_Ethnic
-		Other_Race
-		Birthdate
-		Identify_As_Person_Of_Color
-		Identify_As_Low_Income
-		Identify_As_First_Gen
-		Pell_Grant_Recipient
-		Hometown
-		Anticipated_Graduation
-		Started_College
-
-REMOVE:
-	Contact:
-		Profession_Title
-	Contact Manager:
-		Accepts_Text
+		Interested in opening BZ
+		BZ Region
+		Keep Informed
+		Interested In
+		Comments Or Questions
