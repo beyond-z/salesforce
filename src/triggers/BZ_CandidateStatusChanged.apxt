@@ -1,0 +1,50 @@
+trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
+    System.Debug('BZ_CandidateStatusChanged: begin trigger');
+    
+    for (CampaignMember cm : Trigger.new)
+    {
+        if (Trigger.oldMap.get(cm.Id).Candidate_Status__c != cm.Candidate_Status__c)
+        {
+            List<Task> tasksToAdd = new List<Task>();
+            List<Contact> contactsToUpdate = new List<Contact>();
+            
+            // If the candidate status is changed to Interview Requested, 
+            // queue up a task with the Email Template To Send set to notify 
+            // the user that we are requesting an interview with them.
+            //System.debug('BZ_CandidateStatusChanged: cm.Candidate_Status__c=' + cm.Candidate_Status__c);
+            if (cm.Candidate_Status__c == 'Interview Requested')
+            {
+                Task t = BZ_TaskFactory.createEmailTask(cm, 'Send Interview Request Email', 'App_Interview_Requested_Email_Template__c');
+                if (t!=null)
+                {
+                    tasksToAdd.add(t);
+                    System.debug('BZ_CandidateStatusChanged: Adding new Task: '+ t);
+                }
+            }
+            else if(cm.Candidate_Status__c == 'Accepted')
+            {   
+                Task t = BZ_TaskFactory.createTask(cm, 'Map cohort for {0}');
+                if (t!=null)
+                {
+                    tasksToAdd.add(t);
+                    System.debug('BZ_CandidateStatusChanged: Adding new Task: '+ t);
+                }
+                
+                Campaign campaign = [SELECT Id, Type FROM Campaign WHERE Id=:cm.CampaignId];
+                //System.debug('BZ_CampaignAssigned: campaign='+campaign);
+                Contact contact = [SELECT Id, Volunteer_Information__c, Participant_Information__c
+                                   FROM Contact WHERE Id=:cm.ContactId];
+                //System.debug('BZ_CampaignAssigned: contact='+contact);
+                if (campaign.Type == 'Leadership Coaches') {
+                    contact.Volunteer_Information__c = 'Current LC';
+                    contactsToUpdate.add(contact);
+                } else if (campaign.Type == 'Program Participants'){
+                    contact.Participant_Information__c = 'Participant';
+                    contactsToUpdate.add(contact);
+                }
+            }
+            insert tasksToAdd;
+            update contactsToUpdate;
+        }
+    }
+}
