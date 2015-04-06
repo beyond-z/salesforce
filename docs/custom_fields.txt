@@ -34,6 +34,13 @@ Lead:
 		Started College
 		Digital_Footprint
 		Digital_Footprint_2
+    		High_School_GPA
+    		SAT_Score
+    		ACT_Score
+    		Conquered_Challenge
+    		Languages
+    		Lead_Sources
+    		Additional_Comments
 		Undergrad_University 
 		Grad_University
 		Graduate_Year
