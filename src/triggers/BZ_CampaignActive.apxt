@@ -1,22 +1,40 @@
-// When a Campaign's Active field is changed, all the members in the campaign get their
-// Apply Now Enabled checkbox updated to match.  This way we can open or close all applications
-// for a Campaign using the Active field.  Note that the Apply Now Enabled checkbox controls
-// whether the Apply Now button is visible on the website.
+/**
+ * When a Campaign's Active field is changed, all the members in the campaign get their
+ * Apply Now Enabled checkbox updated to match.  This way we can open or close all applications
+ * for a Campaign using the Active field.  Note that the Apply Now Enabled checkbox controls
+ * whether the Apply Now button is visible on the website.
+ */
 trigger BZ_CampaignActive on Campaign (before update) {
-    //System.Debug('BZ_CampaignActive: begin trigger');
+    System.Debug('BZ_CampaignActive: begin trigger');
     for (Campaign campaign : Trigger.new)
     {
         // Only run this if the Active field changes.
         if (Trigger.oldMap.get(campaign.Id).IsActive != campaign.IsActive)
         {
             System.Debug('BZ_CampaignActive: trigger processing campaign: ' + campaign);
-            List<CampaignMember> cms = [SELECT Id FROM CampaignMember WHERE CampaignId=:campaign.Id];
+            List<CampaignMember> cms = [SELECT Id, ContactId, CampaignId 
+                                        FROM CampaignMember WHERE CampaignId=:campaign.Id];
+            List<Task> tasksToAdd = new List<Task>();
             for(CampaignMember cm : cms)
             {
-                cm.Apply_Button_Enabled__c = campaign.IsActive;
+                System.debug('BZ_CampaignActive: processing CampaignMember: '+ cm);
+                cm.Apply_Button_Enabled__c = campaign.IsActive; 
+                
+                // If the campaign is becoming active, queue up tasks to send emails to 
+                // existing member letting them know the app is open.
+                if (campaign.IsActive)
+                {
+                    Task t = BZ_TaskFactory.createEmailTask(cm, 'Send App Open Email', 'App_Open_Email_Template__c');
+                    if (t!=null)
+                    {
+                        tasksToAdd.add(t);  
+                        System.debug('BZ_CampaignActive: Adding new Task: '+ t);
+                    }
+                }
             }
             update cms;
-            System.Debug('BZ_CampaignActive: updated '+cms.size()+' CampaignMember.Apply_Button_Enabled__c field(s)');
+            insert tasksToAdd;
+            //System.Debug('BZ_CampaignActive: updated '+cms.size()+' CampaignMember.Apply_Button_Enabled__c field(s)');
         }
     }
 }
