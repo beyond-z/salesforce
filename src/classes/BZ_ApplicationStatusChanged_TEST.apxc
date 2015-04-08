@@ -78,6 +78,13 @@ private class BZ_ApplicationStatusChanged_TEST {
                                   Identify_As_First_Gen__c, Identify_As_Low_Income__c, 
                                   Identify_As_Person_Of_Color__c, Pell_Grant_Recipient__c
                                   FROM Contact WHERE Id=:cm.ContactId];
+        
+        List<Task> resultingTasks = [SELECT Id, WhoId, WhatId FROM Task
+                                    WHERE WhoId=:updatedContact.Id AND 
+                                          WhatId=:cm.CampaignId AND
+                                          Subject LIKE '%Review submitted application for%'];
+        System.assert(resultingTasks.size()==1, 'Expected Task to be created to Review the application.');
+        
         //System.assert(updatedContact.Phone == phone, 'Phone not updated on Contact when set on Campaign Member.');
         System.assert(updatedContact.Accepts_Text__c == acceptsText, 'Accepts_Text__c not updated on Contact when set on Campaign Member.');
         System.assert(updatedContact.Grad_University__c == gradU, 'Grad_University__c not updated on Contact when set on Campaign Member.');

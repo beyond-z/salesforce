@@ -19,6 +19,14 @@ trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
                                   Identify_As_First_Gen__c, Identify_As_Low_Income__c, 
                                   Identify_As_Person_Of_Color__c, Pell_Grant_Recipient__c
                                   FROM Contact WHERE Id=:cm.ContactId];
+                
+                Task t = BZ_TaskFactory.createTask(cm, 'Review submitted application for {0}');
+                if (t!=null)
+                {
+                    tasksToAdd.add(t);
+                    System.debug('BZ_ApplicationStatusChanged: Adding new Task: '+ t);
+                }
+                
                 //contact.Phone = cm.Contact.Phone;
                 contact.Accepts_Text__c = cm.Accepts_Text__c;
                 contact.Grad_University__c = cm.Grad_University__c;
