@@ -10,7 +10,7 @@ trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
 
             if(cm.Application_Status__c == 'Submitted')
             {
-                Contact contact = [SELECT Id, Phone, Accepts_Text__c, 
+                Contact contact = [SELECT Id, Name, Phone, Accepts_Text__c, 
                                   Grad_University__c, Graduate_Year__c, Grad_Degree__c, Undergrad_University__c,
                                   Middle_Name__c, Hometown__c, Digital_Footprint_2__c, Digital_Footprint__c, 
                                   African_American__c, Asian_American__c, Latino__c, 
@@ -21,6 +21,7 @@ trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
                                   FROM Contact WHERE Id=:cm.ContactId];
                 
                 Task t = BZ_TaskFactory.createTask(cm, 'Review submitted application for {0}');
+                t.Description = 'Review the application for ' + contact.Name + ' by opening the Campaign, opening their CampaignMember page, and changing their Candidate Status appropriately.';
                 if (t!=null)
                 {
                     tasksToAdd.add(t);
