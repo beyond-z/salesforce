@@ -19,6 +19,8 @@
 		Request Availability # checkbox, if set, MeetingTimes must be present
 		Available Meeting Times # plain text, multi-line, one item per line 
 		Request Student Id
+    Interview Scheduler
+    Sourcing Info Options
 
   CAMPAIGN MEMBER
 		Apply Button Enabled
@@ -74,6 +76,7 @@
 		Languages
 		Lead Sources
 		Additional Comments
+    Student Registration Code
 
 	CONTACT
 		Middle Name Contact
