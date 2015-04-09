@@ -45,8 +45,8 @@ private class BZ_BulkEmailer_TEST {
             Test.startTest();
             // Note, this Util method is to avoid a MIXED_DML_OPERATION error described here: 
             // http://www.tgerm.com/2012/04/mixeddmloperation-dml-operation-on.html        
-            BZ_Util.insertEmailTemplate('Test Email Template To Send1', et1DeveloperName, 'text', sender.Id);
-            BZ_Util.insertEmailTemplate('Test Email Template To Send2', et2DeveloperName, 'text', sender.Id);
+            BZ_SendTemplatedEmail.insertEmailTemplate('Test Email Template To Send1', et1DeveloperName, 'text', sender.Id);
+            BZ_SendTemplatedEmail.insertEmailTemplate('Test Email Template To Send2', et2DeveloperName, 'text', sender.Id);
             Test.stopTest();
         }
         
@@ -125,9 +125,9 @@ private class BZ_BulkEmailer_TEST {
             Test.startTest();
             // Note, this Util method is to avoid a MIXED_DML_OPERATION error described here: 
             // http://www.tgerm.com/2012/04/mixeddmloperation-dml-operation-on.html        
-            BZ_Util.insertEmailTemplate('Test Waitlisted Email Template', waitlistedEmailDeveloperName, 'text', sender.Id);
-            BZ_Util.insertEmailTemplate('Test Accepted Email Template', acceptedEmailDeveloperName, 'text', sender.Id);
-            BZ_Util.insertEmailTemplate('Test Rejected Email Template', rejectedEmailDeveloperName, 'text', sender.Id);
+            BZ_SendTemplatedEmail.insertEmailTemplate('Test Waitlisted Email Template', waitlistedEmailDeveloperName, 'text', sender.Id);
+            BZ_SendTemplatedEmail.insertEmailTemplate('Test Accepted Email Template', acceptedEmailDeveloperName, 'text', sender.Id);
+            BZ_SendTemplatedEmail.insertEmailTemplate('Test Rejected Email Template', rejectedEmailDeveloperName, 'text', sender.Id);
             Test.stopTest();
         }
         
