@@ -25,6 +25,7 @@
   CAMPAIGN MEMBER
   		Company
 		Industry
+		Cannot Attend
 		Apply Button Enabled
 		Candidate Status
 		Application Decision Sent
