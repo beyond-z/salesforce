@@ -6,7 +6,9 @@ private class BZ_CampaignActive_TEST {
         Contact contact2 = new Contact(FirstName='Test', LastName='User2');
         insert contact2;
         
+        String appOpenEmailTemplate = 'Sample App Open Email Template';
         Campaign campaign = BZ_CampaignFactory_TEST.create();
+        campaign.App_Open_Email_Template__c = appOpenEmailTemplate;
         insert campaign;
         
         CampaignMember cm1 = new CampaignMember();
@@ -24,10 +26,17 @@ private class BZ_CampaignActive_TEST {
         // Fires the trigger we're testing.
         campaign.IsActive = TRUE;
         update campaign;
-
-            CampaignMember cm1_updated = [SELECT Id, Apply_Button_Enabled__c FROM CampaignMember WHERE Id = :cm1.Id];
+    
+        CampaignMember cm1_updated = [SELECT Id, ContactId, Apply_Button_Enabled__c FROM CampaignMember WHERE Id = :cm1.Id];
         System.assertEquals(cm1_updated.Apply_Button_Enabled__c, TRUE);
-        CampaignMember cm2_updated = [SELECT Id, Apply_Button_Enabled__c FROM CampaignMember WHERE Id = :cm2.Id];
-System.assertEquals(cm2_updated.Apply_Button_Enabled__c, TRUE);    
+        CampaignMember cm2_updated = [SELECT Id, ContactId, Apply_Button_Enabled__c FROM CampaignMember WHERE Id = :cm2.Id];
+    System.assertEquals(cm2_updated.Apply_Button_Enabled__c, TRUE);
+        
+        List<Task> resultingTasks = [SELECT Id, WhoId, WhatId, EmailTemplate__c FROM Task
+                                     WHERE (WhoId=:cm1_updated.ContactId OR WhoId=:cm2_updated.ContactId) AND
+                                           WhatId=:campaign.Id AND
+                                           EmailTemplate__c = :appOpenEmailTemplate AND
+                                           Subject LIKE '%Send App Open Email%'];
+        System.assert(resultingTasks.size()==2, resultingTasks.size()+' Tasks found.  Expected 2 to be created to Send App Open Email to existing Campaign Members');
     }
 }

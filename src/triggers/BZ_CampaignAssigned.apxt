@@ -12,26 +12,42 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
     {
         Campaign campaign = [SELECT Id, Type FROM Campaign WHERE Id=:cm.CampaignId];
         //System.debug('BZ_CampaignAssigned: campaign='+campaign);
-        Contact contact = [SELECT Id, Volunteer_Information__c, Participant_Information__c
+        Contact contact = [SELECT Id, Volunteer_Information__c, Participant_Information__c, User_Type__c
                            FROM Contact WHERE Id=:cm.ContactId];
         //System.debug('BZ_CampaignAssigned: contact='+contact);
-        boolean isProgramRelatedCampaign = false;
+        boolean sendWelcomeEMail = false;
         if (campaign.Type == 'Leadership Coaches') {
+            // Note: this is also set in a Workflow when the Lead is converted, 
+            // but they may signup as one type but then we determine that they are really 
+            // a different type so we still want to run this.
             contact.Volunteer_Information__c = 'LC Pipeline';
-            isProgramRelatedCampaign = true;
+            sendWelcomeEMail = true;
         } else if (campaign.Type == 'Program Participants'){
+            // Ditto on above comment
             contact.Participant_Information__c = 'Participant Pipeline';
-            isProgramRelatedCampaign = true;
+            sendWelcomeEMail = true;
+        } else if (campaign.Type == 'Partners')
+        {
+            // Website signup as employer partner or university partner
+            if ( contact.User_Type__c == 'Employer' || contact.User_Type__c == 'University')
+            {
+                sendWelcomeEMail = true;
+            }
+        }
+        else if (campaign.Type == 'Other' && contact.User_Type__c == 'Other')
+        {
+            // Website signup as "Other"
+            sendWelcomeEMail = true;
         }
         
-        if (isProgramRelatedCampaign){   
+        if (sendWelcomeEMail){   
             contactsToUpdate.add(contact);
                         
             Task t = BZ_TaskFactory.createEmailTask(cm, 'Send Intro Email', 'Intro_Email_Template__c');
             if (t!=null)
             {
-                tasksToAdd.add(t); 
-                 System.debug('BZ_CampaignAssigned: Adding new Task: '+ t);
+                tasksToAdd.add(t);  
+                System.debug('BZ_CampaignAssigned: Adding new Task: '+ t);
             }
         }
     }

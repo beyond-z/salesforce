@@ -40,7 +40,7 @@ public class BZ_TaskFactory {
         {
             Task t = new Task(
                 OwnerId = owner.Id,           // Assigned To
-                Subject = taskSubjectPrefix + ' To ' + contact.Name,
+                Subject = 'Email: ' + taskSubjectPrefix + ' To ' + contact.Name,
                 IsReminderSet = true,
                 ReminderDateTime = System.now(),
                 ActivityDate = Date.today(),      // Due Date

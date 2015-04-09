@@ -1,0 +1,37 @@
+#####
+Rules:
+#####
+CONTACT
+		BZ_TranslateUndergradUserType
+		BZ_TranslateVolunteerUserType
+		BZ_TranslateEmployerUserType
+		BZ_TranslateUniversityUserType
+
+CAMPAIGN
+		BZ_CampaignActiveCheckEmailTemplate
+
+CAMPAIGN MEMBER
+		BZ_CampaignAssignedEnableApplyNow
+		BZ_CopyContactFields 
+
+#####
+Field Updates:
+#####
+CAMPAIGN MEMBER
+		BZ_CopyAnticipatedGradDate
+    BZ_CopyStartedCollege
+    BZ_Enable Apply Button Field
+    BZ_SetApplyButtonEnabled
+
+CONTACT
+    BZ_TranslateEmployerNotes
+    BZ_TranslateEmployerUserType
+    BZ_TranslateSchoolUserType
+    BZ_TranslateUndergrad
+    BZ_TranslateVolunteerUserType
+
+#####
+Tasks
+#####
+CAMPAIGN
+    Check the Intro Email Template

@@ -9,11 +9,13 @@
 
 <apex:page standardController="Campaign" extensions="BZ_CampaignEmailTemplates">
     <apex:form >
-        <apex:commandButton value="Save" action="{!save}"/>
-        <apex:pageBlock >
+        <apex:pageBlock mode="edit">
             <style type="text/css">
           .noWrap { white-space: nowrap; }
       </style>
+            <apex:pageBlockButtons>
+                <apex:commandButton value="Save" action="{!save}"/>
+            </apex:pageBlockButtons>
             <apex:pageBlockSection columns="1">
                 <apex:pageblockSectionItem helpText="Email template sent to new users">
                     <apex:outputLabel value="Intro Email Template" styleClass="noWrap"/>
@@ -24,7 +26,7 @@
                         </apex:selectList>
                     </apex:outputPanel>
                 </apex:pageblockSectionItem>   
-                <apex:pageblockSectionItem helpText="Email template to notify people that applications are open and they can Apply">
+                <apex:pageblockSectionItem helpText="Email template to notify people that applications are open and they can Apply.  This is for people that signed up before it was open. New signups after the app is open should get this info in the Intro email.">
                     <apex:outputLabel value="App Open Email Template" styleClass="noWrap"/>
                     <apex:outputPanel layout="block">
             <apex:outputPanel layout="block"/>
