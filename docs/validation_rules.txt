@@ -10,3 +10,4 @@ CAMPAIGN
 
 CAMPAIGN MEMBER
   BZ_RequireStudentRegistrationCode
+  BZ_RequireInterviewScheduler
