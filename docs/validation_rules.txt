@@ -1,9 +1,12 @@
 
 CAMPAIGN
-    BZ_RequiredApplicationType
-    BZ_RequiredMeetingTimes
-    BZ_RequiredProgramTitle
-    BZ_RequiredProgramSite
-    BZ_RequiredTargetCourse
-    BZ_RequiredType
-    BZ_SourcingInfoOptions
+  BZ_RequiredApplicationType
+	BZ_RequiredMeetingTimes
+	BZ_RequiredProgramTitle
+	BZ_RequiredProgramSite
+	BZ_RequiredTargetCourse
+	BZ_RequiredType
+	BZ_SourcingInfoOptions
+
+CAMPAIGN MEMBER
+  BZ_RequireStudentRegistrationCode
