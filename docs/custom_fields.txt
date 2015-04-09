@@ -23,6 +23,8 @@
     Sourcing Info Options
 
   CAMPAIGN MEMBER
+  		Company
+		Industry
 		Apply Button Enabled
 		Candidate Status
 		Application Decision Sent
