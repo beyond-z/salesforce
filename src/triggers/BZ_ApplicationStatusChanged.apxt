@@ -11,6 +11,7 @@ trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
             if(cm.Application_Status__c == 'Submitted')
             {
                 Contact contact = [SELECT Id, Name, Phone, Accepts_Text__c, 
+                                  Industry__c, Company__c, Sourcing_Info__c,
                                   Grad_University__c, Graduate_Year__c, Grad_Degree__c, Undergrad_University__c,
                                   Middle_Name__c, Hometown__c, Digital_Footprint_2__c, Digital_Footprint__c, 
                                   African_American__c, Asian_American__c, Latino__c, 
@@ -28,8 +29,10 @@ trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
                     System.debug('BZ_ApplicationStatusChanged: Adding new Task: '+ t);
                 }
                 
-                //contact.Phone = cm.Contact.Phone;
                 contact.Accepts_Text__c = cm.Accepts_Text__c;
+                contact.Industry__c = cm.Industry__c;
+                contact.Company__c = cm.Company__c;
+                contact.Sourcing_Info__c = cm.Sourcing_Info__c;
                 contact.Grad_University__c = cm.Grad_University__c;
                 contact.Graduate_Year__c = cm.Graduate_Year__c;
                 contact.Grad_Degree__c = cm.Grad_Degree__c;
