@@ -39,7 +39,7 @@ Lead:
     		ACT_Score
     		Conquered_Challenge
     		Languages
-    		Lead_Sources
+    		Sourcing_Info
     		Additional_Comments
 		Undergrad_University 
 		Grad_University
@@ -61,6 +61,8 @@ Lead:
 		Pell_Grant_Recipient
 			
 	CAMPAIGN MEMBER
+		Company
+		Industry
 		Grad_Degree
 		Summer
 		Post_Grad
