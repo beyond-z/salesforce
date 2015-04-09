@@ -16,10 +16,14 @@ private class BZ_ApplicationStatusChanged_TEST {
        
         insert cm;
         
-//        String phone = '5551235555';
-//        cm.Contact.Phone = phone;
         boolean acceptsText = true;
         cm.Accepts_Text__c = acceptsText;
+        String industry = 'Woodworker';
+        cm.Industry__c = industry;
+        String company = 'Acme Inc.';
+        cm.Company__c = company;
+        String sourcingInfo = 'Colleague; Other: my friend bart';
+        cm.Sourcing_Info__c = sourcingInfo;
         String gradU = 'SmartTownUsa';
         cm.Grad_University__c = gradU;
         String gradY = '2051';
@@ -70,6 +74,7 @@ private class BZ_ApplicationStatusChanged_TEST {
         update cm;
     
         Contact updatedContact = [SELECT Id, Phone, Accepts_Text__c, 
+                                  Industry__c, Company__c, Sourcing_Info__c,
                                   Grad_University__c, Graduate_Year__c, Grad_Degree__c, Undergrad_University__c,
                                   Middle_Name__c, Hometown__c, Digital_Footprint__c, Digital_Footprint_2__c, 
                                   African_American__c, Asian_American__c, Latino__c, 
@@ -85,8 +90,10 @@ private class BZ_ApplicationStatusChanged_TEST {
                                           Subject LIKE '%Review submitted application for%'];
         System.assert(resultingTasks.size()==1, 'Expected Task to be created to Review the application.');
         
-        //System.assert(updatedContact.Phone == phone, 'Phone not updated on Contact when set on Campaign Member.');
         System.assert(updatedContact.Accepts_Text__c == acceptsText, 'Accepts_Text__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Industry__c == industry, 'Industry__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Company__c == company, 'Company__c not updated on Contact when set on Campaign Member.');
+        System.assert(updatedContact.Sourcing_Info__c == sourcingInfo, 'Sourcing_Info__c not updated on Contact when set on Campaign Member.');
         System.assert(updatedContact.Grad_University__c == gradU, 'Grad_University__c not updated on Contact when set on Campaign Member.');
         System.assert(updatedContact.Graduate_Year__c == gradY, 'Graduate_Year__c not updated on Contact when set on Campaign Member.');
         System.assert(updatedContact.Grad_Degree__c == gradD, 'Grad_Degree__c not updated on Contact when set on Campaign Member.');

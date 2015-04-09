@@ -18,7 +18,10 @@ public class BZ_CampaignFactory_TEST {
                             Application_Type__c='student', 
                             Program_Title__c='Blah', 
                             Program_Site__c='Meh', 
-                            Target_Course_ID_In_LMS__c='2');
+                            Target_Course_ID_In_LMS__c='2',
+                            Sourcing_Info_Options__c='option1:\noption2:',
+                            Interview_Scheduler__c='https://youcanbook.me'
+                           );
     }
 
 }

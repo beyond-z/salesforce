@@ -81,43 +81,43 @@
     Student Registration Code
 
 	CONTACT
-		Middle Name Contact
-		Accepts Text  Contact
-		Undergrad University  Contact
-		Grad University Contact
-		Graduate Year Contact
-		Grad Degree Contact
-		Anticipated Graduation  Contact
-		BZ Region Contact
-		BZ User Id  Contact
-		Came From to Visit Site Contact
-		Interested in opening BZ  Contact
-		Keep Informed Contact
-		Signup Date Contact
-		Started College Contact
-		User Type Contact
-		Interested In Contact
-		Industry  Contact
-		African American  Contact
-		Asian American  Contact
-		Latino  Contact
-		Native Alaskan  Contact
-		Native American Contact
-		Native Hawaiian Contact
-		Pacific Islander  Contact
-		White Contact
-		Multi Ethnic  Contact
-		Other Race  Contact
-		Identify As Person Of Color Contact
-		Identify As Low Income  Contact
-		Identify As First Gen  Contact
-		Pell Grant Recipient  Contact
-		Digital Footprint Contact
-		Digital Footprint 2 Contact
-		Company Contact
-		Hometown  Contact
-		Participant Information Contact
-		Volunteer Information Contact
+		Middle Name
+		Accepts Text 
+		Undergrad University 
+		Grad University
+		Graduate Year
+		Grad Degree
+		Anticipated Graduation 
+		BZ Region
+		BZ User Id 
+		Came From to Visit Site
+		Interested in opening BZ 
+		Keep Informed
+		Signup Date
+		Started College
+		User Type
+		Interested In
+		Industry 
+		African American 
+		Asian American 
+		Latino 
+		Native Alaskan 
+		Native American
+		Native Hawaiian
+		Pacific Islander 
+		White
+		Multi Ethnic 
+		Other Race 
+		Identify As Person Of Color
+		Identify As Low Income 
+		Identify As First Gen 
+		Pell Grant Recipient 
+		Digital Footprint
+		Digital Footprint 2
+		Company
+		Hometown 
+		Participant Information
+		Volunteer Information
 		
 	LEAD
 		BZ User Id
