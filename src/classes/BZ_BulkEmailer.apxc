@@ -2,19 +2,15 @@
  * Class used to send emails in bulk.
  */
 public class BZ_BulkEmailer {
-    
+
     /**
-     * Look for Tasks with the “Email Template To Send” field set, that are 
+     * Return list of Tasks with the “Email Template To Send” field set, that are 
      * Related To the specified Campaign and Assigned To the specified User 
-     * (e.g. current button pusher).  Send the email template to them and
-     * mark the Tasks as Complete when the emails are sent.
-     * 
-     * Returns the number of emails sent.
+     * (e.g. current button pusher).   
      */
-    public static Integer SendMyQueuedEmails(Campaign campaign, User sender)
+    public static List<Task> getQueuedEmails(Campaign campaign, User sender)
     {
-        System.debug('BZ_BulkEmailer.SendMyQueuedEmails('+campaign+','+sender+'): begin');
-        
+        System.debug('BZ_BulkEmailer.getQueuedEmails('+campaign+','+sender+'): begin');
         List<Task> emailTasks = [SELECT Id, WhoId, WhatId, OwnerId, Status, EmailTemplate__c // WhoId = Name field
                                  FROM Task 
                                  WHERE WhatId = :campaign.Id    // Related To
@@ -24,11 +20,24 @@ public class BZ_BulkEmailer {
                                         )
                                 ];
 
-        System.Debug('BZ_BulkEmailer.SendMyQueuedEmails: emailsTasks.size() = '+emailTasks.size());
-//        System.Debug('BZ_BulkEmailer.SendMyQueuedEmails: emailTasks.get(0) = ' + emailTasks.get(0));
-        
+//        System.Debug('BZ_BulkEmailer.getQueuedEmails: emailsTasks.size() = '+emailTasks.size());
+//        System.Debug('BZ_BulkEmailer.getQueuedEmails: emailTasks.get(0) = ' + emailTasks.get(0));
+
+        return emailTasks;
+    }
+
+    /**
+     * Send emails for each of the specified Tasks according to the “Email Template To Send” field.
+     * Mark the Tasks as Complete when the emails are sent.
+     * 
+     * Returns the number of emails sent.
+     */
+    public static Integer sendMyQueuedEmails(List<Task> emailTasksToSend)
+    {
+        System.debug('BZ_BulkEmailer.sendMyQueuedEmails(emailTasksToSend): begin');
+
         Integer emailsSent = 0;
-        for(Task et : emailTasks)
+        for(Task et : emailTasksToSend)
         {
           // send the email template to each Name
             Contact recipient = [SELECT Id, Email FROM Contact WHERE Id = :et.WhoId];
@@ -41,7 +50,7 @@ public class BZ_BulkEmailer {
         // We delete instead of updating to Completed because that causes two 
         // "Activity History" events, which is confusing.  We just want to leave 
         // the history of the actual email sent, not that fact that it needed to be sent.
-        delete emailTasks;
+        delete emailTasksToSend;
         return emailsSent;
     }
     
@@ -120,3 +129,4 @@ public class BZ_BulkEmailer {
         return emailsSent;
     }
 }
+
