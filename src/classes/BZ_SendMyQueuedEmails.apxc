@@ -8,25 +8,48 @@ public class BZ_SendMyQueuedEmails {
     private Campaign m_campaign;
     private String m_resultMessage;
     private boolean m_hasRun;
-    
+    private List<Task> m_emailsTasksToSend;
+    private String m_emailsToSendDisplayList;
+
     public BZ_SendMyQueuedEmails(ApexPages.StandardController controller){
-      m_campaign = (Campaign)controller.getRecord(); 
+        m_campaign = (Campaign)controller.getRecord(); 
         m_hasRun = false;
         m_resultMessage = '';
+
+        Id senderId = UserInfo.getUserId();
+        User sender = [SELECT Id from User Where Id = :senderId];
+        m_emailsTasksToSend = BZ_BulkEmailer.getQueuedEmails(m_campaign, sender);
+        if (m_emailsTasksToSend.size() > 0)
+        {
+            m_emailsToSendDisplayList = '<table><tr><td width="150px"><strong>Name</strong></td><td><strong>EmailTemplate</strong></td></tr>';
+            for (Task t : m_emailsTasksToSend)
+            {
+                Contact c = [SELECT Name FROM Contact WHERE Id = :t.WhoId];
+                m_emailsToSendDisplayList += '<tr><td>' + c.name + '</td><td>' + t.EmailTemplate__c + '</td></tr><br/>';    
+            }
+            m_emailsToSendDisplayList += '</table>';
+        }
+        else
+        {
+            m_resultMessage = 'There are no queued emails to send.  Check the Open Activities on this Campaign.';
+            m_hasRun = true;
+        }
+   }
+
+    public String getEmailsToSendDisplayList(){
+        return m_emailsToSendDisplayList;
     }
-    
+
     public String getResultMessage(){
         return m_resultMessage;
     }
-    
+
     public boolean getHasRun(){
         return m_hasRun;
     }
-    
+
     public void run(){
-        Id senderId = UserInfo.getUserId();
-        User sender = [SELECT Id from User Where Id = :senderId];
-      Integer emailsSent = BZ_BulkEmailer.SendMyQueuedEmails(m_campaign, sender);
+        Integer emailsSent = BZ_BulkEmailer.sendMyQueuedEmails(m_emailsTasksToSend);
         if (emailsSent > 0){
             m_resultMessage = emailsSent + ' Emails sent!  Look under the Activity History section to see what was sent.';
         }
@@ -36,3 +59,4 @@ public class BZ_SendMyQueuedEmails {
         m_hasRun = true;
     }
 }
+
