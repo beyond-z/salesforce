@@ -8,6 +8,8 @@ public class BZ_SendQueuedApplicationDecisions {
     private Campaign m_campaign;
     private String m_resultMessage;
     private boolean m_hasRun;
+    private Map<String, List<CampaignMember>> m_emailTemplateToRecipients;
+    private String m_applicationDecisionsToSendDisplayList;
     
     public BZ_SendQueuedApplicationDecisions(ApexPages.StandardController controller){
         // The addFields call is becuase these fields are required by the functionality 
@@ -17,6 +19,29 @@ public class BZ_SendQueuedApplicationDecisions {
         m_campaign = (Campaign)controller.getRecord();
         m_hasRun = false;
         m_resultMessage = '';
+        
+        m_emailTemplateToRecipients = BZ_BulkEmailer.getQueuedApplicationDecisions(m_campaign);
+        if (m_emailTemplateToRecipients.size() > 0)
+        {
+            m_applicationDecisionsToSendDisplayList = '<table><tr><td width="200px"><strong>Name</strong></td><td><strong>EmailTemplate</strong></td></tr>';
+            for (String emailTemplate : m_emailTemplateToRecipients.keySet())
+            {
+                for (CampaignMember cm : m_emailTemplateToRecipients.get(emailTemplate))
+                {
+                    m_applicationDecisionsToSendDisplayList += '<tr><td>' + cm.Contact.Name + '</td><td>' + emailTemplate + '</td></tr><br/>';
+                }
+            }
+            m_applicationDecisionsToSendDisplayList += '</table>';
+        }
+        else
+        {
+            m_resultMessage = 'There are no queued application decisions to send.  Application decisions are only sent for Campaign Members marked as Accepted, Waitlisted, or Rejected.';
+            m_hasRun = true;
+        }
+    }
+    
+    public String getApplicationDecisionsToSendDisplayList(){
+        return m_applicationDecisionsToSendDisplayList;
     }
     
     public String getResultMessage(){
@@ -30,12 +55,13 @@ public class BZ_SendQueuedApplicationDecisions {
     public void run(){
         Id senderId = UserInfo.getUserId();
         User sender = [SELECT Id from User Where Id = :senderId];
-        Integer emailsSent = BZ_BulkEmailer.SendQueuedApplicationDecisions(m_campaign);
+        Integer emailsSent = BZ_BulkEmailer.sendQueuedApplicationDecisions(m_emailTemplateToRecipients);
         if (emailsSent > 0){
-            m_resultMessage = emailsSent + ' Emails sent!  Look under the Activity History section to see what was sent.';
+            m_resultMessage = emailsSent + ' Application Decisions sent!  Look under the Activity History section to see what was sent.';
         }
         else {
-            m_resultMessage = 'No decisions found to send.';
+            // If no application decisions exist, the option shouldn't be shown in the UI in the first place.
+            m_resultMessage = 'Failed to send application decisions.  Contact your administrator';
         }
         m_hasRun = true;
     }

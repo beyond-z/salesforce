@@ -57,76 +57,81 @@ public class BZ_BulkEmailer {
     /**
      * Goes through all Campaign Members for the specified campaign and
      * if their Application Status is set to “Waitlisted”, “Accepted”, or “Rejected” 
-     * then it pulls the corresponding email template from the campaign and sends
-     * the associated template.
-     * 
-     * Returns the number of emails sent.
+     * then returns a Map of the associated Email Template from the Campaign to the
+     * List of Campaign Members that should be sent that email.
      */
-    public static Integer SendQueuedApplicationDecisions(Campaign campaign)
+    public static Map<String, List<CampaignMember>> getQueuedApplicationDecisions(Campaign campaign)
     {
-        System.debug('BZ_BulkEmailer.SendQueuedApplicationDecisions('+campaign+'): begin');
-       
-        List<CampaignMember> waitlistedUsers = 
-            [SELECT CampaignId, ContactId, Contact.Email FROM CampaignMember 
-             WHERE CampaignId = :campaign.Id AND
-                   Application_Decision_Sent__c = FALSE AND
-                   Candidate_Status__c = 'Waitlisted'
-            ];
-        System.debug('BZ_BulkEmailer.SendQueuedApplicationDecisions: waitlistedUsers.size() = '+waitlistedUsers.size());
-        //System.Debug('BZ_BulkEmailer.SendQueuedApplicationDecisions: waitlistedUsers.get(0).Contact.Email = ' + waitlistedUsers.get(0).Contact.Email);
+        System.debug('BZ_BulkEmailer.getQueuedApplicationDecisions('+campaign+'): begin');
+        Map<String, List<CampaignMember>> emailTemplateToRecipients = new Map<String, List<CampaignMember>>();
         
         List<CampaignMember> acceptedUsers = 
-            [SELECT CampaignId, ContactId, Contact.Email FROM CampaignMember 
+            [SELECT CampaignId, ContactId, Contact.Email, Contact.Name FROM CampaignMember 
              WHERE CampaignId = :campaign.Id AND
                    Application_Decision_Sent__c = FALSE AND
                    Candidate_Status__c = 'Accepted'
             ];
-        System.debug('BZ_BulkEmailer.SendQueuedApplicationDecisions: acceptedUsers.size() = '+acceptedUsers.size());
-        //System.Debug('BZ_BulkEmailer.SendQueuedApplicationDecisions: acceptedUsers.get(0).Contact.Email = ' + acceptedUsers.get(0).Contact.Email);
+        //System.debug('BZ_BulkEmailer.getQueuedApplicationDecisions: acceptedUsers.size() = '+acceptedUsers.size());
+        //System.Debug('BZ_BulkEmailer.getQueuedApplicationDecisions: acceptedUsers.get(0).Contact.Email = ' + acceptedUsers.get(0).Contact.Email);
+        if (acceptedUsers != null && acceptedUsers.size() > 0)
+        {
+            emailTemplateToRecipients.put(campaign.App_Accepted_Email_Template__c, acceptedUsers);
+        }
+        
+        List<CampaignMember> waitlistedUsers = 
+            [SELECT CampaignId, ContactId, Contact.Email, Contact.Name FROM CampaignMember 
+             WHERE CampaignId = :campaign.Id AND
+                   Application_Decision_Sent__c = FALSE AND
+                   Candidate_Status__c = 'Waitlisted'
+            ];
+        //System.debug('BZ_BulkEmailer.getQueuedApplicationDecisions: waitlistedUsers.size() = '+waitlistedUsers.size());
+        //System.Debug('BZ_BulkEmailer.getQueuedApplicationDecisions: waitlistedUsers.get(0).Contact.Email = ' + waitlistedUsers.get(0).Contact.Email);
+        if (waitlistedUsers != null && waitlistedUsers.size() > 0)
+        {
+            emailTemplateToRecipients.put(campaign.App_Waitlisted_Email_Template__c, waitlistedUsers);
+        }
 
         List<CampaignMember> rejectedUsers = 
-            [SELECT CampaignId, ContactId, Contact.Email FROM CampaignMember 
+            [SELECT CampaignId, ContactId, Contact.Email, Contact.Name FROM CampaignMember 
              WHERE CampaignId = :campaign.Id AND
                    Application_Decision_Sent__c = FALSE AND
                    Candidate_Status__c = 'Rejected'
             ];
-        System.debug('BZ_BulkEmailer.SendQueuedApplicationDecisions: rejectedUsers.size() = '+rejectedUsers.size());
-        //System.Debug('BZ_BulkEmailer.SendQueuedApplicationDecisions: rejectedUsers.get(0).Contact.Email = ' + rejectedUsers.get(0).Contact.Email);
+        //System.debug('BZ_BulkEmailer.getQueuedApplicationDecisions: rejectedUsers.size() = '+rejectedUsers.size());
+        //System.Debug('BZ_BulkEmailer.getQueuedApplicationDecisions: rejectedUsers.get(0).Contact.Email = ' + rejectedUsers.get(0).Contact.Email);
+        if (rejectedUsers != null && rejectedUsers.size() > 0)
+        {
+            emailTemplateToRecipients.put(campaign.App_Rejected_Email_Template__c, rejectedUsers);
+        }
 
+        return emailTemplateToRecipients;
+    }
+    
+    /**
+     * For each Email Template key in the specified Map, send the corresponding email 
+     * to each CamaignMember in the List.
+     * 
+     * Returns the number of decisions sent.
+     */
+    public static Integer sendQueuedApplicationDecisions(Map<String, List<CampaignMember>> emailTemplateToRecipients)
+    {
+        System.debug('BZ_BulkEmailer.sendQueuedApplicationDecisions('+emailTemplateToRecipients+'): begin');
         Integer emailsSent = 0;
-        for(CampaignMember cm : waitlistedUsers)
-        {
-            String[] recipients = new String[]{cm.Contact.Email};
-            BZ_SendTemplatedEmail.sendTemplatedEmail(
-                recipients, null, campaign.App_Waitlisted_Email_Template__c, 
-                cm.ContactId, cm.CampaignId, null, TRUE, null); 
-            emailsSent++;
-            cm.Application_Decision_Sent__c = TRUE;
-        }
-        update waitlistedUsers;
         
-        for(CampaignMember cm : acceptedUsers)
+        for (String emailTemplate : emailTemplateToRecipients.keySet())
         {
-            String[] recipients = new String[]{cm.Contact.Email};
-            BZ_SendTemplatedEmail.sendTemplatedEmail(
-                recipients, null, campaign.App_Accepted_Email_Template__c, 
-                cm.ContactId, cm.CampaignId, null, TRUE, null); 
-            emailsSent++;
-            cm.Application_Decision_Sent__c = TRUE;
+            List<CampaignMember> cms = emailTemplateToRecipients.get(emailTemplate);
+            for (CampaignMember cm : cms)
+            {
+                String[] recipients = new String[]{cm.Contact.Email};
+                BZ_SendTemplatedEmail.sendTemplatedEmail(
+                    recipients, null, emailTemplate, 
+                    cm.ContactId, cm.CampaignId, null, TRUE, null); 
+                emailsSent++;
+                cm.Application_Decision_Sent__c = TRUE;
+            }
+            update cms;
         }
-        update acceptedUsers;
-        
-        for(CampaignMember cm : rejectedUsers)
-        {
-            String[] recipients = new String[]{cm.Contact.Email};
-            BZ_SendTemplatedEmail.sendTemplatedEmail(
-                recipients, null, campaign.App_Rejected_Email_Template__c, 
-                cm.ContactId, cm.CampaignId, null, TRUE, null); 
-            emailsSent++;
-            cm.Application_Decision_Sent__c = TRUE;
-        }
-        update rejectedUsers;
         return emailsSent;
     }
 }
-
