@@ -21,7 +21,7 @@ public class BZ_SendMyQueuedEmails {
         m_emailsTasksToSend = BZ_BulkEmailer.getQueuedEmails(m_campaign, sender);
         if (m_emailsTasksToSend.size() > 0)
         {
-            m_emailsToSendDisplayList = '<table><tr><td width="150px"><strong>Name</strong></td><td><strong>EmailTemplate</strong></td></tr>';
+            m_emailsToSendDisplayList = '<table><tr><td width="200px"><strong>Name</strong></td><td><strong>EmailTemplate</strong></td></tr>';
             for (Task t : m_emailsTasksToSend)
             {
                 Contact c = [SELECT Name FROM Contact WHERE Id = :t.WhoId];

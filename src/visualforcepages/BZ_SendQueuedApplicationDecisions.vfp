@@ -1,13 +1,26 @@
 <!-- Page that handles the "Send Queued Application Decisions" button. -->
 <apex:page standardController="Campaign" extensions="BZ_SendQueuedApplicationDecisions">
-  <apex:form>
+  <apex:form >
     <apex:pageBlock id="buttons" rendered="{!hasRun==false}">
         <apex:pageMessages id="messages"/>
-        <apex:pageMessage severity="confirm" title="Are you sure?" summary="You are about to send FINAL application decision emails in bulk to members of this campaign. If you're sure you want to do this hit Send." />
-        <apex:pageBlockSection>
-            <apex:pageBlockSectionItem>
-            <apex:commandButton action="{!run}" value="Send" />
-            <apex:commandButton action="{!cancel}" value="Cancel" />
+        <apex:pageMessage severity="confirm" title="Are you sure?" summary="You are about to send FINAL application decision emails to the following members of this campaign. If you're sure you want to do this hit Send" />
+        <apex:pageBlockSection >
+            <apex:pageBlockSectionItem >
+                <apex:outputText id="previewEmailsToSend" value="{!applicationDecisionsToSendDisplayList}" escape="false">
+                </apex:outputText>
+            </apex:pageBlockSectionItem>
+        </apex:pageBlockSection>
+        <apex:pageBlockSection ><br/></apex:pageBlockSection>
+        <apex:pageBlockSection >
+            <apex:pageBlockSectionItem >
+                <apex:outputPanel >
+                <table>
+                <tr>
+                    <td><apex:commandButton action="{!run}" value="Send" /></td>
+                    <td><apex:commandButton action="{!cancel}" value="Cancel" /></td>
+                </tr>
+                </table>
+                </apex:outputPanel>
             </apex:pageBlockSectionItem>
         </apex:pageBlockSection>
     </apex:pageBlock>

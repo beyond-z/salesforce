@@ -134,8 +134,8 @@ private class BZ_BulkEmailer_TEST {
         }
         
         // Run the test
-        System.Debug('BZ_BulkEmailer_TEST: BZ_BulkEmailer.SendQueuedApplicationDecisions(campaign='+campaign+')');
-        emailsSent = BZ_BulkEmailer.SendQueuedApplicationDecisions(campaign);
+        System.Debug('BZ_BulkEmailer_TEST: BZ_BulkEmailer.sendQueuedApplicationDecisions(BZ_BulkEmailer.getQueuedApplicationDecisions(campaign='+campaign+'))');
+        emailsSent = BZ_BulkEmailer.sendQueuedApplicationDecisions(BZ_BulkEmailer.getQueuedApplicationDecisions(campaign));
         
         System.assertEquals(3, emailsSent, 'Expected 3 emails to be sent, not '+emailsSent);
         CampaignMember waitlistedCmResult = [SELECT Application_Decision_Sent__c FROM CampaignMember WHERE Id = :waitlistedCm.Id];
@@ -146,4 +146,3 @@ private class BZ_BulkEmailer_TEST {
         System.assertEquals(TRUE, rejectedCmResult.Application_Decision_Sent__c);
     }
 }
-
