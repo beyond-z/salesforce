@@ -15,6 +15,7 @@ public class BZ_BulkEmailer {
                                  FROM Task 
                                  WHERE WhatId = :campaign.Id    // Related To
                                   AND OwnerId = :sender.Id    // Assigned To
+                                  AND Status != 'Completed'
                                   AND (               // Email Template To Send
                                         EmailTemplate__c != null OR EmailTemplate__c != ''
                                         )
