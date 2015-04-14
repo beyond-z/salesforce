@@ -27,7 +27,7 @@ private class BZ_CandidateStatusChanged_TEST {
                                     WHERE WhoId=:cm.ContactId AND 
                                           WhatId=:cm.CampaignId AND
                                           Subject LIKE '%Send Interview Request Email%'];
-        System.assert(resultingTasks.size()==1, 'Expected Task to be created to Map the cohort');
+        System.assert(resultingTasks.size()==1, 'Expected Task to be created to Send Interview Request Email');
     }
     
     static testMethod void validateAccepted() {
@@ -50,11 +50,12 @@ private class BZ_CandidateStatusChanged_TEST {
         cm.Candidate_Status__c = 'Accepted';
         update cm;
     
-        List<Task> resultingTasks = [SELECT Id, WhoId, WhatId FROM Task
+        // BTODO: commented out for now until we design and implement the confirmation and cohort mapping flow
+       /* List<Task> resultingTasks = [SELECT Id, WhoId, WhatId FROM Task
                                     WHERE WhoId=:cm.ContactId AND 
                                           WhatId=:cm.CampaignId AND
                                           Subject LIKE '%Map cohort%'];
-        System.assert(resultingTasks.size()==1, 'Expected Task to be created to Map the cohort');
+        System.assert(resultingTasks.size()==1, 'Expected Task to be created to Map the cohort'); */
         
         Contact updatedContact = [SELECT Id, Volunteer_Information__c FROM Contact WHERE Id=:cm.ContactId];
         System.assert(updatedContact.Volunteer_Information__c == 'Current LC', 'When a Contact is Accepted, their Volunteer Information should be set.');

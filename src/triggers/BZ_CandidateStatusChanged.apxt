@@ -23,12 +23,13 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
             }
             else if(cm.Candidate_Status__c == 'Accepted')
             {   
-                Task t = BZ_TaskFactory.createTask(cm, 'Map cohort for {0}');
+                // TODO: need to finish designing how this is going to work for SJSU and other programs
+                /*Task t = BZ_TaskFactory.createTask(cm, 'Map cohort for {0}');
                 if (t!=null)
                 {
                     tasksToAdd.add(t);
                     System.debug('BZ_CandidateStatusChanged: Adding new Task: '+ t);
-                }
+                }*/
                 
                 Campaign campaign = [SELECT Id, Type FROM Campaign WHERE Id=:cm.CampaignId];
                 //System.debug('BZ_CampaignAssigned: campaign='+campaign);
