@@ -1,6 +1,6 @@
 trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
     System.Debug('BZ_ApplicationStatusChanged: begin trigger');
-    
+
     for (CampaignMember cm : Trigger.new)
     {
         if (Trigger.oldMap.get(cm.Id).Application_Status__c != cm.Application_Status__c)
@@ -20,15 +20,15 @@ trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
                                   Identify_As_First_Gen__c, Identify_As_Low_Income__c, 
                                   Identify_As_Person_Of_Color__c, Pell_Grant_Recipient__c
                                   FROM Contact WHERE Id=:cm.ContactId];
-                
+
                 Task t = BZ_TaskFactory.createTask(cm, 'Review submitted application for {0}');
-                t.Description = 'Review the application for ' + contact.Name + ' by clicking the Campaign in the Releated To field, then scrolling down to the Campaign Member section, then clicking their first or last name to open the Campaign Member page, and finally changing their Candidate Status to Accepted, Interview Requested, Waitlisted, or Rejected.';
+                t.Description = 'Review the application for \'' + contact.Name + '\' by clicking the Campaign in the Releated To field, then scrolling down to the Campaign Member section, then clicking their first or last name to open the Campaign Member page, and finally changing their Candidate Status to Accepted, Interview Requested, Waitlisted, or Rejected.';
                 if (t!=null)
                 {
                     tasksToAdd.add(t);
                     System.debug('BZ_ApplicationStatusChanged: Adding new Task: '+ t);
                 }
-                
+
                 contact.Accepts_Text__c = cm.Accepts_Text__c;
                 contact.Industry__c = cm.Industry__c;
                 contact.Company__c = cm.Company__c;
