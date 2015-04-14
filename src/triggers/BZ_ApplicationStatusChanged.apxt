@@ -22,7 +22,7 @@ trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
                                   FROM Contact WHERE Id=:cm.ContactId];
                 
                 Task t = BZ_TaskFactory.createTask(cm, 'Review submitted application for {0}');
-                t.Description = 'Review the application for ' + contact.Name + ' by opening the Campaign, opening their CampaignMember page, and changing their Candidate Status appropriately.';
+                t.Description = 'Review the application for ' + contact.Name + ' by clicking the Campaign in the Releated To field, then scrolling down to the Campaign Member section, then clicking their first or last name to open the Campaign Member page, and finally changing their Candidate Status to Accepted, Interview Requested, Waitlisted, or Rejected.';
                 if (t!=null)
                 {
                     tasksToAdd.add(t);
