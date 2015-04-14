@@ -2,7 +2,15 @@
  * Factory to create Tasks.
  */
 public class BZ_TaskFactory {
-    
+
+    /**
+     * See createEmailTask(CampaignMember, String, String, String) for more info
+     */
+    public static Task createEmailTask(CampaignMember cm, String taskSubjectPrefix, String emailTemplateCampaignFieldName)
+    {
+        return createEmailTask(cm, taskSubjectPrefix, emailTemplateCampaignFieldName, 'Send the email by clicking on the Campaign in the \'Releated To\' field, then clicking the \'Send My Queued Emails\' button.');
+    }
+
     /**
      * Creates Tasks with the specified CampaignMember's 
      * 'Email Template To Send' field populated with the EmailTemplate 
@@ -13,7 +21,9 @@ public class BZ_TaskFactory {
      * Campaign.Intro_Email_Template__c field, call this method like so:
      *    createEmailTask(cm, 'Send Intro Email', 'Intro_Email_Template__c')
      */
-    public static Task createEmailTask(CampaignMember cm, String taskSubjectPrefix, String emailTemplateCampaignFieldName) {
+    public static Task createEmailTask(CampaignMember cm, String taskSubjectPrefix, String emailTemplateCampaignFieldName, 
+                                       String description)
+    {
         Id contactId = cm.ContactId;
         //System.debug('BZ_TaskFactory: contactId='+contactId);
         Contact contact = [SELECT Id, Name From Contact Where Id = :contactId];
@@ -24,10 +34,10 @@ public class BZ_TaskFactory {
                               ' FROM Campaign WHERE Id = :campaignId';
         SObject campaignObj = Database.query(campaignQueryString);
         Campaign campaign = (Campaign)campaignObj;
-        //System.debug('BZ_TaskFactory: campaign='+campaign);                     
+        //System.debug('BZ_TaskFactory: campaign='+campaign);
         User owner = [SELECT Id FROM User WHERE Id = :campaign.OwnerId];
         //System.debug('BZ_TaskFactory: owner='+owner); 
-        
+
         String emailTemplate = (String)campaignObj.get(emailTemplateCampaignFieldName);
         //System.debug('BZ_TaskFactory: emailTemplate='+emailTemplate);   
 
@@ -41,6 +51,7 @@ public class BZ_TaskFactory {
             Task t = new Task(
                 OwnerId = owner.Id,           // Assigned To
                 Subject = 'Email: ' + taskSubjectPrefix + ' To ' + contact.Name,
+                Description = description,
                 IsReminderSet = true,
                 ReminderDateTime = System.now(),
                 ActivityDate = Date.today(),      // Due Date
@@ -50,7 +61,15 @@ public class BZ_TaskFactory {
             return t;
         }
     }
-    
+
+    /**
+     * See createTask(CampaignMember, String, String) for more info
+     */
+    public static Task createTask(CampaignMember cm, String taskSubjectPattern) 
+    {
+        return createTask(cm, taskSubjectPattern, '');
+    }
+
     /**
      * Creates Tasks for the owner of the Campaign for the specified CampaignMember.
      * 
@@ -59,7 +78,8 @@ public class BZ_TaskFactory {
      * replacement token used with String.format(String,List<String>) method.  
      * e.g. createTask(cm, 'The person {0} need something to happen')
      */
-    public static Task createTask(CampaignMember cm, String taskSubjectPattern) {
+    public static Task createTask(CampaignMember cm, String taskSubjectPattern, String description) 
+    {
         Id contactId = cm.ContactId;
         //System.debug('BZ_TaskFactory: contactId='+contactId);
         Contact contact = [SELECT Id, Name From Contact Where Id = :contactId];
@@ -67,21 +87,21 @@ public class BZ_TaskFactory {
         Id campaignId = cm.CampaignId;
         //System.debug('BZ_TaskFactory: campaignId='+campaignId);
         Campaign campaign = [SELECT Id, OwnerId FROM Campaign WHERE Id = :campaignId];
-        //System.debug('BZ_TaskFactory: campaign='+campaign);                     
+        //System.debug('BZ_TaskFactory: campaign='+campaign);
         User owner = [SELECT Id FROM User WHERE Id = :campaign.OwnerId];
         //System.debug('BZ_TaskFactory: owner='+owner); 
-       
         Task t = new Task(
                 OwnerId = owner.Id,           // Assigned To
                 Subject = System.String.format(taskSubjectPattern, new String[]{contact.Name}),
+                Description = description,
                 IsReminderSet = true,
                 ReminderDateTime = System.now(),
                 ActivityDate = Date.today(),      // Due Date
                 WhoId = contactId,            // Name
-                WhatId = campaignId);               // Related To
+                WhatId = campaignId);                   // Related To
         return t;
     }
-    
+
     /**
      * Creates Tasks for the owner of the Lead.
      * 
