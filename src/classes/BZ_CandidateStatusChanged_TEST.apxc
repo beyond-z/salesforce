@@ -60,4 +60,74 @@ private class BZ_CandidateStatusChanged_TEST {
         Contact updatedContact = [SELECT Id, Volunteer_Information__c FROM Contact WHERE Id=:cm.ContactId];
         System.assert(updatedContact.Volunteer_Information__c == 'Current LC', 'When a Contact is Accepted, their Volunteer Information should be set.');
     }
+    
+    static testMethod void validateReviewAppTaskClosed() {
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_vratc1', OwnerId=userInfo.getUserId());
+        insert campaignOwner;
+        Contact contact_accepted = new Contact(FirstName='Test', LastName='AppStatClosedAccepted1');
+        insert contact_accepted;
+        Contact contact_waitlisted = new Contact(FirstName='Test', LastName='AppStatClosedWaitlisted1');
+        insert contact_waitlisted;
+        Contact contact_rejected = new Contact(FirstName='Test', LastName='AppStatClosedRejected1');
+        insert contact_rejected;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        insert campaign;
+        
+        CampaignMember cm_accepted = new CampaignMember();
+        cm_accepted.CampaignId=campaign.Id;
+        cm_accepted.ContactId=contact_accepted.Id;
+        insert cm_accepted;
+        Task t_accepted = BZ_TaskFactory.createTask(cm_accepted, 'Review submitted application for {0}');
+        insert t_accepted;
+        
+        CampaignMember cm_waitlisted = new CampaignMember();
+        cm_waitlisted.CampaignId=campaign.Id;
+        cm_waitlisted.ContactId=contact_waitlisted.Id;
+        insert cm_waitlisted;
+        Task t_waitlisted = BZ_TaskFactory.createTask(cm_waitlisted, 'Review submitted application for {0}');
+        insert t_waitlisted;
+
+        CampaignMember cm_rejected = new CampaignMember();
+        cm_rejected.CampaignId=campaign.Id;
+        cm_rejected.ContactId=contact_rejected.Id;
+        insert cm_rejected;
+        Task t_rejected = BZ_TaskFactory.createTask(cm_rejected, 'Review submitted application for {0}');
+        insert t_rejected;
+        
+        Test.startTest();
+
+        cm_accepted.Candidate_Status__c = 'Accepted';
+        update cm_accepted;
+    
+        List<Task> resultingTasks_accepted = [SELECT Id, Status FROM Task 
+                                     WHERE WhoId=:cm_accepted.ContactId AND 
+                                           WhatId=:cm_accepted.CampaignId AND
+                                           Status='Completed' AND
+                                           Subject LIKE '%Review submitted application for%'];
+        System.assert(resultingTasks_accepted.size()==1, 'Expected Task to Review the application to be closed when Accepted.');
+        
+        cm_waitlisted.Candidate_Status__c = 'Waitlisted';
+        update cm_waitlisted;
+        
+        List<Task> resultingTasks_waitlisted = [SELECT Id, Status FROM Task 
+                                     WHERE WhoId=:cm_waitlisted.ContactId AND 
+                                           WhatId=:cm_waitlisted.CampaignId AND
+                                           Status='Completed' AND
+                                           Subject LIKE '%Review submitted application for%'];
+        System.assert(resultingTasks_waitlisted.size()==1, 'Expected Task to Review the application to be closed when Waitlisted.');
+
+        cm_rejected.Candidate_Status__c = 'Rejected';
+        update cm_rejected;
+        
+        List<Task> resultingTasks_rejected = [SELECT Id, Status FROM Task 
+                                     WHERE WhoId=:cm_rejected.ContactId AND 
+                                           WhatId=:cm_rejected.CampaignId AND
+                                           Status='Completed' AND
+                                           Subject LIKE '%Review submitted application for%'];
+        System.assert(resultingTasks_rejected.size()==1, 'Expected Task to Review the application to be closed when Rejected.');
+
+        Test.stopTest();
+    }
 }
