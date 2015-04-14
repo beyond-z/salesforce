@@ -6,7 +6,10 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
         if (Trigger.oldMap.get(cm.Id).Candidate_Status__c != cm.Candidate_Status__c)
         {
             List<Task> tasksToAdd = new List<Task>();
+            List<Task> tasksToUpdate = new List<Task>();
             List<Contact> contactsToUpdate = new List<Contact>();
+            
+            boolean closeReviewAppTask = false;
             
             // If the candidate status is changed to Interview Requested, 
             // queue up a task with the Email Template To Send set to notify 
@@ -30,6 +33,7 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
                     tasksToAdd.add(t);
                     System.debug('BZ_CandidateStatusChanged: Adding new Task: '+ t);
                 }*/
+                closeReviewAppTask = true;
                 
                 Campaign campaign = [SELECT Id, Type FROM Campaign WHERE Id=:cm.CampaignId];
                 //System.debug('BZ_CampaignAssigned: campaign='+campaign);
@@ -43,9 +47,31 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
                     contact.Participant_Information__c = 'Participant';
                     contactsToUpdate.add(contact);
                 }
+            } else if(cm.Candidate_Status__c == 'Rejected' || cm.Candidate_Status__c == 'Waitlisted')
+            {
+                closeReviewAppTask = true;
             }
+            
+            if (closeReviewAppTask)
+            {
+                System.debug('BZ_CampaignAssigned: closing task to Review App');
+                List<Task> reviewAppTasks = [SELECT Id, Status FROM Task 
+                                             WHERE WhoId=:cm.ContactId AND 
+                                                   WhatId=:cm.CampaignId AND
+                                                   Status != 'Completed' AND
+                                                   Subject LIKE '%Review submitted application for%'];
+                if (reviewAppTasks != null && reviewAppTasks.size() > 0)
+                {
+                    Task reviewAppTask = reviewAppTasks.get(0);
+                    System.debug('BZ_CampaignAssigned: reviewAppTask = ' + reviewAppTask);
+                    reviewAppTask.Status = 'Completed';
+                    tasksToUpdate.add(reviewAppTask);
+                }
+            }
+            
             insert tasksToAdd;
             update contactsToUpdate;
+            update tasksToUpdate;
         }
     }
 }
