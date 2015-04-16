@@ -76,7 +76,7 @@
 		ACT Score
 		Conquered Challenge
 		Languages
-		Lead Sources
+    Sourcing Info	
 		Additional Comments
     Student Registration Code
     Available Meeting Times
