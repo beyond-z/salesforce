@@ -33,6 +33,8 @@ private class BZ_BulkEmailer_TEST {
         insert t4_ignored;
         Task t5_ignored = new Task(Subject='Test Send Email Task5 -- Should be ignored', OwnerId=anotherSender.Id, WhoId=recipient.Id, WhatId=campaign.Id, EmailTemplate__c='TestEmailTemplateToSend5');
         insert t5_ignored;
+        Task t6_ignored = new Task(Subject='Test Send Email Task6 -- Should be ignored', OwnerId=sender.Id, WhoId=recipient.Id, WhatId=campaign.Id, EmailTemplate__c=et2DeveloperName, Status='Completed');
+        insert t6_ignored;
 
         Integer emailsSent = 0;
 
@@ -134,8 +136,8 @@ private class BZ_BulkEmailer_TEST {
         }
         
         // Run the test
-        System.Debug('BZ_BulkEmailer_TEST: BZ_BulkEmailer.SendQueuedApplicationDecisions(campaign='+campaign+')');
-        emailsSent = BZ_BulkEmailer.SendQueuedApplicationDecisions(campaign);
+        System.Debug('BZ_BulkEmailer_TEST: BZ_BulkEmailer.sendQueuedApplicationDecisions(BZ_BulkEmailer.getQueuedApplicationDecisions(campaign='+campaign+'))');
+        emailsSent = BZ_BulkEmailer.sendQueuedApplicationDecisions(BZ_BulkEmailer.getQueuedApplicationDecisions(campaign));
         
         System.assertEquals(3, emailsSent, 'Expected 3 emails to be sent, not '+emailsSent);
         CampaignMember waitlistedCmResult = [SELECT Application_Decision_Sent__c FROM CampaignMember WHERE Id = :waitlistedCm.Id];
@@ -146,4 +148,3 @@ private class BZ_BulkEmailer_TEST {
         System.assertEquals(TRUE, rejectedCmResult.Application_Decision_Sent__c);
     }
 }
-

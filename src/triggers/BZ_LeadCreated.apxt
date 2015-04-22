@@ -10,7 +10,7 @@ trigger BZ_LeadCreated on Lead (after insert) { // Needs to be "after insert" b/
         System.debug('BZ_LeadCreated: lead.Id=' + lead.Id);
         System.debug('BZ_LeadCreated: lead.FirstName=' + lead.FirstName);
         System.debug('BZ_LeadCreated: lead.OwnerId=' + lead.OwnerId);
-        Task t = BZ_TaskFactory.createTask(lead, 'New Website Signup: {0} -- decide next steps', 'Research and fill out missing Lead fields. Then either convert to a Contact and assign them to appropriate Campaign(s) or mark the Lead Status as Unqualified if this person is someone that we don\'t want to clutter the system.');
+        Task t = BZ_TaskFactory.createTask(lead, 'New Website Signup: {0} -- decide next steps', 'Click on the Name of the new Lead.  Research and fill out the missing Lead fields. Then convert the Lead to a Contact and assign them to appropriate Campaign(s). If this person is someone that we don\'t want to clutter the system, mark the Lead Status as Unqualified.');
         if (t!=null)
         {
             tasksToAdd.add(t);  

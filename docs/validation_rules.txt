@@ -7,6 +7,7 @@ CAMPAIGN
 	BZ_RequiredTargetCourse
 	BZ_RequiredType
 	BZ_SourcingInfoOptions
+  BZ_StudentIdNotForVolunteers
 
 CAMPAIGN MEMBER
   BZ_RequireStudentRegistrationCode

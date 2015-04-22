@@ -17,7 +17,7 @@
 		Program Title
 		Program Site
 		Request Availability # checkbox, if set, MeetingTimes must be present
-		Available Meeting Times # plain text, multi-line, one item per line 
+		Available Meeting Time Options # plain text, multi-line, one item per line 
 		Request Student Id
     Interview Scheduler
     Sourcing Info Options
@@ -77,9 +77,10 @@
 		ACT Score
 		Conquered Challenge
 		Languages
-		Lead Sources
+    Sourcing Info	
 		Additional Comments
     Student Registration Code
+    Available Meeting Times
 
 	CONTACT
 		Middle Name
