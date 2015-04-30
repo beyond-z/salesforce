@@ -121,7 +121,8 @@
 		Volunteer Information
 		
 	LEAD
-		BZ User Id
+		Account Activated?
+    BZ User Id
 		Signup Date
 		Came From to Visit Site
 		User Type
