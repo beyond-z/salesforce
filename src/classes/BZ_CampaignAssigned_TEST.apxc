@@ -1,11 +1,21 @@
 @isTest 
 private class BZ_CampaignAssigned_TEST {
     static testMethod void validateLCCampaignAssigned() {
+        // This also create the task that we want to test if it gets closed by the trigger.
+        Lead l = new Lead(OwnerId=UserInfo.getUserId(), User_Type__c='Volunteer', Account_Activated__c=true, LeadSource='Website Signup', FirstName='Someone', LastName='New', Company='Someone New (individual)', Status='Open');
+        insert l;
+        
+        // Convert Lead to Contact to get everything setup properly (e.g. Lead.ConvertedContactId must be set).
+        Database.LeadConvert lc = new Database.LeadConvert();
+        lc.setLeadId(l.id);
+        LeadStatus convertStatus = [Select Id, MasterLabel FROM LeadStatus WHERE IsConverted=true LIMIT 1];
+        lc.setConvertedStatus(convertStatus.MasterLabel);
+        Database.LeadConvertResult lcr = Database.convertLead(lc);        
+        
+        Contact contact = [SELECT Id FROM Contact WHERE Id = :lcr.contactId];
         Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner1', OwnerId=userInfo.getUserId());
         insert campaignOwner;
-        Contact contact = new Contact(FirstName='Test', LastName='User1', User_Type__c='Volunteer');
-        insert contact;
-        
+
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
         Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
         insert campaign;
@@ -15,7 +25,9 @@ private class BZ_CampaignAssigned_TEST {
         cm.ContactId=contact.Id;
         
         // This fires the trigger we're testing.
+        test.startTest();
         insert cm;
+        test.stopTest();
         
         CampaignMember updatedCm = [SELECT Id, ContactId, CampaignId FROM CampaignMember WHERE Id=:cm.Id];
         Contact updatedContact = [SELECT Id, Volunteer_Information__c FROM Contact WHERE Id=:updatedCm.ContactId];
@@ -26,6 +38,10 @@ private class BZ_CampaignAssigned_TEST {
                                            WhatId=:updatedCm.CampaignId AND
                                            Subject LIKE '%Send Intro Email%'];
         System.assert(resultingTasks.size()==1, 'Expected Task to be created to Send Intro Email to LCs');
+        List<Task> resultingClosedTasks = [SELECT Id, Status FROM Task
+                                           WHERE WhoId=:updatedContact.Id AND
+                                           Subject LIKE '%New Website Signup%'];
+        System.assert(resultingClosedTasks.get(0).Status == 'Completed', 'Expected Task to deal with New Website Signup\'s to be closed automatically after converting them and assigning them to a Campaign.');
     }
     
     static testMethod void validateUniversityCampaignAssigned() {
