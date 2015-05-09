@@ -90,6 +90,12 @@ private class BZ_ApplicationStatusChanged_TEST {
                                           Subject LIKE '%Review submitted application for%'];
         System.assert(resultingTasks.size()==1, 'Expected Task to be created to Review the application.');
         
+        List<Task> resultingIntroEmailTasks = [SELECT Id, WhoId, WhatId FROM Task
+                                    WHERE WhoId=:contact.Id AND 
+                                          WhatId=:cm.CampaignId AND
+                                          Subject LIKE '%Send Intro Email%'];
+        System.assert(resultingIntroEmailTasks.size()==0, 'Expected Task to send Intro email to be deleted.');
+        
         System.assert(updatedContact.Accepts_Text__c == acceptsText, 'Accepts_Text__c not updated on Contact when set on Campaign Member.');
         System.assert(updatedContact.Industry__c == industry, 'Industry__c not updated on Contact when set on Campaign Member.');
         System.assert(updatedContact.Company__c == company, 'Company__c not updated on Contact when set on Campaign Member.');
@@ -117,4 +123,41 @@ private class BZ_ApplicationStatusChanged_TEST {
         System.assert(updatedContact.Identify_As_Person_Of_Color__c == poc, 'Identify_As_Person_Of_Color__c not updated on Contact when set on Campaign Member.');
         System.assert(updatedContact.Pell_Grant_Recipient__c == pellG, 'Pell_Grant_Recipient__c not updated on Contact when set on Campaign Member.');
     }   
+    
+    // We decided to still let them get the Intro email so that they have easy access to the link
+    // in their email.
+    /*static testMethod void validateStarted() {
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_ascts1', OwnerId=userInfo.getUserId());
+        insert campaignOwner;
+        Contact contact = new Contact(FirstName='Test', LastName='AppStatChangedToToSubmitted1');
+        insert contact;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        insert campaign;
+        
+        CampaignMember cm = new CampaignMember();
+        cm.CampaignId=campaign.Id;
+        cm.ContactId=contact.Id;
+       
+        insert cm;
+       
+        // This happens automatically when the CampaignMember is assigned above.
+        //Task queueIntroEmail = BZ_TaskFactory.createEmailTask(cm, 'Send Intro Email', 'Intro_Email_Template__c');
+        //insert queueIntroEmail;        
+        
+        // This fires the trigger we're testing.
+        cm.Application_Status__c = 'Started';
+        update cm;
+        
+        List<Task> resultingTasks = [SELECT Id, WhoId, WhatId FROM Task
+                                    WHERE WhoId=:contact.Id AND 
+                                          WhatId=:cm.CampaignId AND
+                                          Subject LIKE '%Send Intro Email%'];
+        System.assert(resultingTasks.size()==0, 'Expected Task to send Intro email to be deleted.');
+        
+        // TODO: Alternate test to mimic the case where the Intro email has already been sent. 
+        // Don't want it deleted.  Just want it to be NOOp.
+
+    }*/
 }

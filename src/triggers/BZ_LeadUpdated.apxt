@@ -1,0 +1,27 @@
+trigger BZ_LeadUpdated on Lead (after update) {
+    System.Debug('BZ_LeadUpdated: begin trigger');
+    for (Lead lead : Trigger.new)
+    {
+        if (lead.Account_Activated__c == true &&
+            lead.IsConverted == false &&
+            (lead.User_Type__c == 'Undergrad' || lead.User_Type__c == 'Volunteer'))
+        {
+            System.debug('BZ_LeadUpdated: lead.Id=' + lead.Id);
+            System.debug('BZ_LeadUpdated: lead.FirstName=' + lead.FirstName);
+            System.debug('BZ_LeadUpdated: lead.LastName=' + lead.LastName);
+            System.debug('BZ_LeadUpdated: lead.User_Type__c=' + lead.User_Type__c);
+            System.debug('BZ_LeadUpdated: lead.Account_Activated__c=' + lead.Account_Activated__c);
+            
+            // Convert Lead to Contact automatically to enable their application once
+            // the platform server adds them to the proper campaign (automatically)
+            Database.LeadConvert lc = new Database.LeadConvert();
+            lc.setLeadId(lead.id);
+            lc.setDoNotCreateOpportunity(true);
+            lc.setSendNotificationEmail(false);
+            lc.setConvertedStatus('Qualified');
+            LeadStatus convertStatus = [Select Id, MasterLabel FROM LeadStatus WHERE IsConverted=true LIMIT 1];
+            lc.setConvertedStatus(convertStatus.MasterLabel);
+            Database.LeadConvertResult lcr = Database.convertLead(lc); 
+        }
+    }
+}
