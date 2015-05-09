@@ -24,6 +24,13 @@ public class BZ_CampaignEmailTemplates {
     }
     
     /**
+     * The selected App Open Email Template.
+     */
+    public string submitAppReminderEmailTemplate {
+        get; set;
+    }
+    
+    /**
      * The selected App Interview Requested Email Template.
      */
     public string appOpenInterviewRequestedTemplate {
@@ -52,7 +59,7 @@ public class BZ_CampaignEmailTemplates {
     }
   
     public BZ_CampaignEmailTemplates(ApexPages.StandardController controller) {
-        m_campaign = [select Id, Intro_Email_Template__c, 
+        m_campaign = [select Id, Intro_Email_Template__c, App_Submit_Reminder_Template__c,
                         App_Accepted_Email_Template__c, App_Open_Email_Template__c, App_Interview_Requested_Email_Template__c, 
                         App_Rejected_Email_Template__c, App_Waitlisted_Email_Template__c  
                       from Campaign where id = :ApexPages.currentPage().getParameters().get('id')];
@@ -63,6 +70,7 @@ public class BZ_CampaignEmailTemplates {
         
     introEmailTemplate = m_campaign.Intro_Email_Template__c;
     appOpenEmailTemplate = m_campaign.App_Open_Email_Template__c;
+        submitAppReminderEmailTemplate = m_campaign.App_Submit_Reminder_Template__c;
         appOpenInterviewRequestedTemplate = m_campaign.App_Interview_Requested_Email_Template__c;
         appWaitlistedEmailTemplate = m_campaign.App_Waitlisted_Email_Template__c;
         appAcceptedEmailTemplate = m_campaign.App_Accepted_Email_Template__c;
@@ -76,6 +84,7 @@ public class BZ_CampaignEmailTemplates {
         m_campaign.Intro_Email_Template__c = introEmailTemplate;
         m_campaign.App_Accepted_Email_Template__c = appAcceptedEmailTemplate;
         m_campaign.App_Open_Email_Template__c = appOpenEmailTemplate;
+        m_campaign.App_Submit_Reminder_Template__c = submitAppReminderEmailTemplate;
         m_campaign.App_Interview_Requested_Email_Template__c = appOpenInterviewRequestedTemplate;
         m_campaign.App_Rejected_Email_Template__c = appRejectedEmailTemplate;
         m_campaign.App_Waitlisted_Email_Template__c = appWaitlistedEmailTemplate;       
