@@ -1,8 +1,8 @@
 @isTest 
 private class BZ_LeadCreated_TEST {
-    static testMethod void validateLeadTask() {
+    static testMethod void validateEmployerLeadTask() {
         User owner = [SELECT Id FROM User Where Id = :System.UserInfo.getUserId()];
-        Lead l = new Lead(OwnerId=owner.Id, LeadSource='Website Signup', FirstName='Someone', LastName='New', Company='Someone New (individual)', Status='Open');
+        Lead l = new Lead(OwnerId=owner.Id, LeadSource='Website Signup', User_Type__c='Employer', FirstName='Someone', LastName='New', Company='Someone New (individual)', Status='Open');
 
         // This fires the trigger we're testing.
         insert l;
@@ -11,5 +11,23 @@ private class BZ_LeadCreated_TEST {
                                      WHERE WhoId=:l.Id AND
                                            Subject LIKE '%New Website Signup:%'];
         System.assert(resultingTasks.size()==1, 'Expected Task to be created to take next steps on Website Signup');
+       
+    }
+    
+    static testMethod void validateStudentLeadTask() {
+        User owner = [SELECT Id FROM User Where Id = :System.UserInfo.getUserId()];
+        Lead l = new Lead(OwnerId=owner.Id, LeadSource='Website Signup', User_Type__c='Undergrad', Account_Activated__c=true, FirstName='Someone', LastName='New', Company='Someone New (individual)', Status='Open');
+
+        // This fires the trigger we're testing.
+        insert l;
+        
+        List<Task> resultingTasks = [SELECT Id, WhoId FROM Task
+                                     WHERE WhoId=:l.Id AND
+                                           Subject LIKE '%New Website Signup:%'];
+        System.assert(resultingTasks.size()==0, 'Expected Undergrad leads to be autoconverted when they activate their account.');
+       
+        Lead updatedLead = [SELECT Id, ConvertedContactId FROM Lead WHERE Id = :l.Id];
+        List<Contact> convertedLeads = [SELECT Id FROM Contact WHERE Id = :updatedLead.ConvertedContactId];
+        System.assert(convertedLeads.size()==1, 'Expected Undergrad leads to be auto converted when their account is activated.');
     }
 }
