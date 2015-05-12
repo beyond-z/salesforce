@@ -38,10 +38,11 @@ private class BZ_CampaignAssigned_TEST {
                                            WhatId=:updatedCm.CampaignId AND
                                            Subject LIKE '%Send Intro Email%'];
         System.assert(resultingTasks.size()==1, 'Expected Task to be created to Send Intro Email to LCs');
-        List<Task> resultingClosedTasks = [SELECT Id, Status FROM Task
+        // We changed students and volunteers to automatically be converted and added to a campaign.
+        /*List<Task> resultingClosedTasks = [SELECT Id, Status FROM Task
                                            WHERE WhoId=:updatedContact.Id AND
                                            Subject LIKE '%New Website Signup%'];
-        System.assert(resultingClosedTasks.get(0).Status == 'Completed', 'Expected Task to deal with New Website Signup\'s to be closed automatically after converting them and assigning them to a Campaign.');
+        System.assert(resultingClosedTasks.get(0).Status == 'Completed', 'Expected Task to deal with New Website Signup\'s to be closed automatically after converting them and assigning them to a Campaign.');*/
     }
     
     static testMethod void validateUniversityCampaignAssigned() {
