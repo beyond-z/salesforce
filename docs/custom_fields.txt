@@ -85,6 +85,16 @@
 		Additional Comments
     Student Registration Code
     Available Meeting Times
+    Reference 1 Name
+    Reference 1 How Known
+    Reference 1 How Long Known
+    Reference 1 Phone
+    Reference 1 Email
+    Reference 2 Name
+    Reference 2 How Known
+    Reference 2 How Long Known
+    Reference 2 Phone
+    Reference 2 Email
 
 	CONTACT
 		Middle Name
