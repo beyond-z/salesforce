@@ -13,11 +13,11 @@
             <style type="text/css">
           .noWrap { white-space: nowrap; }
       </style>
-            <apex:pageBlockButtons>
+            <apex:pageBlockButtons >
                 <apex:commandButton value="Save" action="{!save}"/>
             </apex:pageBlockButtons>
             <apex:pageBlockSection columns="1">
-                <apex:pageblockSectionItem helpText="Email template sent to new users">
+                <apex:pageblockSectionItem helpText="Email template sent to new users who haven't started their application">
                     <apex:outputLabel value="Intro Email Template" styleClass="noWrap"/>
                     <apex:outputPanel layout="block">
             <apex:outputPanel layout="block"/>
@@ -25,12 +25,21 @@
                             <apex:selectoptions value="{!EmailTemplates}"/>
                         </apex:selectList>
                     </apex:outputPanel>
-                </apex:pageblockSectionItem>   
+                </apex:pageblockSectionItem>
                 <apex:pageblockSectionItem helpText="Email template to notify people that applications are open and they can Apply.  This is for people that signed up before it was open. New signups after the app is open should get this info in the Intro email.">
                     <apex:outputLabel value="App Open Email Template" styleClass="noWrap"/>
                     <apex:outputPanel layout="block">
             <apex:outputPanel layout="block"/>
                         <apex:selectList size="1" value="{!appOpenEmailTemplate}">
+                            <apex:selectoptions value="{!EmailTemplates}"/>
+                        </apex:selectList>
+                    </apex:outputPanel>
+                </apex:pageblockSectionItem>
+                <apex:pageblockSectionItem helpText="Email template sent to users who haven't submitted their application after X days">
+                    <apex:outputLabel value="Submit App Reminder Email Template" styleClass="noWrap"/>
+                    <apex:outputPanel layout="block">
+            <apex:outputPanel layout="block"/>
+                        <apex:selectList size="1" value="{!submitAppReminderEmailTemplate}">
                             <apex:selectoptions value="{!EmailTemplates}"/>
                         </apex:selectList>
                     </apex:outputPanel>

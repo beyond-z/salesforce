@@ -12,3 +12,6 @@ CAMPAIGN
 CAMPAIGN MEMBER
   BZ_RequireStudentRegistrationCode
   BZ_RequireInterviewScheduler
+
+LEAD
+  BZ_RequireActivation

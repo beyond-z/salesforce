@@ -9,11 +9,13 @@
 		Intro Email Template
 		Target Course ID In LMS
 		App Open Email Template
+    App Submit Reminder Template
 		App Waitlisted Email Template
 		App Accepted Email Template
 		App Rejected Email Template
 		App Interview Requested Email Template
 		Application Type # coach or student. Which application form to show 
+    #Application Reminder Interval
 		Program Title
 		Program Site
 		Request Availability # checkbox, if set, MeetingTimes must be present
@@ -29,7 +31,9 @@
 		Apply Button Enabled
 		Candidate Status
 		Application Decision Sent
-		Middle Name
+    #Application Reminder Queued
+		#Must Queue Application Reminder
+    Middle Name
 		Undergrad University
 		Undergraduate Year
 		Major
@@ -122,7 +126,8 @@
 		Volunteer Information
 		
 	LEAD
-		BZ User Id
+		Account Activated?
+    BZ User Id
 		Signup Date
 		Came From to Visit Site
 		User Type

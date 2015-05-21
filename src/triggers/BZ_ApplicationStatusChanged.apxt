@@ -7,8 +7,25 @@ trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
         {
             List<Task> tasksToAdd = new List<Task>();
             List<Contact> contactsToUpdate = new List<Contact>();
+            List<Task> tasksToDelete = new List<Task>();
 
-            if(cm.Application_Status__c == 'Submitted')
+            /*if(cm.Application_Status__c == 'Started')
+            {
+                // Dequeue the Intro email since they started the application on their own.
+                // Immediately after signing up, before we had to prod them to start.
+                // They'll get a reminder in X days if they don't finish the app.
+                // UPDATE: For started apps we'll still send them the email Intro because
+                // we want people to have access to the link in their email to complete their app.  
+                // Many people that immediately "start" but don't finish probably immediately 
+                // close it and still need a way to get back easily.  
+                tasksToDelete = 
+                    [SELECT Id, WhoId, WhatId FROM Task
+                     WHERE WhoId=:cm.ContactId AND
+                     WhatId=:cm.CampaignId AND
+                     Status <> 'Completed' AND
+                     Subject LIKE '%Send Intro Email%'];
+            }
+            else*/ if(cm.Application_Status__c == 'Submitted')
             {
                 Contact contact = [SELECT Id, Name, Phone, Accepts_Text__c, 
                                   Industry__c, Company__c, Sourcing_Info__c,
@@ -21,6 +38,15 @@ trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
                                   Identify_As_Person_Of_Color__c, Pell_Grant_Recipient__c
                                   FROM Contact WHERE Id=:cm.ContactId];
 
+                // If they immediately completed the app after signing up, even 
+                // before we had to prod them to start it, then just delete the intro email task.
+                tasksToDelete = 
+                    [SELECT Id, WhoId, WhatId FROM Task
+                     WHERE WhoId=:cm.ContactId AND
+                     WhatId=:cm.CampaignId AND
+                     Status <> 'Completed' AND
+                     Subject LIKE '%Send Intro Email%'];
+                
                 Task t = BZ_TaskFactory.createTask(cm, 'Review submitted application for {0}');
                 t.Description = 'Review the application for \'' + contact.Name + '\' by clicking the Campaign in the Releated To field, then scrolling down to the Campaign Member section, then clicking their first or last name to open the Campaign Member page, and finally changing their Candidate Status to Accepted, Interview Requested, Waitlisted, or Rejected.';
                 if (t!=null)
@@ -60,6 +86,7 @@ trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
             }
             insert tasksToAdd;
             update contactsToUpdate;
+            delete tasksToDelete;
         }
     }
 }

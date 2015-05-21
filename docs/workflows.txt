@@ -13,6 +13,7 @@ CAMPAIGN
 CAMPAIGN MEMBER
 		BZ_CampaignAssignedEnableApplyNow
 		BZ_CopyContactFields 
+    BZ_AppSubmitReminder
 
 #####
 Field Updates:

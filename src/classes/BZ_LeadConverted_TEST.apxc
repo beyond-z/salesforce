@@ -4,7 +4,8 @@ private class BZ_LeadConverted_TEST {
         User owner = [SELECT Id FROM User Where Id = :System.UserInfo.getUserId()];
         String testCompany='Do The Impossible Inc.';
         String testIndustry='IndustryOfTheFuture';
-        Lead l = new Lead(OwnerId=owner.Id, Company=testCompany, Industry=testIndustry, LeadSource='Website Signup', FirstName='Someone', LastName='New', Status='Open');
+        String testPhone='555.555.4444';
+        Lead l = new Lead(OwnerId=owner.Id, Company=testCompany, Industry=testIndustry, Phone=testPhone, Account_Activated__c=true, LeadSource='Website Signup', FirstName='Someone', LastName='New', Status='Open');
         insert l;
         Database.LeadConvert lc = new Database.LeadConvert();
         lc.setLeadId(l.id);
@@ -15,8 +16,9 @@ private class BZ_LeadConverted_TEST {
         Database.LeadConvertResult lcr = Database.convertLead(lc);
         test.stopTest();
         
-        Contact updatedContact = [SELECT Id, Company__c, Industry__c FROM Contact WHERE Id = :lcr.contactId];
+        Contact updatedContact = [SELECT Id, Company__c, Industry__c, HomePhone FROM Contact WHERE Id = :lcr.contactId];
         System.assert(updatedContact.Company__c == testCompany, 'The Lead.Company field failed to be copied to Contact.Company__c');
         System.assert(updatedContact.Industry__c == testIndustry, 'The Lead.Industry field failed to be copied to Contact.Industry__c');
+        System.assert(updatedContact.HomePhone == testPhone, 'The Lead.Phone field failed to be copied to Contact.HomePhone');
     }
 }

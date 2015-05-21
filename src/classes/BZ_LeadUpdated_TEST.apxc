@@ -1,0 +1,29 @@
+@isTest 
+private class BZ_LeadUpdated_TEST {
+    static testMethod void validateAccountActivatedStudentLead() {
+        User owner = [SELECT Id FROM User Where Id = :System.UserInfo.getUserId()];
+        Lead l = new Lead(OwnerId=owner.Id, LeadSource='Website Signup', User_Type__c='Undergrad', FirstName='Someone', LastName='New', Company='Someone New (individual)', Status='Open');
+        insert l;
+        
+        // This fires the trigger we're testing.
+        l.Account_Activated__c = true;
+        update l;
+        
+        Lead updatedLead = [SELECT Id, ConvertedContactId FROM Lead WHERE Id = :l.Id];
+        List<Contact> convertedLeads = [SELECT Id FROM Contact WHERE Id = :updatedLead.ConvertedContactId];
+        System.assert(convertedLeads.size()==1, 'Expected Undergrad leads to be auto converted when their account is activated.');
+    }
+    
+    static testMethod void validateAccountActivatedUniversityLead() {
+        User owner = [SELECT Id FROM User Where Id = :System.UserInfo.getUserId()];
+        Lead l = new Lead(OwnerId=owner.Id, LeadSource='Website Signup', User_Type__c='University', FirstName='Someone', LastName='New', Company='Someone New (individual)', Status='Open');
+        insert l;
+        
+        // This fires the trigger we're testing.
+        l.Account_Activated__c = true;
+        update l;
+        
+        List<Contact> convertedLeads = [SELECT Id FROM Contact WHERE Id = :l.ConvertedContactId];
+        System.assert(convertedLeads.size()==0, 'Expected University Partner leads to NOT be auto converted when their account is activated.');
+    }
+}
