@@ -13,7 +13,7 @@ public class BZ_CampaignFactory_TEST {
 
     public static Campaign create(Id ownerId, String type){
         return new Campaign(Name='Test Campaign', OwnerId=ownerId, 
-                            Intro_Email_Template__c='Test Intro Email Template', 
+                            Intro_Email_Template__c='BZ_Test Intro Email Template', 
                             Type=type, 
                             Application_Type__c='student', 
                             Program_Title__c='Blah', 
