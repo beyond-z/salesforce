@@ -8,6 +8,7 @@ private class BZ_CampaignActive_TEST {
         
         String appOpenEmailTemplate = 'Sample App Open Email Template';
         Campaign campaign = BZ_CampaignFactory_TEST.create();
+        campaign.IsActive = false;
         campaign.App_Open_Email_Template__c = appOpenEmailTemplate;
         insert campaign;
         
