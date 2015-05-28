@@ -17,6 +17,8 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
             //System.debug('BZ_CandidateStatusChanged: cm.Candidate_Status__c=' + cm.Candidate_Status__c);
             if (cm.Candidate_Status__c == 'Interview Requested')
             {
+                closeReviewAppTask = true;
+                
                 Task t = BZ_TaskFactory.createEmailTask(cm, 'Send Interview Request Email', 'App_Interview_Requested_Email_Template__c');
                 if (t!=null)
                 {
