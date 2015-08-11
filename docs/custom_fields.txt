@@ -1,38 +1,39 @@
-  BZ SETTINGS
-    Site base URL
-    Magic token
+	BZ SETTINGS
+		Site base URL
+		Magic token
 
-  ACTIVITY
-    Email Template To Send
+	ACTIVITY
+		Email Template To Send
 
-  CAMPAIGN
+	CAMPAIGN
 		Intro Email Template
 		Target Course ID In LMS
 		App Open Email Template
-    App Submit Reminder Template
+		App Submit Reminder Template
 		App Waitlisted Email Template
 		App Accepted Email Template
 		App Rejected Email Template
 		App Interview Requested Email Template
 		Application Type # coach or student. Which application form to show 
-    #Application Reminder Interval
+		#Application Reminder Interval
 		Program Title
 		Program Site
 		Request Availability # checkbox, if set, MeetingTimes must be present
 		Available Meeting Time Options # plain text, multi-line, one item per line 
 		Request Student Id
-    Interview Scheduler
-    Sourcing Info Options
+		Interview Scheduler
+		Sourcing Info Options
 
-  CAMPAIGN MEMBER
-  		Company
+	CAMPAIGN MEMBER
+		Company
 		Industry
+		Cannot Attend
 		Apply Button Enabled
 		Candidate Status
 		Application Decision Sent
-    #Application Reminder Queued
+		#Application Reminder Queued
 		#Must Queue Application Reminder
-    Middle Name
+		Middle Name
 		Undergrad University
 		Undergraduate Year
 		Major
@@ -41,6 +42,7 @@
 		Graduate Year
 		Digital Footprint
 		Resume
+		Previous University
 		African American
 		Asian American
 		Latino
@@ -80,10 +82,20 @@
 		ACT Score
 		Conquered Challenge
 		Languages
-    Sourcing Info	
+		Sourcing Info	
 		Additional Comments
-    Student Registration Code
-    Available Meeting Times
+		Student Registration Code
+		Available Meeting Times
+		Reference 1 Name
+		Reference 1 How Known
+		Reference 1 How Long Known
+		Reference 1 Phone
+		Reference 1 Email
+		Reference 2 Name
+		Reference 2 How Known
+		Reference 2 How Long Known
+		Reference 2 Phone
+		Reference 2 Email
 
 	CONTACT
 		Middle Name
@@ -126,7 +138,7 @@
 		
 	LEAD
 		Account Activated?
-    BZ User Id
+		BZ User Id
 		Signup Date
 		Came From to Visit Site
 		User Type
