@@ -7,8 +7,10 @@
 
 	CAMPAIGN
 		Intro Email Template
-		Target Course ID In LMS
-		Target Coach Course ID in LMS # for the coach playbook
+		Target Course ID In LMS # NOTE: this is "Student Course ID" on the UI, just still called Target_Course_ID_In_LMS__c in the API for legacy compatibility.
+		Coach Course ID # for the coach playbook
+		Section Name in LMS Coach Course # this is for the coach only - the class where Coaches are students. Set on the campaign because it is always the same for individuals within it.
+		Section Name Site Prefix # prefix for automatically making section names in this site. e.g. "NYC" or "SJSU" when we do "NYC Abby Mon 5"
 		App Open Email Template
 		App Submit Reminder Template
 		App Waitlisted Email Template
@@ -26,6 +28,7 @@
 		Sourcing Info Options
 
 	CAMPAIGN MEMBER
+		Selected Timeslot
 		Company
 		Industry
 		Cannot Attend
@@ -58,7 +61,6 @@
 		Identify As First Gen
 		Hometown
 		Section Name In LMS # this is the one for the fellows. coaches are TAs in here, fellows are Students
-		Section Name in LMS Coach Course # this is for the coach only - the class where Coaches are students
 		Started College
 		Anticipated Graduation
 		Eligible
