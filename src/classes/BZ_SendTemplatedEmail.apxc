@@ -1,15 +1,25 @@
 public class BZ_SendTemplatedEmail {
 
-    // Sends an email using an Email Template.
-  // 
-  // 
-  //  templateId   must be ID of an Email template
-  //  targetObjId must be a Contact, User, Lead Id -- also used in merge fields of template recipient.xxxx
-  //  whatId    must be an SObject that is used in the merge fields of the template relatedTo.xxxx
-  //  fromId    if non null, use current user, otherwise, use this ID (most likely an org wide no reply id)
-  //  bcc      not permitted when using templates
-  //  
-  //  Adapted from: https://developer.salesforce.com/forums/ForumsMain?id=906F000000094ClIAI
+    /**
+     * Sends an email using an Email Template.
+   * 
+   * 
+   *  templateId   must be ID of an Email template
+   *  targetObjId must be a Contact, User, Lead Id -- also used in merge fields of template recipient.xxxx
+   *  whatId    must be an SObject that is used in the merge fields of the template relatedTo.xxxx
+   *  fromId    if non null, use current user, otherwise, use this ID (most likely an org wide no reply id)
+   *  bcc      not permitted when using templates
+   *  
+   * IMPORTANT: this method can only be called 10 times in a single Apex context (aka run).
+   * Use SendMassTemplatedEmail() below if you want to send more than 10.
+   * 
+   * EXAMPLE USAGE:
+   * Contact recipient = [SELECT Id, Email FROM Contact WHERE Id = :someId];
+     * String[] recipients = new String[]{recipient.Email};
+     * BZ_SendTemplatedEmail.sendTemplatedEmail(recipients, null, et.EmailTemplate__c, recipient.Id, null, null, TRUE, null);
+   * 
+   * Adapted from: https://developer.salesforce.com/forums/ForumsMain?id=906F000000094ClIAI
+   */
   public static void sendTemplatedEmail(String[] toRecipients, String[] ccRecipients, String templateDeveloperName, ID targetObjId, Id whatId, ID orgWideEmailId, Boolean saveAsActivity, Attachment[] attachList ) {
         Messaging.SingleEmailMessage email = new Messaging.SingleEmailMessage();
     
@@ -22,7 +32,7 @@ public class BZ_SendTemplatedEmail {
                                'Unable to locate EmailTemplate using name: ' + templateDeveloperName + 
                            ' refer to Setup | Communications Templates | ' + templateDeveloperName);
         }
-    
+        
         email.setToAddresses(toRecipients);
         email.setCcAddresses(ccRecipients);
         email.setTargetObjectId(targetObjId);
@@ -40,5 +50,49 @@ public class BZ_SendTemplatedEmail {
         catch (EmailException e) {
             throw new BZ_EmailException('BZ_SendTemplatedEmail.sendTemplatedEmail(): error -- ' + e.getMessage());
         }
+    }
+    
+    /**
+     * Sends a mass email using an Email Template.
+   * 
+   *  contactIds   the list of Id's for the Contacts you want to email
+   *  templateDeveloperName the API developer name of the Email Template
+   * 
+   *  Adapted from: http://salesforce.stackexchange.com/questions/30874/how-to-write-a-mass-email-in-apex-code-i-have-tried-if-any-know-what-error-in-th
+   */
+    public static void sendMassTemplatedEmail(List<Id> contactIds, String templateDeveloperName) {    
+        Id templateId;  
+        try {
+            templateId = [select id, name from EmailTemplate where DeveloperName = : templateDeveloperName].id;
+        }
+        catch (Exception e) {
+          throw new BZ_EmailException ('BZ_SendTemplatedEmail.sendMassTemplatedEmail(): '+
+                               'Unable to locate EmailTemplate using name: ' + templateDeveloperName + 
+                           ' refer to Setup | Communications Templates | ' + templateDeveloperName);
+        }
+        
+        Messaging.MassEmailMessage emails = new Messaging.MassEmailMessage();
+        emails.setTargetObjectIds(contactIds);
+        emails.setTemplateId(templateId);
+    
+        System.debug(LoggingLevel.INFO,'BZ_SendTemplatedEmail.sendMassTemplatedEmail(contactIds:' + contactIds + ' templateDeveloperName:' + templateDeveloperName + ') -- begin');
+        try {
+            Messaging.sendEmail(new Messaging.MassEmailMessage[] {emails});
+            return;
+        }
+        catch (EmailException e) {
+            throw new BZ_EmailException('BZ_SendTemplatedEmail.sendMassTemplatedEmail(): error -- ' + e.getMessage());
+        }
+    }
+    
+    // If you get a MIXED_DML_OPERATION, use this utility method to do it in 
+    // future transaction.  
+    // See: http://www.salesforce.com/us/developer/docs/apexcode/Content/apex_dml_non_mix_sobjects.htm
+    // Note: you can't pass SObjects as parameters into async methods (aka future methods)
+    @future
+    public static void insertEmailTemplate(String name, String developerName, String templateType, Id folderId)
+    {
+        EmailTemplate et = new EmailTemplate(Name=name, DeveloperName=developerName, TemplateType=templateType, FolderId=folderId, IsActive=TRUE);
+        insert et;
     }
 }
