@@ -19,6 +19,7 @@ public class BZ_BulkEmailer {
                                   AND (               // Email Template To Send
                                         EmailTemplate__c != null OR EmailTemplate__c != ''
                                         )
+                                  LIMIT 10 // Hack for now: The SingleMailMessage can only do 10 per button press.  You'll have to press the button a buunch of times.
                                 ];
 
 //        System.Debug('BZ_BulkEmailer.getQueuedEmails: emailsTasks.size() = '+emailTasks.size());
@@ -36,7 +37,7 @@ public class BZ_BulkEmailer {
     public static Integer sendMyQueuedEmails(List<Task> emailTasksToSend)
     {
         System.debug('BZ_BulkEmailer.sendMyQueuedEmails(emailTasksToSend): begin');
-
+        
         Integer emailsSent = 0;
         for(Task et : emailTasksToSend)
         {
@@ -48,6 +49,32 @@ public class BZ_BulkEmailer {
                 recipients, null, et.EmailTemplate__c, recipient.Id, et.WhatId, null, TRUE, null); 
             emailsSent++;
         }
+        
+        /** COMMENTED OUT BC IT DOESN'T MERGE IN CAMPAIGN FIELDS EVEN IF I SET THE WhatId, 
+            BC MassEmailMessage doesn't support it **/
+        /*Integer emailsSent = 0;
+        // Segment the list into groups for each email template
+        Map<String, List<Id>> emailTemplateToContactIds = new Map<String, List<Id>>();
+        for(Task et : emailTasksToSend)
+        {
+            if (emailTemplateToContactIds.containsKey(et.EmailTemplate__c))
+            {
+              emailTemplateToContactIds.get(et.EmailTemplate__c).add(et.WhoId);
+            }
+      else
+            {
+                emailTemplateToContactIds.put(et.EmailTemplate__c, new List<Id>{et.WhoId});
+            }            
+            emailsSent++;
+        }
+        
+        for (String template : emailTemplateToContactIds.keySet())
+        { 
+          //Map <Id, Contact> recipients = new Map<Id, Contact>([SELECT Id, Email FROM Contact WHERE Id IN :emailTemplateToContactIds.get(template)]);
+          BZ_SendTemplatedEmail.sendMassTemplatedEmail(emailTemplateToContactIds.get(template), template);
+        }
+        */
+                     
         // We delete instead of updating to Completed because that causes two 
         // "Activity History" events, which is confusing.  We just want to leave 
         // the history of the actual email sent, not that fact that it needed to be sent.
@@ -65,6 +92,7 @@ public class BZ_BulkEmailer {
     {
         System.debug('BZ_BulkEmailer.getQueuedApplicationDecisions('+campaign+'): begin');
         Map<String, List<CampaignMember>> emailTemplateToRecipients = new Map<String, List<CampaignMember>>();
+        Integer count = 0;
         
         List<CampaignMember> acceptedUsers = 
             [SELECT CampaignId, ContactId, Contact.Email, Contact.Name FROM CampaignMember 
@@ -76,6 +104,7 @@ public class BZ_BulkEmailer {
         //System.Debug('BZ_BulkEmailer.getQueuedApplicationDecisions: acceptedUsers.get(0).Contact.Email = ' + acceptedUsers.get(0).Contact.Email);
         if (acceptedUsers != null && acceptedUsers.size() > 0)
         {
+            count += acceptedUsers.size();
             emailTemplateToRecipients.put(campaign.App_Accepted_Email_Template__c, acceptedUsers);
         }
         
@@ -89,6 +118,7 @@ public class BZ_BulkEmailer {
         //System.Debug('BZ_BulkEmailer.getQueuedApplicationDecisions: waitlistedUsers.get(0).Contact.Email = ' + waitlistedUsers.get(0).Contact.Email);
         if (waitlistedUsers != null && waitlistedUsers.size() > 0)
         {
+            count += waitlistedUsers.size();
             emailTemplateToRecipients.put(campaign.App_Waitlisted_Email_Template__c, waitlistedUsers);
         }
 
@@ -102,10 +132,39 @@ public class BZ_BulkEmailer {
         //System.Debug('BZ_BulkEmailer.getQueuedApplicationDecisions: rejectedUsers.get(0).Contact.Email = ' + rejectedUsers.get(0).Contact.Email);
         if (rejectedUsers != null && rejectedUsers.size() > 0)
         {
+            count += rejectedUsers.size();
             emailTemplateToRecipients.put(campaign.App_Rejected_Email_Template__c, rejectedUsers);
         }
 
-        return emailTemplateToRecipients;
+        if (count > 10)
+        {
+            // Hack for now b/c SingleMailMessage can only do 10 per button press.
+            // You'll have to press the button a buunch of times.
+            Map<String, List<CampaignMember>> upTo10emailTemplateToRecipients = new Map<String, List<CampaignMember>>();
+            Integer recipientsAdded = 0;
+            for (String emailTemplate : emailTemplateToRecipients.keySet())
+            {
+                upTo10emailTemplateToRecipients.put(emailTemplate, new List<CampaignMember>());
+                List<CampaignMember> cms = emailTemplateToRecipients.get(emailTemplate);
+                for (CampaignMember cm : cms)
+                {
+                    if (recipientsAdded < 10)
+                    {
+                        upTo10emailTemplateToRecipients.get(emailTemplate).add(cm);
+                        recipientsAdded++;
+                    }
+                    else
+                    {
+                        return upTo10emailTemplateToRecipients;
+                    }
+                }
+            }
+            return upTo10emailTemplateToRecipients;
+        }
+        else
+        {
+            return emailTemplateToRecipients;
+        }
     }
     
     /**
