@@ -12,6 +12,12 @@ public class BZ_SyncToLMS {
     
     public BZ_SyncToLMS(ApexPages.StandardController controller){
         m_campaign = (Campaign)controller.getRecord();
+	/*
+             This query should remain in sync - the WHERE condition
+	     is what's important - with the corresponding function
+	     in salesforce.rb method sync_to_lms in the Beyond Z
+	     source.
+	*/
         List<CampaignMember> membersToSync = [
           SELECT
             Contact.FirstName, Contact.LastName, Section_Name_In_LMS__c
