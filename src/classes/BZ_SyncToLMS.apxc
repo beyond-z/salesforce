@@ -1,4 +1,4 @@
- /**
+/**
  * Custom Controller that responds to the "Sync Contacts To LMS" button on a Campaign.
  * This button takes all Confirmed CampaignMembers and updates our Learning
  * Management System enrollments based on their Student and Leadership Coach
@@ -8,11 +8,54 @@ public class BZ_SyncToLMS {
     private Campaign m_campaign;
     private String m_resultMessage;
     private boolean m_hasRun;
+    private string m_membersToSyncDisplayList;
     
     public BZ_SyncToLMS(ApexPages.StandardController controller){
-      m_campaign = (Campaign)controller.getRecord(); 
-        m_hasRun = false;
-        m_resultMessage = '';
+        m_campaign = (Campaign)controller.getRecord();
+	/*
+             This query should remain in sync - the WHERE condition
+	     is what's important - with the corresponding function
+	     in salesforce.rb method sync_to_lms in the Beyond Z
+	     source.
+	*/
+        List<CampaignMember> membersToSync = [
+          SELECT
+            Contact.FirstName, Contact.LastName, Section_Name_In_LMS__c
+          FROM
+            CampaignMember
+          WHERE
+            CampaignId = :m_campaign.Id
+          AND
+            Candidate_Status__c = 'Confirmed'
+          AND
+            Section_Name_In_LMS__c <> NULL
+          AND
+            Section_Name_In_LMS__c <> ''
+        ];
+        
+        if (!membersToSync.isEmpty())
+        {
+            m_membersToSyncDisplayList = '<table><tr><td width="200px"><strong>Name</strong></td><td><strong>Section Name</strong></td></tr>';
+            
+            for (CampaignMember cm : membersToSync)
+            {
+                m_membersToSyncDisplayList += '<tr><td>'+cm.Contact.FirstName+' ' + cm.Contact.LastName + '</td><td>'+cm.Section_Name_In_LMS__c+'</td></tr>';
+            }
+            
+            m_membersToSyncDisplayList += '</table>';
+            
+            m_hasRun = false;
+            m_resultMessage = '';
+        }
+        else
+        {
+            m_hasRun = true;
+            m_resultMessage = 'There are no members to sync.';
+        }
+    }
+    
+    public String getMembersToSyncDisplayList() {
+        return m_membersToSyncDisplayList;
     }
     
     public String getResultMessage(){
