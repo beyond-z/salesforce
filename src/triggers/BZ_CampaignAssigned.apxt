@@ -8,18 +8,15 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
     List<Task> tasksToAdd = new List<Task>(); 
     List<Task> tasksToUpdate = new List<Task>(); 
     List<Contact> contactsToUpdate = new List<Contact>();
+    List<CampaignMember> campaignMembersToCreateTasksFor = new List<CampaignMember>();
     
     Set<Id> contactIds = new Set<Id>();
     Set<Id> contactIdsOfTasksToClose = new Set<Id>();
     Set<Id> campaignIds = new Set<Id>();
     for (CampaignMember cm : Trigger.new)
     {        
-        if (cm.ContactId != null) // Test if CampaignMember is Lead
-        {
-            //System.Debug('BZ_CampaignAssigned: adding ContactId='+cm.ContactId + ' to contactIds ' + contactIds);
-            contactIds.add(cm.ContactId);
-        }
-        
+        //System.Debug('BZ_CampaignAssigned: adding ContactId='+cm.ContactId + ' to contactIds ' + contactIds);
+        contactIds.add(cm.ContactId);
         //System.Debug('BZ_CampaignAssigned: adding CampaignId='+cm.CampaignId + ' to campaignIds ' + campaignIds);
         campaignIds.add(cm.CampaignId);
     }
@@ -35,10 +32,17 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
         Contact contact = contactMap.get(cm.ContactId);
         //System.debug('BZ_CampaignAssigned: contact='+contact);        
         
-        if (contact == null)
+        if (contact == null) // This happens for Leads
         {
-            // This happens for Leads
-            System.debug('BZ_CampaignAssigned: skipping cm.ContactId='+contact+' because the Contact is null');
+            System.debug('BZ_CampaignAssigned: skipping cm.ContactId='+cm.ContactId+' because the Contact is null');
+            continue;
+        }
+        
+        if (campaign == null)
+        {
+            // Not sure why this happens, but I've seen it before where the CampaignMember
+            // has an invalid CampaignId causing it to not exist in the map.
+            System.debug('BZ_CampaignAssigned: skipping cm.CampaignId='+cm.CampaignId+' because the Campaign is null');
             continue;
         }
         
@@ -71,14 +75,14 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
         {   
             contactsToUpdate.add(contact);
             contactIdsOfTasksToClose.add(contact.Id);
-                        
-            Task introTask = BZ_TaskFactory.createEmailTask(cm, 'Send Intro Email', 'Intro_Email_Template__c');
-            if (introTask!=null)
-            {
-                tasksToAdd.add(introTask);  
-                System.debug('BZ_CampaignAssigned: Adding new intro Task: '+ introTask);
-            }
+            campaignMembersToCreateTasksFor.add(cm);
         }
+    }
+    
+    if (campaignMembersToCreateTasksFor.size() > 0)
+    {
+        tasksToAdd = BZ_TaskFactory.createEmailTasks(campaignMembersToCreateTasksFor, 
+                                                 'Send Intro Email', 'Intro_Email_Template__c');
     }
     
     Id senderId = UserInfo.getUserId();

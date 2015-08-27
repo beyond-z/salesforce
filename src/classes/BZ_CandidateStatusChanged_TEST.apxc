@@ -79,21 +79,21 @@ private class BZ_CandidateStatusChanged_TEST {
         cm_accepted.CampaignId=campaign.Id;
         cm_accepted.ContactId=contact_accepted.Id;
         insert cm_accepted;
-        Task t_accepted = BZ_TaskFactory.createTask(cm_accepted, 'Review submitted application for {0}');
+        List<Task> t_accepted = BZ_TaskFactory.createTasks(new CampaignMember[]{cm_accepted}, 'Review submitted application for {0}');
         insert t_accepted;
         
         CampaignMember cm_waitlisted = new CampaignMember();
         cm_waitlisted.CampaignId=campaign.Id;
         cm_waitlisted.ContactId=contact_waitlisted.Id;
         insert cm_waitlisted;
-        Task t_waitlisted = BZ_TaskFactory.createTask(cm_waitlisted, 'Review submitted application for {0}');
+        List<Task> t_waitlisted = BZ_TaskFactory.createTasks(new CampaignMember[]{cm_waitlisted}, 'Review submitted application for {0}');
         insert t_waitlisted;
 
         CampaignMember cm_rejected = new CampaignMember();
         cm_rejected.CampaignId=campaign.Id;
         cm_rejected.ContactId=contact_rejected.Id;
         insert cm_rejected;
-        Task t_rejected = BZ_TaskFactory.createTask(cm_rejected, 'Review submitted application for {0}');
+        List<Task> t_rejected = BZ_TaskFactory.createTasks(new CampaignMember[]{cm_rejected}, 'Review submitted application for {0}');
         insert t_rejected;
         
         Test.startTest();
@@ -127,6 +127,39 @@ private class BZ_CandidateStatusChanged_TEST {
                                            Status='Completed' AND
                                            Subject LIKE '%Review submitted application for%'];
         System.assert(resultingTasks_rejected.size()==1, 'Expected Task to Review the application to be closed when Rejected.');
+        
+        Test.stopTest();
+    }
+    
+    static testMethod void validateReviewAppTaskClosedInterviewRequested() {
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_vratc2', OwnerId=userInfo.getUserId());
+        insert campaignOwner;
+        Contact contact_interview = new Contact(FirstName='Test', LastName='AppStatClosedInterview');
+        insert contact_interview;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
+        campaign.App_Interview_Requested_Email_Template__c = 'BZ_SomeInterviewRequestTemplate';
+        insert campaign;
+        
+        CampaignMember cm_interview = new CampaignMember();
+        cm_interview.CampaignId=campaign.Id;
+        cm_interview.ContactId=contact_interview.Id;
+        insert cm_interview;
+        List<Task> t_interview = BZ_TaskFactory.createTasks(new CampaignMember[]{cm_interview}, 'Review submitted application for {0}');
+        insert t_interview;
+        
+        Test.startTest();
+
+        cm_interview.Candidate_Status__c = 'Interview Requested';
+        update cm_interview;
+        
+        List<Task> resultingTasks_interview = [SELECT Id, Status FROM Task 
+                                     WHERE WhoId=:cm_interview.ContactId AND 
+                                           WhatId=:cm_interview.CampaignId AND
+                                           Status='Completed' AND
+                                           Subject LIKE '%Review submitted application for%'];
+        System.assert(resultingTasks_interview.size()==1, 'Expected Task to Review the application to be closed when Interview Requested.');
 
         Test.stopTest();
     }

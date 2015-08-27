@@ -1,11 +1,11 @@
 trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
     System.Debug('BZ_ApplicationStatusChanged: begin trigger');
 
+    List<CampaignMember> campaignMembersToCreateTasksFor = new List<CampaignMember>();
     for (CampaignMember cm : Trigger.new)
     {
         if (Trigger.oldMap.get(cm.Id).Application_Status__c != cm.Application_Status__c)
         {
-            List<Task> tasksToAdd = new List<Task>();
             List<Contact> contactsToUpdate = new List<Contact>();
             List<Task> tasksToDelete = new List<Task>();
 
@@ -47,13 +47,7 @@ trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
                      Status <> 'Completed' AND
                      Subject LIKE '%Send Intro Email%'];
                 
-                Task t = BZ_TaskFactory.createTask(cm, 'Review submitted application for {0}');
-                t.Description = 'Review the application for \'' + contact.Name + '\' by clicking the Campaign in the Releated To field, then scrolling down to the Campaign Member section, then clicking their first or last name to open the Campaign Member page, and finally changing their Candidate Status to Accepted, Interview Requested, Waitlisted, or Rejected.';
-                if (t!=null)
-                {
-                    tasksToAdd.add(t);
-                    System.debug('BZ_ApplicationStatusChanged: Adding new Task: '+ t);
-                }
+                campaignMembersToCreateTasksFor.add(cm);
 
                 contact.Accepts_Text__c = cm.Accepts_Text__c;
                 contact.Industry__c = cm.Industry__c;
@@ -84,9 +78,15 @@ trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
 
                 contactsToUpdate.add(contact);
             }
-            insert tasksToAdd;
             update contactsToUpdate;
             delete tasksToDelete;
         }
+    }
+    
+    if (campaignMembersToCreateTasksFor.size() > 0)
+    {
+        insert BZ_TaskFactory.createTasks(campaignMembersToCreateTasksFor, 
+                                          'Review submitted application for {0}',
+                                          'Review the application for \"{0}\" by clicking the Campaign in the Releated To field, then scrolling down to the Campaign Member section, then clicking their first or last name to open the Campaign Member page, and finally changing their Candidate Status to Accepted, Interview Requested, Waitlisted, or Rejected.');
     }
 }

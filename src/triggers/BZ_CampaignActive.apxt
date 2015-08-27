@@ -6,6 +6,7 @@
  */
 trigger BZ_CampaignActive on Campaign (before update) {
     System.Debug('BZ_CampaignActive: begin trigger');
+    List<CampaignMember> campaignMembersToCreateTasksFor = new List<CampaignMember>();
     for (Campaign campaign : Trigger.new)
     {
         // Only run this if the Active field changes.
@@ -24,17 +25,19 @@ trigger BZ_CampaignActive on Campaign (before update) {
                 // existing member letting them know the app is open.
                 if (campaign.IsActive)
                 {
-                    Task t = BZ_TaskFactory.createEmailTask(cm, 'Send App Open Email', 'App_Open_Email_Template__c');
-                    if (t!=null)
-                    {
-                        tasksToAdd.add(t);  
-                        System.debug('BZ_CampaignActive: Adding new Task: '+ t);
-                    }
+                    campaignMembersToCreateTasksFor.add(cm);
                 }
             }
             update cms;
-            insert tasksToAdd;
+            
             //System.Debug('BZ_CampaignActive: updated '+cms.size()+' CampaignMember.Apply_Button_Enabled__c field(s)');
         }
+    }
+    
+    if (campaignMembersToCreateTasksFor.size() > 0)
+    {
+        insert BZ_TaskFactory.createEmailTasks(campaignMembersToCreateTasksFor, 
+                                               'Send App Open Email', 
+                                               'App_Open_Email_Template__c');
     }
 }
