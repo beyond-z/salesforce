@@ -46,7 +46,7 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
             continue;
         }
         
-        boolean isApplicableCampaign = false;
+       boolean isApplicableCampaign = false;
         if (campaign.Type == 'Leadership Coaches') {
             // Note: this is also set in a Workflow when the Lead is converted, 
             // but they may signup as one type but then we determine that they are really 

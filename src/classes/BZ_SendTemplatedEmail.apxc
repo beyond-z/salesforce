@@ -58,6 +58,8 @@ public class BZ_SendTemplatedEmail {
    *  contactIds   the list of Id's for the Contacts you want to email
    *  templateDeveloperName the API developer name of the Email Template
    * 
+   *  Note: this won't merge in the Campaign field in a template
+   * 
    *  Adapted from: http://salesforce.stackexchange.com/questions/30874/how-to-write-a-mass-email-in-apex-code-i-have-tried-if-any-know-what-error-in-th
    */
     public static void sendMassTemplatedEmail(List<Id> contactIds, String templateDeveloperName) {    

@@ -5,14 +5,15 @@ private class BZ_CampaignAssigned_TEST {
         Lead l = new Lead(OwnerId=UserInfo.getUserId(), User_Type__c='Volunteer', Account_Activated__c=true, LeadSource='Website Signup', FirstName='Someone', LastName='New', Company='Someone New (individual)', Status='Open');
         insert l;
         
+        // THis happens automatically now on lead insertion above.
         // Convert Lead to Contact to get everything setup properly (e.g. Lead.ConvertedContactId must be set).
-        Database.LeadConvert lc = new Database.LeadConvert();
+        /*Database.LeadConvert lc = new Database.LeadConvert();
         lc.setLeadId(l.id);
         LeadStatus convertStatus = [Select Id, MasterLabel FROM LeadStatus WHERE IsConverted=true LIMIT 1];
         lc.setConvertedStatus(convertStatus.MasterLabel);
-        Database.LeadConvertResult lcr = Database.convertLead(lc);        
-        
-        Contact contact = [SELECT Id FROM Contact WHERE Id = :lcr.contactId];
+        Database.LeadConvertResult lcr = Database.convertLead(lc); */    
+        Lead updatedLead = [SELECT Id, ConvertedContactId FROM Lead Where Id = :l.Id];
+        Contact contact = [SELECT Id FROM Contact WHERE Id = :updatedLead.ConvertedContactId];
         Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner1', OwnerId=userInfo.getUserId());
         insert campaignOwner;
 
@@ -95,5 +96,32 @@ private class BZ_CampaignAssigned_TEST {
                                            WhatId=:updatedCm.CampaignId AND
                                            Subject LIKE '%Send Intro Email%'];
         System.assert(resultingTasks.size()==1, 'Expected Task to be created to Send Intro Email to Other Campaigns');
+    }
+    
+    static testMethod void validateReferrealProgramCampaignAssigned() {
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner4', OwnerId=userInfo.getUserId());
+        insert campaignOwner;
+        
+        // Mimic someone who we manually entered and assigned to a Referral Program campaign.
+        Contact contact = new Contact(FirstName='Test', LastName='User4');
+        insert contact;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Referral Program');
+        insert campaign;
+        
+        CampaignMember cm = new CampaignMember();
+        cm.CampaignId=campaign.Id;
+        cm.ContactId=contact.Id;
+        
+        // This fires the trigger we're testing.
+        insert cm;
+        
+        CampaignMember updatedCm = [SELECT Id, ContactId, CampaignId FROM CampaignMember WHERE Id=:cm.Id];
+        List<Task> resultingTasks = [SELECT Id, WhoId, WhatId FROM Task
+                                     WHERE WhoId=:updatedCm.ContactId AND
+                                           WhatId=:updatedCm.CampaignId AND
+                                           Subject LIKE '%Send Intro Email%'];
+        System.assert(resultingTasks.size()==0, 'Expected NO Task to be created to Send Intro Email to a Referral Program Campaigns');
     }
 }

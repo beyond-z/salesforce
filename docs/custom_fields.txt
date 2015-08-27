@@ -1,38 +1,43 @@
-  BZ SETTINGS
-    Site base URL
-    Magic token
+	BZ SETTINGS
+		Site base URL
+		Magic token
 
-  ACTIVITY
-    Email Template To Send
+	ACTIVITY
+		Email Template To Send
 
-  CAMPAIGN
+	CAMPAIGN
 		Intro Email Template
-		Target Course ID In LMS
+		Target Course ID In LMS # NOTE: this is "Student Course ID" on the UI, just still called Target_Course_ID_In_LMS__c in the API for legacy compatibility.
+		Coach Course ID # for the coach playbook
+		Section Name in LMS Coach Course # this is for the coach only - the class where Coaches are students. Set on the campaign because it is always the same for individuals within it.
+		Section Name Site Prefix # prefix for automatically making section names in this site. e.g. "NYC" or "SJSU" when we do "NYC Abby Mon 5"
 		App Open Email Template
-    App Submit Reminder Template
+		App Submit Reminder Template
 		App Waitlisted Email Template
 		App Accepted Email Template
 		App Rejected Email Template
 		App Interview Requested Email Template
 		Application Type # coach or student. Which application form to show 
-    #Application Reminder Interval
+		#Application Reminder Interval
 		Program Title
 		Program Site
 		Request Availability # checkbox, if set, MeetingTimes must be present
 		Available Meeting Time Options # plain text, multi-line, one item per line 
 		Request Student Id
-    Interview Scheduler
-    Sourcing Info Options
+		Interview Scheduler
+		Sourcing Info Options
 
-  CAMPAIGN MEMBER
-  		Company
+	CAMPAIGN MEMBER
+		Selected Timeslot
+		Company
 		Industry
+		Cannot Attend
 		Apply Button Enabled
 		Candidate Status
 		Application Decision Sent
-    #Application Reminder Queued
+		#Application Reminder Queued
 		#Must Queue Application Reminder
-    Middle Name
+		Middle Name
 		Undergrad University
 		Undergraduate Year
 		Major
@@ -41,6 +46,7 @@
 		Graduate Year
 		Digital Footprint
 		Resume
+		Previous University
 		African American
 		Asian American
 		Latino
@@ -54,7 +60,7 @@
 		Identify As Low Income
 		Identify As First Gen
 		Hometown
-		Section Name In LMS
+		Section Name In LMS # this is the one for the fellows. coaches are TAs in here, fellows are Students
 		Started College
 		Anticipated Graduation
 		Eligible
@@ -80,10 +86,20 @@
 		ACT Score
 		Conquered Challenge
 		Languages
-    Sourcing Info	
+		Sourcing Info	
 		Additional Comments
-    Student Registration Code
-    Available Meeting Times
+		Student Registration Code
+		Available Meeting Times
+		Reference 1 Name
+		Reference 1 How Known
+		Reference 1 How Long Known
+		Reference 1 Phone
+		Reference 1 Email
+		Reference 2 Name
+		Reference 2 How Known
+		Reference 2 How Long Known
+		Reference 2 Phone
+		Reference 2 Email
 
 	CONTACT
 		Middle Name
@@ -126,7 +142,7 @@
 		
 	LEAD
 		Account Activated?
-    BZ User Id
+		BZ User Id
 		Signup Date
 		Came From to Visit Site
 		User Type

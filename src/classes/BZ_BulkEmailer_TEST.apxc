@@ -147,4 +147,115 @@ private class BZ_BulkEmailer_TEST {
         CampaignMember rejectedCmResult = [SELECT Application_Decision_Sent__c FROM CampaignMember WHERE Id = :rejectedCm.Id];
         System.assertEquals(TRUE, rejectedCmResult.Application_Decision_Sent__c);
     }
+    
+    static testMethod void validateMoreThanTenSendQueuedApplicationDecisions() {
+        System.Debug('BZ_BulkEmailer_TEST.validateMoreThanTenSendQueuedApplicationDecisions(): begin');
+        
+        Integer emailsSent = 0;
+        Campaign campaign = null;
+        Contact waitlistedRecipient = null;
+        Contact acceptedRecipient = null;
+        Contact rejectedRecipient = null;
+        
+        CampaignMember waitlistedCm = null;
+        CampaignMember acceptedCm = null;
+        CampaignMember rejectedCm = null;
+
+        List<CampaignMember> testCms = null;
+        
+        // We do the runAs() b/c of a bug in salesforce where the template is not actually created.  
+        // This, in conjunction with the startTest and stopTest below which forces the async future method 
+        // to run synchronously: 
+        // https://developer.salesforce.com/forums/ForumsMain?id=906F00000008wSQIAY
+        User sender = [SELECT Id FROM User Where Id = :System.UserInfo.getUserId()];    
+        System.runAs(sender) 
+        {
+            List<Contact> testContacts = new List<Contact>();
+            waitlistedRecipient = new Contact(FirstName='TestWaitlistedEmail', LastName='Recipient', Email='TestWaitlistedEmail.Recipient@bz.org');
+            testContacts.add(waitlistedRecipient);
+            Contact waitlistedRecipient2 = new Contact(FirstName='TestWaitlistedEmail2', LastName='Recipient', Email='TestWaitlistedEmail.Recipient2@bz.org');
+            testContacts.add(waitlistedRecipient2);
+            Contact waitlistedRecipient3 = new Contact(FirstName='TestWaitlistedEmail3', LastName='Recipient', Email='TestWaitlistedEmail.Recipient3@bz.org');
+            testContacts.add(waitlistedRecipient3);
+            acceptedRecipient = new Contact(FirstName='TestAcceptedEmail', LastName='Recipient', Email='TestAcceptedEmail.Recipient@bz.org');
+            testContacts.add(acceptedRecipient);
+            Contact acceptedRecipient2 = new Contact(FirstName='TestAcceptedEmail2', LastName='Recipient', Email='TestAcceptedEmail.Recipient2@bz.org');
+            testContacts.add(acceptedRecipient2);
+            Contact acceptedRecipient3 = new Contact(FirstName='TestAcceptedEmail3', LastName='Recipient', Email='TestAcceptedEmail.Recipient3@bz.org');
+            testContacts.add(acceptedRecipient3);        
+            Contact acceptedRecipient4 = new Contact(FirstName='TestAcceptedEmail4', LastName='Recipient', Email='TestAcceptedEmail.Recipient4@bz.org');
+            testContacts.add(acceptedRecipient4);
+            rejectedRecipient = new Contact(FirstName='TestRejectedEmail', LastName='Recipient', Email='TestRejectedEmail.Recipient@bz.org');
+            testContacts.add(rejectedRecipient);
+            Contact rejectedRecipient2 = new Contact(FirstName='TestRejectedEmail2', LastName='Recipient', Email='TestRejectedEmail.Recipient2@bz.org');
+            testContacts.add(rejectedRecipient2);
+            Contact rejectedRecipient3 = new Contact(FirstName='TestRejectedEmail3', LastName='Recipient', Email='TestRejectedEmail.Recipient3@bz.org');
+            testContacts.add(rejectedRecipient3);
+            Contact rejectedRecipient4 = new Contact(FirstName='TestRejectedEmail4', LastName='Recipient', Email='TestRejectedEmail.Recipient4@bz.org');
+            testContacts.add(rejectedRecipient4);
+            
+            insert testContacts;
+            
+            String waitlistedEmailDeveloperName='TestWaitlistedEmailTemplateToSend';
+            String acceptedEmailDeveloperName='TestAcceptedEmailTemplateToSend';
+            String rejectedEmailDeveloperName='TestRejectedEmailTemplateToSend';
+            
+            campaign = BZ_CampaignFactory_TEST.create();
+            campaign.Name='Test Send Queued App Decisions Campaign1'; 
+            campaign.App_Waitlisted_Email_Template__c=waitlistedEmailDeveloperName;
+            campaign.App_Accepted_Email_Template__c=acceptedEmailDeveloperName;
+            campaign.App_Rejected_Email_Template__c=rejectedEmailDeveloperName;
+            insert campaign; 
+            
+            testCms = new List<CampaignMember>();
+            waitlistedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=waitlistedRecipient.Id, Candidate_Status__c='Waitlisted');
+            testCms.add(waitlistedCm);
+            CampaignMember waitlistedCm2 = new CampaignMember(CampaignId=campaign.Id, ContactId=waitlistedRecipient2.Id, Candidate_Status__c='Waitlisted');
+            testCms.add(waitlistedCm2);
+            CampaignMember waitlistedCm3 = new CampaignMember(CampaignId=campaign.Id, ContactId=waitlistedRecipient3.Id, Candidate_Status__c='Waitlisted');
+            testCms.add(waitlistedCm3);
+            
+            acceptedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=acceptedRecipient.Id, Candidate_Status__c='Accepted');
+            testCms.add(acceptedCm);
+            CampaignMember acceptedCm2 = new CampaignMember(CampaignId=campaign.Id, ContactId=acceptedRecipient2.Id, Candidate_Status__c='Accepted');
+            testCms.add(acceptedCm2);
+            CampaignMember acceptedCm3 = new CampaignMember(CampaignId=campaign.Id, ContactId=acceptedRecipient3.Id, Candidate_Status__c='Accepted');
+            testCms.add(acceptedCm3);
+            CampaignMember acceptedCm4 = new CampaignMember(CampaignId=campaign.Id, ContactId=acceptedRecipient4.Id, Candidate_Status__c='Accepted');
+            testCms.add(acceptedCm4);
+            
+            rejectedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=rejectedRecipient.Id, Candidate_Status__c='Rejected');
+            testCms.add(rejectedCm);
+            CampaignMember rejectedCm2 = new CampaignMember(CampaignId=campaign.Id, ContactId=rejectedRecipient2.Id, Candidate_Status__c='Rejected');
+            testCms.add(rejectedCm2);
+            CampaignMember rejectedCm3 = new CampaignMember(CampaignId=campaign.Id, ContactId=rejectedRecipient3.Id, Candidate_Status__c='Rejected');
+            testCms.add(rejectedCm3);
+            CampaignMember rejectedCm4 = new CampaignMember(CampaignId=campaign.Id, ContactId=rejectedRecipient4.Id, Candidate_Status__c='Rejected');
+            testCms.add(rejectedCm4);
+            
+            insert testCms;
+        
+            Test.startTest();
+            // Note, this Util method is to avoid a MIXED_DML_OPERATION error described here: 
+            // http://www.tgerm.com/2012/04/mixeddmloperation-dml-operation-on.html        
+            BZ_SendTemplatedEmail.insertEmailTemplate('Test Waitlisted Email Template', waitlistedEmailDeveloperName, 'text', sender.Id);
+            BZ_SendTemplatedEmail.insertEmailTemplate('Test Accepted Email Template', acceptedEmailDeveloperName, 'text', sender.Id);
+            BZ_SendTemplatedEmail.insertEmailTemplate('Test Rejected Email Template', rejectedEmailDeveloperName, 'text', sender.Id);
+
+            Test.stopTest();
+            
+            // Run the test
+            System.Debug('BZ_BulkEmailer_TEST: BZ_BulkEmailer.sendQueuedApplicationDecisions(BZ_BulkEmailer.getQueuedApplicationDecisions(campaign='+campaign+'))');        
+            emailsSent = BZ_BulkEmailer.sendQueuedApplicationDecisions(BZ_BulkEmailer.getQueuedApplicationDecisions(campaign));
+        }
+
+        System.assert(testCms.size() > 10, 'Test should have more than 10 Campaign Members');
+        System.assertEquals(10, emailsSent, 'Expected 10 emails to be sent, not '+emailsSent);
+        CampaignMember waitlistedCmResult = [SELECT Application_Decision_Sent__c FROM CampaignMember WHERE Id = :waitlistedCm.Id];
+        System.assertEquals(TRUE, waitlistedCmResult.Application_Decision_Sent__c);
+        CampaignMember acceptedCmResult = [SELECT Application_Decision_Sent__c FROM CampaignMember WHERE Id = :acceptedCm.Id];
+        System.assertEquals(TRUE, acceptedCmResult.Application_Decision_Sent__c);
+        CampaignMember rejectedCmResult = [SELECT Application_Decision_Sent__c FROM CampaignMember WHERE Id = :rejectedCm.Id];
+        System.assertEquals(TRUE, rejectedCmResult.Application_Decision_Sent__c);
+    }
 }
