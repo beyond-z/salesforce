@@ -4,13 +4,15 @@
 public class BZ_TaskFactory {
 
     /**
-     * See createEmailTask(CampaignMember, String, String, String) for more info
+     * See createEmailTasks(CampaignMember[], String, String, String) for more info
      */
-    public static Task createEmailTask(CampaignMember cm, String taskSubjectPrefix, String emailTemplateCampaignFieldName)
+    public static List<Task> createEmailTasks(CampaignMember[] cms, String taskSubjectPrefix, 
+                                        String emailTemplateCampaignFieldName)
     {
-        return createEmailTask(cm, taskSubjectPrefix, emailTemplateCampaignFieldName, 'Send the email by clicking on the Campaign in the \'Releated To\' field, then clicking the \'Send My Queued Emails\' button.');
+        return createEmailTasks(cms, taskSubjectPrefix, emailTemplateCampaignFieldName, 
+                               'Send the email by clicking on the Campaign in the \'Releated To\' field, then clicking the \'Send My Queued Emails\' button.');
     }
-
+    
     /**
      * Creates Tasks with the specified CampaignMember's 
      * 'Email Template To Send' field populated with the EmailTemplate 
@@ -19,87 +21,136 @@ public class BZ_TaskFactory {
      * 
      * E.g. to have the task use the template in the 
      * Campaign.Intro_Email_Template__c field, call this method like so:
-     *    createEmailTask(cm, 'Send Intro Email', 'Intro_Email_Template__c')
+     *    createEmailTasks(cms, 'Send Intro Email', 'Intro_Email_Template__c')
      */
-    public static Task createEmailTask(CampaignMember cm, String taskSubjectPrefix, String emailTemplateCampaignFieldName, 
-                                       String description)
+    public static List<Task> createEmailTasks(CampaignMember[] cms, String taskSubjectPrefix, 
+                                        String emailTemplateCampaignFieldName, 
+                                        String description)
     {
-        Id contactId = cm.ContactId;
-        //System.debug('BZ_TaskFactory: contactId='+contactId);
-        Contact contact = [SELECT Id, Name From Contact Where Id = :contactId];
-        //System.debug('BZ_TaskFactory: contact='+contact);
-        Id campaignId = cm.CampaignId;
-        //System.debug('BZ_TaskFactory: campaignId='+campaignId);
-        String campaignQueryString = 'SELECT Id, OwnerId, '+emailTemplateCampaignFieldName+
-                              ' FROM Campaign WHERE Id = :campaignId';
-        SObject campaignObj = Database.query(campaignQueryString);
-        Campaign campaign = (Campaign)campaignObj;
-        //System.debug('BZ_TaskFactory: campaign='+campaign);
-        User owner = [SELECT Id FROM User WHERE Id = :campaign.OwnerId];
-        //System.debug('BZ_TaskFactory: owner='+owner); 
-
-        String emailTemplate = (String)campaignObj.get(emailTemplateCampaignFieldName);
-        //System.debug('BZ_TaskFactory: emailTemplate='+emailTemplate);   
-
-        if (emailTemplate == null || emailTemplate == '')
-        {
-            cm.addError('The email template is not set on the Campaign for: '+emailTemplateCampaignFieldName);
-            return null;
+        Set<Id> contactIds = new Set<Id>();
+        Set<Id> campaignIds = new Set<Id>();
+        for (CampaignMember cm : cms)
+        {        
+            if (cm.ContactId != null) // Test if CampaignMember is Lead
+            {
+                //System.Debug('BZ_TaskFactory: adding ContactId='+cm.ContactId + ' to contactIds ' + contactIds);
+                contactIds.add(cm.ContactId);
+            }
+            
+            //System.Debug('BZ_TaskFactory: adding CampaignId='+cm.CampaignId + ' to campaignIds ' + campaignIds);
+            campaignIds.add(cm.CampaignId);
         }
-        else
+        Map<Id, Contact> contactMap = new Map<Id, Contact>([SELECT Id, Name FROM Contact WHERE Id in :contactIds]);
+        Map<Id, Campaign> campaignMap = new Map<Id, Campaign>([SELECT Id, OwnerId FROM Campaign WHERE Id in :campaignIds]);
+        Map<Id, String> emailTemplateMap = new Map<Id, String>();
+        for (Id campaignId : campaignMap.keySet())
+        {
+            if (emailTemplateMap.get(campaignId) == null)
+            {
+                String campaignQueryString = 'SELECT Id, OwnerId, '+emailTemplateCampaignFieldName+
+                                             ' FROM Campaign WHERE Id = :campaignId';
+                SObject campaignObj = Database.query(campaignQueryString);
+                String emailTemplate = (String)campaignObj.get(emailTemplateCampaignFieldName);
+                if (emailTemplate == null || emailTemplate == '')
+                {
+                    campaignObj.addError('The email template is not set on the Campaign for: '+emailTemplateCampaignFieldName);
+                    return null;
+                }
+                else
+                {
+                    emailTemplateMap.put(campaignId, emailTemplate);
+                }
+            }
+        }
+            
+        List<Task> tasks = new List<Task>();
+        for (CampaignMember cm : cms)
         {
             Task t = new Task(
-                OwnerId = owner.Id,           // Assigned To
-                Subject = 'Email: ' + taskSubjectPrefix + ' To ' + contact.Name,
+                OwnerId = campaignMap.get(cm.CampaignId).OwnerId,         // Assigned To
+                Subject = 'Email: ' + taskSubjectPrefix + ' To ' + contactMap.get(cm.ContactId).Name,
                 Description = description,
                 IsReminderSet = true,
                 ReminderDateTime = System.now(),
                 ActivityDate = Date.today(),      // Due Date
-                WhoId = contactId,            // Name
-                WhatId = campaignId,          // Related To
-                EmailTemplate__c = emailTemplate);    // Email Template To Send
-            return t;
+                WhoId = cm.ContactId,             // Name
+                WhatId = cm.CampaignId,         // Related To
+                EmailTemplate__c = emailTemplateMap.get(cm.CampaignId));    // Email Template To Send
+            
+            tasks.add(t);
         }
+        return tasks;
     }
-
+    
     /**
-     * See createTask(CampaignMember, String, String) for more info
+     * See createTasks(CampaignMember[], String, String) for more info
      */
-    public static Task createTask(CampaignMember cm, String taskSubjectPattern) 
+    public static List<Task> createTasks(CampaignMember[] cms, String taskSubjectPattern) 
     {
-        return createTask(cm, taskSubjectPattern, '');
+        return createTasks(cms, taskSubjectPattern, '');
     }
-
+    
     /**
-     * Creates Tasks for the owner of the Campaign for the specified CampaignMember.
+     * Creates Tasks for the owner of each Campaign for the specified CampaignMembers.
      * 
      * taskSubjectPattern is the Subject of the Task where the name of the CampaignMember
      * is added in the location that you specify.  You specify the location with a single
      * replacement token used with String.format(String,List<String>) method.  
-     * e.g. createTask(cm, 'The person {0} need something to happen')
+     * e.g. createTask(cm, 'The person {0} need something to happen', ...)
+     * 
+     * descriptionPattern is the Description of the Task where the name of the CampaignMember
+     * is added in the location that you specify.  You specify the location with a single
+     * replacement token used with String.format(String,List<String>) method.  
+     * e.g. createTask(cm, ... , 'Click on the name of {0} and then...')
+     * 
+     * Note: in the parameters that take a pattern, you can omit the replacement token if you 
+     *       don't need the Contact name in there.
      */
-    public static Task createTask(CampaignMember cm, String taskSubjectPattern, String description) 
+    public static List<Task> createTasks(CampaignMember[] cms, String taskSubjectPattern, String descriptionPattern) 
     {
-        Id contactId = cm.ContactId;
-        //System.debug('BZ_TaskFactory: contactId='+contactId);
-        Contact contact = [SELECT Id, Name From Contact Where Id = :contactId];
-        //System.debug('BZ_TaskFactory: contact='+contact);
-        Id campaignId = cm.CampaignId;
-        //System.debug('BZ_TaskFactory: campaignId='+campaignId);
-        Campaign campaign = [SELECT Id, OwnerId FROM Campaign WHERE Id = :campaignId];
-        //System.debug('BZ_TaskFactory: campaign='+campaign);
-        User owner = [SELECT Id FROM User WHERE Id = :campaign.OwnerId];
-        //System.debug('BZ_TaskFactory: owner='+owner); 
-        Task t = new Task(
-                OwnerId = owner.Id,           // Assigned To
-                Subject = System.String.format(taskSubjectPattern, new String[]{contact.Name}),
-                Description = description,
-                IsReminderSet = true,
-                ReminderDateTime = System.now(),
-                ActivityDate = Date.today(),      // Due Date
-                WhoId = contactId,            // Name
-                WhatId = campaignId);                   // Related To
-        return t;
+        List<Task> tasksToAdd = new List<Task>();
+        Set<Id> contactIds = new Set<Id>();
+        Set<Id> campaignIds = new Set<Id>();
+        for (CampaignMember cm : cms)
+        {        
+            if (cm.ContactId != null) // Test if CampaignMember is Lead
+            {
+                //System.Debug('BZ_TaskFactory: adding ContactId='+cm.ContactId + ' to contactIds ' + contactIds);
+                contactIds.add(cm.ContactId);
+            }
+            
+            //System.Debug('BZ_TaskFactory: adding CampaignId='+cm.CampaignId + ' to campaignIds ' + campaignIds);
+            campaignIds.add(cm.CampaignId);
+        }
+        Map<Id, Contact> contactMap = new Map<Id, Contact>([SELECT Id, Name FROM Contact WHERE Id in :contactIds]);
+        Map<Id, Campaign> campaignMap = new Map<Id, Campaign>([SELECT Id, OwnerId FROM Campaign WHERE Id in :campaignIds]);
+    
+        for (CampaignMember cm : cms)
+        {
+            Id contactId = cm.ContactId;
+            //System.debug('BZ_TaskFactory: contactId='+contactId);
+            Contact contact = contactMap.get(contactId);
+            if (contact != null) // Can happen for Leads
+            {
+                //System.debug('BZ_TaskFactory: contact='+contact);
+                Id campaignId = cm.CampaignId;
+                //System.debug('BZ_TaskFactory: campaignId='+campaignId);
+                Campaign campaign = campaignMap.get(campaignId);
+                //System.debug('BZ_TaskFactory: campaign='+campaign);
+                Task t = new Task(
+                        OwnerId = campaign.OwnerId,           // Assigned To
+                        Subject = System.String.format(taskSubjectPattern, new String[]{contact.Name}),
+                        Description = System.String.format(descriptionPattern, new String[]{contact.Name}),
+                        IsReminderSet = true,
+                        ReminderDateTime = System.now(),
+                        ActivityDate = Date.today(),      // Due Date
+                        WhoId = contactId,            // Name
+                        WhatId = campaignId);                   // Related To
+                
+                tasksToAdd.add(t);
+            }
+        }
+        return tasksToAdd;
     }
 
     /**

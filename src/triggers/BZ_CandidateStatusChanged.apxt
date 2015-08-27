@@ -1,11 +1,26 @@
 trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
     System.Debug('BZ_CandidateStatusChanged: begin trigger');
     
+    Set<Id> contactIds = new Set<Id>();
+    Set<Id> campaignIds = new Set<Id>();
+    for (CampaignMember cm : Trigger.new)
+    {        
+        //System.Debug('BZ_CandidateStatusChanged: adding ContactId='+cm.ContactId + ' to contactIds ' + contactIds);
+        contactIds.add(cm.ContactId);
+        //System.Debug('BZ_CandidateStatusChanged: adding CampaignId='+cm.CampaignId + ' to campaignIds ' + campaignIds);
+        campaignIds.add(cm.CampaignId);
+    }
+    Map<Id, Contact> contactMap = new Map<Id, Contact>([SELECT Id, Volunteer_Information__c, Participant_Information__c, User_Type__c FROM Contact WHERE Id in :contactIds]);
+    Map<Id, Campaign> campaignMap = new Map<Id, Campaign>([SELECT Id, Type FROM Campaign WHERE Id in :campaignIds]);
+    //System.Debug('BZ_CandidateStatusChanged: contactMap='+contactMap);
+    //System.Debug('BZ_CandidateStatusChanged: campaignMap='+campaignMap);
+    
+    List<CampaignMember> campaignMembersToCreateTasksFor = new List<CampaignMember>();
+    
     for (CampaignMember cm : Trigger.new)
     {
         if (Trigger.oldMap.get(cm.Id).Candidate_Status__c != cm.Candidate_Status__c)
         {
-            List<Task> tasksToAdd = new List<Task>();
             List<Task> tasksToUpdate = new List<Task>();
             List<Contact> contactsToUpdate = new List<Contact>();
             
@@ -18,30 +33,17 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
             if (cm.Candidate_Status__c == 'Interview Requested')
             {
                 closeReviewAppTask = true;
-                
-                Task t = BZ_TaskFactory.createEmailTask(cm, 'Send Interview Request Email', 'App_Interview_Requested_Email_Template__c');
-                if (t!=null)
-                {
-                    tasksToAdd.add(t);
-                    System.debug('BZ_CandidateStatusChanged: Adding new Task: '+ t);
-                }
+                campaignMembersToCreateTasksFor.add(cm);
             }
             else if(cm.Candidate_Status__c == 'Accepted')
             {   
-                // TODO: need to finish designing how this is going to work for SJSU and other programs
-                /*Task t = BZ_TaskFactory.createTask(cm, 'Map cohort for {0}');
-                if (t!=null)
-                {
-                    tasksToAdd.add(t);
-                    System.debug('BZ_CandidateStatusChanged: Adding new Task: '+ t);
-                }*/
                 closeReviewAppTask = true;
                 
-                Campaign campaign = [SELECT Id, Type FROM Campaign WHERE Id=:cm.CampaignId];
-                //System.debug('BZ_CampaignAssigned: campaign='+campaign);
-                Contact contact = [SELECT Id, Volunteer_Information__c, Participant_Information__c
-                                   FROM Contact WHERE Id=:cm.ContactId];
-                //System.debug('BZ_CampaignAssigned: contact='+contact);
+                Campaign campaign = campaignMap.get(cm.CampaignId);
+                //System.debug('BZ_CandidateStatusChanged: campaign='+campaign);
+                Contact contact = contactMap.get(cm.ContactId);
+                //System.debug('BZ_CandidateStatusChanged: contact='+contact); 
+        
                 if (campaign.Type == 'Leadership Coaches') {
                     contact.Volunteer_Information__c = 'Current LC';
                     contactsToUpdate.add(contact);
@@ -56,7 +58,7 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
             
             if (closeReviewAppTask)
             {
-                System.debug('BZ_CampaignAssigned: closing task to Review App');
+                System.debug('BZ_CandidateStatusChanged: closing task to Review App');
                 List<Task> reviewAppTasks = [SELECT Id, Status FROM Task 
                                              WHERE WhoId=:cm.ContactId AND 
                                                    WhatId=:cm.CampaignId AND
@@ -71,9 +73,16 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
                 }
             }
             
-            insert tasksToAdd;
+            
             update contactsToUpdate;
             update tasksToUpdate;
         }
+    }
+    
+    if (campaignMembersToCreateTasksFor.size() > 0)
+    {
+        insert BZ_TaskFactory.createEmailTasks(campaignMembersToCreateTasksFor, 
+                                               'Send Interview Request Email', 
+                                               'App_Interview_Requested_Email_Template__c');
     }
 }
