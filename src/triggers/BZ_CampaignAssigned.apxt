@@ -6,51 +6,101 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
     System.Debug('BZ_CampaignAssigned: begin trigger');
     
     List<Task> tasksToAdd = new List<Task>(); 
+    List<Task> tasksToUpdate = new List<Task>(); 
     List<Contact> contactsToUpdate = new List<Contact>();
     
+    Set<Id> contactIds = new Set<Id>();
+    Set<Id> contactIdsOfTasksToClose = new Set<Id>();
+    Set<Id> campaignIds = new Set<Id>();
+    for (CampaignMember cm : Trigger.new)
+    {        
+        if (cm.ContactId != null) // Test if CampaignMember is Lead
+        {
+            //System.Debug('BZ_CampaignAssigned: adding ContactId='+cm.ContactId + ' to contactIds ' + contactIds);
+            contactIds.add(cm.ContactId);
+        }
+        
+        //System.Debug('BZ_CampaignAssigned: adding CampaignId='+cm.CampaignId + ' to campaignIds ' + campaignIds);
+        campaignIds.add(cm.CampaignId);
+    }
+    Map<Id, Contact> contactMap = new Map<Id, Contact>([SELECT Id, Volunteer_Information__c, Participant_Information__c, User_Type__c FROM Contact WHERE Id in :contactIds]);
+    Map<Id, Campaign> campaignMap = new Map<Id, Campaign>([SELECT Id, Type FROM Campaign WHERE Id in :campaignIds]);
+    //System.Debug('BZ_CampaignAssigned: contactMap='+contactMap);
+    //System.Debug('BZ_CampaignAssigned: campaignMap='+campaignMap);
+                 
     for (CampaignMember cm : Trigger.new)
     {
-        Campaign campaign = [SELECT Id, Type FROM Campaign WHERE Id=:cm.CampaignId];
+        Campaign campaign = campaignMap.get(cm.CampaignId);
         //System.debug('BZ_CampaignAssigned: campaign='+campaign);
-        Contact contact = [SELECT Id, Volunteer_Information__c, Participant_Information__c, User_Type__c
-                           FROM Contact WHERE Id=:cm.ContactId];
-        //System.debug('BZ_CampaignAssigned: contact='+contact);
-        boolean sendWelcomeEMail = false;
+        Contact contact = contactMap.get(cm.ContactId);
+        //System.debug('BZ_CampaignAssigned: contact='+contact);        
+        
+        if (contact == null)
+        {
+            // This happens for Leads
+            System.debug('BZ_CampaignAssigned: skipping cm.ContactId='+contact+' because the Contact is null');
+            continue;
+        }
+        
+        boolean isApplicableCampaign = false;
         if (campaign.Type == 'Leadership Coaches') {
             // Note: this is also set in a Workflow when the Lead is converted, 
             // but they may signup as one type but then we determine that they are really 
             // a different type so we still want to run this.
             contact.Volunteer_Information__c = 'LC Pipeline';
-            sendWelcomeEMail = true;
+            isApplicableCampaign = true;
         } else if (campaign.Type == 'Program Participants'){
             // Ditto on above comment
             contact.Participant_Information__c = 'Participant Pipeline';
-            sendWelcomeEMail = true;
+            isApplicableCampaign = true;
         } else if (campaign.Type == 'Partners')
         {
             // Website signup as employer partner or university partner
             if ( contact.User_Type__c == 'Employer' || contact.User_Type__c == 'University')
             {
-                sendWelcomeEMail = true;
+                isApplicableCampaign = true;
             }
         }
         else if (campaign.Type == 'Other' && contact.User_Type__c == 'Other')
         {
             // Website signup as "Other"
-            sendWelcomeEMail = true;
+            isApplicableCampaign = true;
         }
         
-        if (sendWelcomeEMail){   
+        if (isApplicableCampaign)
+        {   
             contactsToUpdate.add(contact);
+            contactIdsOfTasksToClose.add(contact.Id);
                         
-            Task t = BZ_TaskFactory.createEmailTask(cm, 'Send Intro Email', 'Intro_Email_Template__c');
-            if (t!=null)
+            Task introTask = BZ_TaskFactory.createEmailTask(cm, 'Send Intro Email', 'Intro_Email_Template__c');
+            if (introTask!=null)
             {
-                tasksToAdd.add(t);  
-                System.debug('BZ_CampaignAssigned: Adding new Task: '+ t);
+                tasksToAdd.add(introTask);  
+                System.debug('BZ_CampaignAssigned: Adding new intro Task: '+ introTask);
             }
         }
     }
+    
+    Id senderId = UserInfo.getUserId();
+    List<Task> tasksToClose = [SELECT Id, WhoId, WhatId, OwnerId, Status, Subject
+                               FROM Task 
+                               WHERE WhoId in :contactIdsOfTasksToClose AND       // Name - this task was created to handle a Lead, but the WhoId seems to be updated to the Contact ID after conversion
+                               OwnerId = :senderId AND         // Assigned To
+                               Status != 'Completed' AND
+                               Subject LIKE '%New Website Signup%'
+                              ];
+    //System.debug('BZ_CampaignAssigned: tasksToClose.size() = ' + tasksToClose.size() );
+    
+    // If the task was already closed or deleted, it's a NOOP b/c this is a convenience behavior anyway.
+    if (tasksToClose != null && tasksToClose.size() > 0)
+    {
+        Task taskToClose = tasksToClose.get(0);
+        System.debug('BZ_CampaignAssigned: closing Task = ' + taskToClose );
+        taskToClose.Status = 'Completed';
+        tasksToUpdate.add(taskToClose);
+    }
+    
     update contactsToUpdate;
+    update tasksToUpdate;
     insert tasksToAdd;
 }
