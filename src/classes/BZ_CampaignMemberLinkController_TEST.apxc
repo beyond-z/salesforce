@@ -1,0 +1,48 @@
+@isTest 
+private class BZ_CampaignMemberLinkController_TEST {
+    static testMethod void validateCampaignMemberLink() {
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
+        insert campaignOwner;
+        Contact contact = new Contact(FirstName='Test', LastName='User');
+        insert contact;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Blah');
+        insert campaign;
+        
+        CampaignMember cm = new CampaignMember();
+        cm.CampaignId=campaign.Id;
+        cm.ContactId=contact.Id;
+        insert cm;
+        
+        Task t = new Task(Subject='Test CampaignMemberLink', CampaignMemberId__c=cm.Id);
+        insert t;
+      ApexPages.StandardController sc = new ApexPages.standardController(t);
+            
+        PageReference pageRef = Page.BZ_CampaignMemberLink;
+        Test.setCurrentPage(pageRef);
+        
+      BZ_CampaignMemberLinkController controller = new BZ_CampaignMemberLinkController(sc);
+        Boolean hasCm = controller.hasRelatedCampaignMember;
+        CampaignMember relatedCm = controller.relatedCampaignMember;
+        
+        System.assert(hasCm, 'The BZ_CampaignMemberLinkController should have a CampaignMember');
+        System.assertEquals(cm.Id, relatedCm.Id, 'The CampaignMember used to create the controller doesnt match');
+    }
+    
+    static testMethod void validateNoCampaignMemberLink() {
+        Task t = new Task(Subject='Test NoCampaignMemberLink');
+        insert t;
+      ApexPages.StandardController sc = new ApexPages.standardController(t);
+            
+        PageReference pageRef = Page.BZ_CampaignMemberLink;
+        Test.setCurrentPage(pageRef);
+        
+      BZ_CampaignMemberLinkController controller = new BZ_CampaignMemberLinkController(sc);
+        Boolean hasCm = controller.hasRelatedCampaignMember;
+        CampaignMember relatedCm = controller.relatedCampaignMember;
+        
+        System.assert(hasCm==false, 'The BZ_CampaignMemberLinkController should NOT have a CampaignMember');
+        System.assert(relatedCm == null, 'The relatedCampaignMember should be null');
+    }
+}
