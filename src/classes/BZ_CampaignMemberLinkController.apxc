@@ -1,0 +1,31 @@
+public class BZ_CampaignMemberLinkController {
+
+    private final Task m_task;
+    
+    /**
+     * The CampaignMember that this Task is related to.  E.g. so you can click the
+     * CampaignMember and go there directly.
+     */
+    public CampaignMember relatedCampaignMember {get; set;}
+    
+    /**
+     * Whether the task has a relatedCampaignMember.  Used to control
+     * the rendered page.
+     */
+    public Boolean hasRelatedCampaignMember {get; set;}
+    
+    public BZ_CampaignMemberLinkController(ApexPages.StandardController controller) {
+        this.m_task = (Task)controller.getRecord();
+        List<CampaignMember> cms = [SELECT Id, Name FROM CampaignMember WHERE Id = :m_task.CampaignMemberId__c];
+        if (cms.size() == 1)
+        {
+            this.relatedCampaignMember = cms.get(0);
+            this.hasRelatedCampaignMember = true;
+        }
+        else
+        {
+            this.relatedCampaignMember = null;
+            this.hasRelatedCampaignMember = false;
+        }
+    }
+}

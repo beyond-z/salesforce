@@ -75,7 +75,8 @@ public class BZ_TaskFactory {
                 ActivityDate = Date.today(),      // Due Date
                 WhoId = cm.ContactId,             // Name
                 WhatId = cm.CampaignId,         // Related To
-                EmailTemplate__c = emailTemplateMap.get(cm.CampaignId));    // Email Template To Send
+                EmailTemplate__c = emailTemplateMap.get(cm.CampaignId),   // Email Template To Send
+                CampaignMemberId__c = cm.Id);
             
             tasks.add(t);
         }
@@ -145,7 +146,8 @@ public class BZ_TaskFactory {
                         ReminderDateTime = System.now(),
                         ActivityDate = Date.today(),      // Due Date
                         WhoId = contactId,            // Name
-                        WhatId = campaignId);                   // Related To
+                        WhatId = campaignId,                    // Related To
+                        CampaignMemberId__c = cm.Id);
                 
                 tasksToAdd.add(t);
             }
