@@ -1,0 +1,12 @@
+/** Helper class to hold the state of the lead being converted */
+public class BZ_LeadConvertedState {
+    public String company {get;set;}
+    public String industry {get;set;}
+    public String phone {get;set;}
+    public BZ_LeadConvertedState(String company, String industry, String phone)
+    {
+        this.company = company;
+        this.industry = industry;
+        this.phone = phone;
+    }
+}

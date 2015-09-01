@@ -5,16 +5,17 @@ trigger BZ_LeadConverted on Lead (before update) {
     // the bz.org platform know about it so that the User on the platform
     // stays tied to the Contact
     String changes = ''; 
-    List<Contact> contactsToUpdate = new List<Contact>();
+    Map<Id, BZ_LeadConvertedState> contactsToUpdateStateMap = new Map<Id, BZ_LeadConvertedState>();
+    
     for (Lead lead : Trigger.new) { 
         if(lead.IsConverted != Trigger.oldMap.get(lead.Id).IsConverted) { 
             if (lead.IsConverted) { 
                 System.debug('BZ_LeadConverted: processing converted lead = '+lead);
                 changes += ',' + lead.Id + ':' + lead.ConvertedContactId; 
                         
-                boolean setCompany = false;
-                boolean setIndustry = false;
-                boolean setPhone = false;
+                String company = null;
+                String industry = null;
+                String phone = null;
                 if (lead.Company != null && lead.Company != '')
                 {
                     // Normally, a Lead.Company field is mapped to Contact.Account Name by default.
@@ -24,43 +25,54 @@ trigger BZ_LeadConverted on Lead (before update) {
                     // See https://powerofus.force.com/articles/Resource/NPSP-What-is-an-Account-Model#household
                     // For this reason, we use a custom Contact.Company__c to store the Company that a Lead 
                     // works for on a Contact.
-                    setCompany = true;
+                    company = lead.Company;
                 }
                 
                 if (lead.Industry != null && lead.Industry != '')
                 {
-                    setIndustry = true;                    
+                    industry = lead.Industry;                    
                 }
                 
                 if (lead.Phone != null && lead.Phone != '')
                 {
-                    setPhone = true;                    
+                    phone = lead.Phone;                    
                 }
                 
-                if (setCompany || setIndustry || setPhone)
+                if (company != null || industry != null || phone != null)
                 {
-                    Contact contact = [SELECT Id, Company__c, Industry__c, HomePhone FROM Contact WHERE Id=:lead.ConvertedContactId];
-                    if (setCompany)
-                    {
-                        System.debug('BZ_LeadConverted: setting Contact.Company__c to ' + lead.Company);
-                        contact.Company__c = lead.Company;
-                    }
-                    if (setIndustry)
-                    {
-                        System.debug('BZ_LeadConverted: setting Contact.Industry__c to ' + lead.Industry);
-                        contact.Industry__c = lead.Industry;
-                    }
-                    if(setPhone)
-                    {
-                        System.debug('BZ_LeadConverted: setting Contact.HomePhone to ' + lead.Phone);
-                        contact.HomePhone = lead.Phone;
-                    }
-                    contactsToUpdate.add(contact);
+                    contactsToUpdateStateMap.put(lead.ConvertedContactId, new BZ_LeadConvertedState(company, industry, phone));
                 }
             } 
         } 
-    } 
-    update contactsToUpdate;
+    }
+    
+    
+    if (contactsToUpdateStateMap.size() > 0)
+    {
+        List<Contact> contactsToUpdate = new List<Contact>([SELECT Id, Company__c, Industry__c, HomePhone FROM Contact WHERE Id in :contactsToUpdateStateMap.keySet()]);
+
+        for (Contact contact : contactsToUpdate)
+        {
+            BZ_LeadConvertedState state = contactsToUpdateStateMap.get(contact.Id);
+            if (state.company != null)
+            {
+                System.debug('BZ_LeadConverted: setting Contact.Company__c to ' + state.company);
+                contact.Company__c = state.company;
+            }
+            if (state.industry != null)
+            {
+                System.debug('BZ_LeadConverted: setting Contact.Industry__c to ' + state.industry);
+                contact.Industry__c = state.industry;
+            }
+            if(state.phone != null)
+            {
+                System.debug('BZ_LeadConverted: setting Contact.HomePhone to ' + state.phone);
+                contact.HomePhone = state.phone;
+            }
+        }
+        update contactsToUpdate;
+    }
+    
     if(changes.length() > 0) 
         BZ_Notifications.recordConvertedLeads(changes); 
 }
