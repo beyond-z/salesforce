@@ -1,0 +1,50 @@
+public class BZ_MoveCampaignMemberController extends BZ_ChangeCampaignMemberBase {
+    
+    // This is true when the Move Campaign Member logic is running
+    public static Boolean IsMoveCampaignMemberRunning {get; set;}
+    
+    static {
+        IsMoveCampaignMemberRunning = false;
+    }
+    
+    private String getDebugPrefix(){
+        return 'BZ_MoveCampaignMemberController';
+    }
+    
+    private Boolean shouldResetState(){
+        return false;
+    }
+
+    private void startRun(){
+        IsMoveCampaignMemberRunning = true;
+    }
+    
+    private void finishRun(){
+        // This is what makes a move, a move (for the most part).
+        delete m_campaignMember;
+    }
+    
+    private void cleanupRun(){
+        IsMoveCampaignMemberRunning = false;
+    }
+    
+    private void validateNewCampaign(Campaign oldCampaign, Campaign newCampaign){
+        // NOOP;
+    }
+    
+    private void adjustClone(CampaignMember clone){
+        // NOOP;
+    }
+    
+    private Boolean cloneActivityHistory(){
+        return true;
+    }
+
+    public BZ_MoveCampaignMemberController(ApexPages.StandardController controller) {
+        super(controller);
+    }
+    
+    // ##############################
+    // NOTE: see BZ_ChangeCampaignMemberBase.run() for the core logic.
+    // ##############################
+}

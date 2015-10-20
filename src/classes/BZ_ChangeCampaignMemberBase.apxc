@@ -1,0 +1,164 @@
+public abstract class BZ_ChangeCampaignMemberBase {
+
+    
+    protected ApexPages.StandardController m_controller {get; set;}
+    protected CampaignMember m_campaignMember {get;set;}
+    abstract String getDebugPrefix();
+    abstract Boolean shouldResetState(); // If reset, the CampaignMember will be as though they just signed up and have a partially completed app
+    abstract Boolean cloneActivityHistory();
+    abstract void startRun();
+    abstract void finishRun();
+    abstract void cleanupRun();
+    abstract void validateNewCampaign(Campaign oldCampaign, Campaign newCampaign);
+    abstract void adjustClone(CampaignMember clone);
+    
+    // Field to allow the user to lookup the new Campaign to copy the CampaignMember to
+    public CampaignMember newCampaignLookup {get; set;}
+    
+    protected BZ_ChangeCampaignMemberBase(ApexPages.StandardController controller) {
+        this.m_controller = controller;
+        // load the current record
+        m_campaignMember = (CampaignMember)m_controller.getRecord();
+        // This is a dummy object that the Visualforce page will populate
+        newCampaignLookup = new CampaignMember(); 
+    }
+    
+    // method called from the VF's action attribute to copy this campaign member to an existing campaign
+    public PageReference run() {
+         Savepoint sp = Database.setSavepoint();
+         startRun();
+         try 
+         {   
+             System.Debug(getDebugPrefix() +'.run(): about to clone m_campaignMember = ' + m_campaignMember);
+             BZ_ClonePlusController cloneController = new BZ_ClonePlusController(m_campaignMember.Id, new Set<String>{});
+             
+             ID newCampaignId = newCampaignLookup.CampaignId;
+             System.Debug(getDebugPrefix() +'.run(): newCampaignId = ' + newCampaignId);
+             CampaignMember clonedCm = (CampaignMember)cloneController.getParentClone();
+             
+             String newCampaignQueryString = 
+                 'SELECT Id, OwnerId, Name, Type, IsActive, Intro_Email_Template__c, App_Submit_Reminder_Template__c,' +
+                     'App_Accepted_Email_Template__c, App_Open_Email_Template__c, ' +
+                     'App_Interview_Requested_Email_Template__c, App_Not_Accepted_Email_Template__c, ' +
+                     'App_Waitlisted_Email_Template__c, Previous_Candidate_New_Invite__c ' +
+                     'FROM Campaign WHERE id = :newCampaignId';
+             SObject newCampaignObj = Database.query(newCampaignQueryString);
+             Campaign newCampaign = (Campaign)newCampaignObj;
+             Campaign oldCampaign = [select Id, Name, Type, IsActive, Intro_Email_Template__c, App_Submit_Reminder_Template__c,
+                        App_Accepted_Email_Template__c, App_Open_Email_Template__c, App_Interview_Requested_Email_Template__c, 
+                        App_Not_Accepted_Email_Template__c, App_Waitlisted_Email_Template__c, Previous_Candidate_New_Invite__c  
+                      from Campaign where id = :clonedCm.CampaignId];
+             
+             if (oldCampaign.Id == newCampaign.Id){
+                 throw new BZ_ChangeCampaignException('Nothing to do, you chose the same campaign!');
+             }
+             
+             if (oldCampaign.Type != newCampaign.Type){
+                 throw new BZ_ChangeCampaignException('The specified campaign is not of the same type. The source \''+ oldCampaign.Name + 
+                                                      '\' campaign is of Type=\''+oldCampaign.Type + '\'. The target \''+newCampaign.Name + 
+                                                      '\' campaign is of Type=\''+newCampaign.Type);
+             }
+                              
+             validateNewCampaign(oldCampaign, newCampaign);
+             
+             clonedCm.CampaignId = newCampaignId;
+
+             // Call back into the bz.org database to 
+             // setup the user in a state where they have to resubmit the application
+             // for this new campaign and re-confirm their commitment.  
+             // e.g. clear the confirmed timeslot, open up the application again, set the campaign ID
+             // to this new campaign, etc
+             BZ_Notifications.changeCampaigns(new List<Id>{clonedCM.ContactId}, clonedCm.CampaignId, shouldResetState());
+             
+             System.Debug(getDebugPrefix() +'.run(): insert clonedCm = ' + clonedCm);
+             insert clonedCm;
+             
+             adjustClone(clonedCm);
+             update clonedCm; // We adjust the CM and update it instead of adjusting it and inserting it
+                              // so that the triggers that run on update work.  
+                              // E.g. the Apply Now button becomes available.
+                              // We could change the trigger to run on insert too, but then we have a
+                              // race condition between letting bz.org know about the campaign assignment
+                              // and setting the Apply Now state so this seems safer.
+             
+             // Note: that CampaignMembers have no related objects.  
+             // We have to clone the Activities ourselves by getting
+             // them for the Contact with the Related To field set to the Campaign.
+             // We need to adjust the the Related To field and the Email Template To Send
+             List<SObject> tasksToClone;
+             if (cloneActivityHistory()){
+                tasksToClone = [SELECT Id From Task Where 
+                                WhoId = :clonedCm.ContactId AND
+                                WhatId = :oldCampaign.Id
+                               ];
+             }
+             else {
+                tasksToClone = [SELECT Id From Task Where 
+                                WhoId = :clonedCm.ContactId AND
+                                WhatId = :oldCampaign.Id AND
+                                Status != 'Completed'
+                               ];
+             }
+             
+             if (tasksToClone != null && !tasksToClone.isEmpty())
+             {
+                 System.Debug(getDebugPrefix() +'.run(): tasksToClone = ' + tasksToClone);
+                 List<SObject> clonedTasks = BZ_ClonePlusController.cloneObjects(tasksToClone);
+                 System.Debug(getDebugPrefix() +'.run(): clonedTasks = ' + clonedTasks);
+                 
+                 Map<String, String> oldEmailTemplateToNewTemplateMap = new Map<String, String>();
+                 oldEmailTemplateToNewTemplateMap.put(oldCampaign.Intro_Email_Template__c, 'Intro_Email_Template__c');
+                 oldEmailTemplateToNewTemplateMap.put(oldCampaign.App_Submit_Reminder_Template__c, 'App_Submit_Reminder_Template__c');
+                 oldEmailTemplateToNewTemplateMap.put(oldCampaign.App_Accepted_Email_Template__c, 'App_Accepted_Email_Template__c');
+                 oldEmailTemplateToNewTemplateMap.put(oldCampaign.App_Open_Email_Template__c, 'App_Open_Email_Template__c');
+                 oldEmailTemplateToNewTemplateMap.put(oldCampaign.App_Interview_Requested_Email_Template__c, 'App_Interview_Requested_Email_Template__c');
+                 oldEmailTemplateToNewTemplateMap.put(oldCampaign.App_Not_Accepted_Email_Template__c, 'App_Not_Accepted_Email_Template__c');
+                 oldEmailTemplateToNewTemplateMap.put(oldCampaign.App_Waitlisted_Email_Template__c, 'App_Waitlisted_Email_Template__c');
+                 oldEmailTemplateToNewTemplateMap.put(oldCampaign.Previous_Candidate_New_Invite__c, 'Previous_Candidate_New_Invite__c');
+                 
+                 // Update the OwnerId, WhatId (aka Related Id) and EmailTemplateToSend fields
+                 // to match the new Campaign's values.
+                 for (SObject tObj : clonedTasks)
+                 {
+                     Task t = (Task)tObj;
+                     //System.Debug(getDebugPrefix() +'.run(): changing WhatId of task = ' + t);
+                     t.WhatId = clonedCm.CampaignId;
+                     t.OwnerId = newCampaign.OwnerId;
+                     
+                     // Change the 'Email Template To Send' by looking at the old campaign, 
+                     // finding what template it matches, and then grabbing that template 
+                     // from the new campaign.
+                     String taskEmailTemplate = t.EmailTemplate__c;
+                     String newEmailTemplateField = oldEmailTemplateToNewTemplateMap.get(taskEmailTemplate);
+                     if (taskEmailTemplate != null && taskEmailTemplate != '' &&
+                         newEmailTemplateField != null && newEmailTemplateField != '')
+                     {
+                         t.EmailTemplate__c = (String)newCampaignObj.get(newEmailTemplateField);
+                     }
+                 }
+                 insert clonedTasks;
+                 // If we're bringing across a task, we want to prevent it from being
+                 // run in the oldCampaign, so delete them.  For Copy, we bring them across so that we can
+                 // snapshot campaigns and not worry about cleaning up the open tasks but just continue
+                 // where we left off with our interaction with the user.  This is to support
+                 // closing recruitment for the active campaign but allowing us to actively recruit
+                 // campaign members purged by copying them back.  For Move, we have to delete them
+                 // anyway.
+                 delete tasksToClone; 
+             }
+             finishRun();
+             return new PageReference('/' + clonedCm.Id);             
+         } catch (Exception e){
+            // roll everything back in case of error
+            Database.rollback(sp);
+            ApexPages.addMessages(e);
+            System.Debug(getDebugPrefix() +'.run(): Exception = ' + e);
+            return null;
+         }
+        finally {
+            cleanupRun();
+        }
+    }
+    
+    public class BZ_ChangeCampaignException extends Exception {}
+}

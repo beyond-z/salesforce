@@ -1,0 +1,96 @@
+@isTest 
+private class BZ_CloseRecruitmentController_TEST {
+    static testMethod void validateRun() {
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
+        insert campaignOwner;
+        Contact contactWaitlist = new Contact(FirstName='Test', LastName='UserWaitlisted');
+        insert contactWaitlist;
+        Contact contactConfirmed = new Contact(FirstName='Test', LastName='UserConfirmed');
+        insert contactConfirmed;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Blah');
+        String reinviteEmailTemplateName = 'reinviteEmailTemplate';
+        campaign.Previous_Candidate_New_Invite__c = reinviteEmailTemplateName;
+        insert campaign;
+        
+        CampaignMember cmWaitlist = new CampaignMember();
+        cmWaitlist.CampaignId=campaign.Id;
+        cmWaitlist.ContactId=contactWaitlist.Id;
+        cmWaitlist.Candidate_Status__c = 'Waitlisted';
+        cmWaitlist.Application_Status__c = 'Submitted';
+        insert cmWaitlist;
+        
+        CampaignMember cmConfirmed = new CampaignMember();
+        cmConfirmed.CampaignId=campaign.Id;
+        cmConfirmed.ContactId=contactConfirmed.Id;
+        cmConfirmed.Candidate_Status__c = 'Confirmed';
+        insert cmConfirmed;
+        
+        Task tWaitlist = new Task(Subject='Test CampaignWaitlist', CampaignMemberId__c=cmWaitlist.Id, WhoId=contactWaitlist.Id, WhatId=campaign.Id);
+        insert tWaitlist;
+        Task tConfirm = new Task(Subject='Test CampaignConfirm', CampaignMemberId__c=cmConfirmed.Id, WhoId=contactConfirmed.Id, WhatId=campaign.Id);
+        insert tConfirm;
+        
+      ApexPages.StandardController sc = new ApexPages.standardController(campaign);
+            
+        PageReference pageRef = Page.BZ_CloseRecruitment;
+        Test.setCurrentPage(pageRef);
+        
+      BZ_CloseRecruitmentController controller = new BZ_CloseRecruitmentController(sc);
+        String newCampaignName = 'blahCampaign';
+        String newAvailableMeetingTimes = 'Wednesday:5';
+        controller.newCampaignName = newCampaignName;
+        controller.newAvailableMeetingTimes = newAvailableMeetingTimes;
+        PageReference result = controller.run();
+        
+        System.Assert(result != null, 'controller.run() returned null');
+        System.assert(controller.newCampaignName == newCampaignName, 'The BZ_CloseRecruitmentController should have newCampaignName = '+newCampaignName +' . Not newCampaignName ='+controller.newCampaignName);
+        System.assert(controller.newAvailableMeetingTimes == newAvailableMeetingTimes, 'The BZ_CloseRecruitmentController should have newAvailableMeetingTimes = '+newAvailableMeetingTimes +' . Not newAvailableMeetingTimes ='+controller.newAvailableMeetingTimes);
+        System.Assert(controller.getEmailTemplates() != null, 'controller.getEmailTemplates() is null');
+        List<CampaignMember> campaignMembersNotPurged = [SELECT Id, Name, Status, CampaignId, ContactId, Candidate_Status__c FROM CampaignMember WHERE CampaignId = :campaign.Id];
+        System.Assert(campaignMembersNotPurged.size() == 1, 'Expected 1 CampaignMember to not be purged. Found '+campaignMembersNotPurged.size());
+        System.Assert(campaignMembersNotPurged.get(0).Id == cmWaitlist.Id, 'cmWaitlist not found in campaign');
+        List<Task> tasksNotPurged = [SELECT Id, WhoId, EmailTemplate__c FROM Task WHERE WhatId = :campaign.Id];
+        Boolean foundWaitlistTask = false;
+        Boolean foundReinviteTask = false;
+        for (Task t : tasksNotPurged)
+        {
+            System.Assert(t.WhoId == contactWaitlist.Id, 'Only tasks for contactWaitlist should be left on campaign.  Found task = '+t);
+            if (t.Id == tWaitlist.Id) {
+                foundWaitlistTask = true;
+            }
+            if (t.EmailTemplate__c != null && t.EmailTemplate__c == reinviteEmailTemplateName){
+                foundReinviteTask = true;
+            }
+        }
+        System.Assert(foundWaitlistTask, 'tWaitlist not found in campaign');
+        System.Assert(foundReinviteTask, 'Task to reinvite member to apply not found in campaign');
+        
+        ////////////
+        // TODO: validate that a snapshot campaign was taken
+        ////////////
+    }
+    
+    static testMethod void validateFailedRun() {
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner2', OwnerId=userInfo.getUserId());
+        insert campaignOwner;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Blah');
+        campaign.Previous_Candidate_New_Invite__c = 'PrevEmailTemplate';
+        insert campaign;
+        
+      ApexPages.StandardController sc = new ApexPages.standardController(campaign);
+            
+        PageReference pageRef = Page.BZ_CloseRecruitment;
+        Test.setCurrentPage(pageRef);
+        
+      BZ_CloseRecruitmentController controller = new BZ_CloseRecruitmentController(sc);
+        
+        // Don't set the newCampaign name, which causes it to fail.
+        PageReference result = controller.run();
+        
+        System.Assert(result == null, 'controller.run() should have returned null');
+    }
+}

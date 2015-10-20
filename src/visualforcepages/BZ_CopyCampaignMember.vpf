@@ -1,0 +1,30 @@
+<apex:page standardController="CampaignMember"  
+     extensions="BZ_CopyCampaignMemberController">
+    <apex:pageMessages />
+    <apex:form >
+        <apex:pageBlock title="Choose Campaign To Copy To" mode="edit">
+            <apex:pageBlockSection columns="1">
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >
+                        Note: You can only copy to Active campaigns.  Inactive campaigns will not be shown.
+                    </apex:outputLabel>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:inputField value="{!newCampaignLookup.CampaignId}"/>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >
+                        Note: when you run this, it will copy this Campaign Member
+                        to the selected Campaign and adjust their status so that
+                        they will have to submit or re-submit the application and continue the
+                        rest of the normal flow for the selected Campaign.  It will also queue up
+                        an email task re-inviting the user to submit an application.
+                    </apex:outputLabel>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >                
+                    <apex:commandButton action="{!run}" value="Run"/>
+                </apex:pageBlockSectionItem>
+            </apex:pageBlockSection>
+        </apex:pageBlock>
+    </apex:form>
+</apex:page>

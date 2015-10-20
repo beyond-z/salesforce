@@ -1,0 +1,86 @@
+<apex:page standardController="Campaign"  
+     extensions="BZ_CloseRecruitmentController">
+     <apex:pageMessages />
+    <apex:form >
+        <apex:pageBlock mode="edit">
+            <style type="text/css">
+          .noWrap { white-space: nowrap; }
+      </style>
+            <apex:pageBlockSection columns="1">
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >
+                        When you run this, it will cleanup this Campaign and prepare it
+                        for a new recruiting drive for an upcoming program.<br/>
+                    </apex:outputLabel>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputPanel >
+                    <apex:outputLabel >
+                        Note: only members with their 'Candidate Status' set to the following
+                        values will be preserved and reset so their application is open.<br/>
+                        <br/>
+                    </apex:outputLabel>
+                    <apex:outputLabel style="padding-left:5em">
+                        'Waitlisted' - means that we wanted to accept them, but there were no more spots.<br/>
+                    </apex:outputLabel>
+                    <apex:outputLabel style="padding-left:5em">
+                        'Opted Out' - means that during the interview they indicated that they couldn’t commit to the program at that time.<br/>
+                    </apex:outputLabel>
+                    <apex:outputLabel >
+                        <br/>
+                        All other members will be purged.  If you want re-invite a purged member 
+                        to apply for the upcoming program, please go into the Campaign snapshot, choose 
+                        that Campaign Member, and use the 'Copy To Campaign' button to add them back.
+                    </apex:outputLabel>
+                    </apex:outputPanel>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem ><br/></apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Current Campaign Name" for="currentCampaignNameField"/>
+                    <apex:outputLabel value="{!campaign.Name}" id="currentCampaignNameField"/>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="New Campaign Name" for="newCampaignNameField"/>
+                    <apex:inputText id="newCampaignNameField" required="true" value="{!newCampaignName}" size="50"/> 
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputPanel >
+                        <!-- Hidden, here to avoid: SObject row was retrieved via SOQL without querying error. -->
+                        <apex:outputField value="{!campaign.StartDate}" rendered="false"/> 
+                        <apex:outputField value="{!campaign.EndDate}" rendered="false"/>
+                        <apex:outputField value="{!campaign.Meeting_Times__c}" rendered="false"/>
+                        <apex:outputField value="{!campaign.Previous_Candidate_New_Invite__c}" rendered="false"/>
+                    </apex:outputPanel>
+                </apex:pageBlockSectionItem>
+                <apex:pageblockSectionItem helpText="Email template sent to Waitlisted and Opted Out users to try and rengage them for the upcoming program">
+                    <apex:outputLabel value="Email Template To Queue Up" styleClass="noWrap"/>
+                    <apex:outputPanel layout="block">
+            <apex:outputPanel layout="block"/>
+                        <apex:selectList size="1" value="{!prevCandidateEmailTemplate}">
+                            <apex:selectoptions value="{!EmailTemplates}"/>
+                        </apex:selectList>
+                    </apex:outputPanel>
+                </apex:pageblockSectionItem>
+                <apex:pageBlockSectionItem >                
+                    <apex:outputLabel value="Start Date" for="newCampaignStartDateField"/>
+                    <apex:inputField id="newCampaignStartDateField" required="true" showDatePicker="true" value="{!campaign.StartDate}"/>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="End Date" for="newCampaignEndDateField"/>
+                    <apex:inputField id="newCampaignEndDateField" required="true" showDatePicker="true" value="{!campaign.EndDate}"/>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem ><br/></apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Please adjust the Available Meeting Times below, if necessary"/>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Available Meeting Times" for="newCampaignAvailMeetingTimesField"/>
+                    <apex:inputTextArea id="newCampaignAvailMeetingTimesField" required="true" value="{!newAvailableMeetingTimes}" cols="50" rows="5"/>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >                
+                    <apex:commandButton action="{!run}" value="Run"/>
+                </apex:pageBlockSectionItem>
+            </apex:pageBlockSection>
+        </apex:pageBlock>
+    </apex:form>
+</apex:page>

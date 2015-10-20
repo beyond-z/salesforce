@@ -4,11 +4,12 @@
  */
 trigger BZ_CampaignAssigned on CampaignMember (before insert) {
     System.Debug('BZ_CampaignAssigned: begin trigger');
-    
+        
     List<Task> tasksToAdd = new List<Task>(); 
     List<Task> tasksToUpdate = new List<Task>(); 
     List<Contact> contactsToUpdate = new List<Contact>();
-    List<CampaignMember> campaignMembersToCreateTasksFor = new List<CampaignMember>();
+    List<CampaignMember> campaignMembersToCreateIntroTasksFor = new List<CampaignMember>();
+    List<CampaignMember> campaignMembersToCreateReinviteTasksFor = new List<CampaignMember>();
     
     Set<Id> contactIds = new Set<Id>();
     Set<Id> contactIdsOfTasksToClose = new Set<Id>();
@@ -46,7 +47,7 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
             continue;
         }
         
-       boolean isApplicableCampaign = false;
+        boolean isApplicableCampaign = false;
         if (campaign.Type == 'Leadership Coaches') {
             // Note: this is also set in a Workflow when the Lead is converted, 
             // but they may signup as one type but then we determine that they are really 
@@ -75,14 +76,43 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
         {   
             contactsToUpdate.add(contact);
             contactIdsOfTasksToClose.add(contact.Id);
-            campaignMembersToCreateTasksFor.add(cm);
+            
+            if (BZ_CopyCampaignMemberController.IsCopyCampaignMemberRunning)
+            {
+                // These are campaign members being moved from an old campaign to the
+                // active campaign so we can reinvite them to apply to an upcoming program
+                campaignMembersToCreateReinviteTasksFor.add(cm);
+                System.Debug('BZ_CampaignAssigned: queuing up Reinvite email for '+ cm);
+            }
+            else if (BZ_MoveCampaignMemberController.IsMoveCampaignMemberRunning)
+            {
+                // NOOP: we just want to continue where we left off with the old campaign.
+                System.Debug('BZ_CampaignAssigned: skipping email Task b/c Move To Campaign is running for CampaignMember = '+ cm);
+            } 
+            else if (BZ_CloseRecruitmentController.IsCloseRecruitmentRunning)
+            {
+                // NOOP: we're snapshotting the campaign but we don't want to actively 
+                // queue up tasks to take action.
+                System.Debug('BZ_CampaignAssigned: skipping email Task b/c Close Recruitment is running for CampaignMember = '+ cm);
+            }
+            else
+            {
+              campaignMembersToCreateIntroTasksFor.add(cm);
+                System.Debug('BZ_CampaignAssigned: queuing up Intro email for '+cm);
+            }
         }
     }
     
-    if (campaignMembersToCreateTasksFor.size() > 0)
+    if (campaignMembersToCreateIntroTasksFor.size() > 0)
     {
-        tasksToAdd = BZ_TaskFactory.createEmailTasks(campaignMembersToCreateTasksFor, 
+        tasksToAdd = BZ_TaskFactory.createEmailTasks(campaignMembersToCreateIntroTasksFor, 
                                                  'Send Intro Email', 'Intro_Email_Template__c');
+    }
+    
+    if (campaignMembersToCreateReinviteTasksFor.size() > 0)
+    {
+        tasksToAdd = BZ_TaskFactory.createEmailTasks(campaignMembersToCreateReinviteTasksFor, 
+                                                 'Reinvite For New Program', 'Previous_Candidate_New_Invite__c');
     }
     
     Id senderId = UserInfo.getUserId();

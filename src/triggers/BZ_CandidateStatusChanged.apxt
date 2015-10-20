@@ -51,7 +51,7 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
                     contact.Participant_Information__c = 'Participant';
                     contactsToUpdate.add(contact);
                 }
-            } else if(cm.Candidate_Status__c == 'Rejected' || cm.Candidate_Status__c == 'Waitlisted')
+            } else if(cm.Candidate_Status__c == 'Not Accepted' || cm.Candidate_Status__c == 'Waitlisted')
             {
                 closeReviewAppTask = true;
             }

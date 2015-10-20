@@ -26,9 +26,9 @@ public class BZ_CampaignEmailTemplates {
     /**
      * The selected App Open Email Template.
      */
-    public string submitAppReminderEmailTemplate {
+    /*public string submitAppReminderEmailTemplate {
         get; set;
-    }
+    }*/
     
     /**
      * The selected App Interview Requested Email Template.
@@ -52,16 +52,23 @@ public class BZ_CampaignEmailTemplates {
     }
     
     /**
-     * The selected App Rejected Email Template.
+     * The selected App Not Accepted Email Template.
      */
-    public string appRejectedEmailTemplate {
+    public string appNotAcceptedEmailTemplate {
+        get; set;
+    }
+    
+    /**
+     * The selected Previous Candidate New Invite.
+     */
+    public string prevCandidateEmailTemplate {
         get; set;
     }
   
     public BZ_CampaignEmailTemplates(ApexPages.StandardController controller) {
         m_campaign = [select Id, Intro_Email_Template__c, App_Submit_Reminder_Template__c,
-                        App_Accepted_Email_Template__c, App_Open_Email_Template__c, App_Interview_Requested_Email_Template__c, 
-                        App_Rejected_Email_Template__c, App_Waitlisted_Email_Template__c  
+                        App_Accepted_Email_Template__c, App_Open_Email_Template__c, App_Interview_Requested_Email_Template__c,
+                        App_Not_Accepted_Email_Template__c, App_Waitlisted_Email_Template__c, Previous_Candidate_New_Invite__c
                       from Campaign where id = :ApexPages.currentPage().getParameters().get('id')];
         
         //System.debug('m_campaign = ' + m_campaign);
@@ -70,11 +77,12 @@ public class BZ_CampaignEmailTemplates {
         
     introEmailTemplate = m_campaign.Intro_Email_Template__c;
     appOpenEmailTemplate = m_campaign.App_Open_Email_Template__c;
-        submitAppReminderEmailTemplate = m_campaign.App_Submit_Reminder_Template__c;
+        //submitAppReminderEmailTemplate = m_campaign.App_Submit_Reminder_Template__c;
         appOpenInterviewRequestedTemplate = m_campaign.App_Interview_Requested_Email_Template__c;
         appWaitlistedEmailTemplate = m_campaign.App_Waitlisted_Email_Template__c;
         appAcceptedEmailTemplate = m_campaign.App_Accepted_Email_Template__c;
-        appRejectedEmailTemplate = m_campaign.App_Rejected_Email_Template__c;
+        appNotAcceptedEmailTemplate = m_campaign.App_Not_Accepted_Email_Template__c;
+        prevCandidateEmailTemplate = m_campaign.Previous_Candidate_New_Invite__c;
     }
     
     /**
@@ -84,10 +92,11 @@ public class BZ_CampaignEmailTemplates {
         m_campaign.Intro_Email_Template__c = introEmailTemplate;
         m_campaign.App_Accepted_Email_Template__c = appAcceptedEmailTemplate;
         m_campaign.App_Open_Email_Template__c = appOpenEmailTemplate;
-        m_campaign.App_Submit_Reminder_Template__c = submitAppReminderEmailTemplate;
+        //m_campaign.App_Submit_Reminder_Template__c = submitAppReminderEmailTemplate;
         m_campaign.App_Interview_Requested_Email_Template__c = appOpenInterviewRequestedTemplate;
-        m_campaign.App_Rejected_Email_Template__c = appRejectedEmailTemplate;
-        m_campaign.App_Waitlisted_Email_Template__c = appWaitlistedEmailTemplate;       
+        m_campaign.App_Not_Accepted_Email_Template__c = appNotAcceptedEmailTemplate;
+        m_campaign.App_Waitlisted_Email_Template__c = appWaitlistedEmailTemplate;
+        m_campaign.Previous_Candidate_New_Invite__c = prevCandidateEmailTemplate;
         update m_campaign;
         return null;
     }

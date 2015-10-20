@@ -1,0 +1,28 @@
+<apex:page standardController="CampaignMember"  
+     extensions="BZ_MoveCampaignMemberController">
+    <apex:pageMessages />
+    <apex:form >
+        <apex:pageBlock title="Choose Campaign To Move To" mode="edit">
+            <apex:pageBlockSection columns="1">
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >
+                        Note: You can only copy to Active campaigns.  Inactive campaigns will not be shown.
+                    </apex:outputLabel>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:inputField value="{!newCampaignLookup.CampaignId}"/>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >
+                        Note: when you run this, it will move this Campaign Member
+                        to the selected Campaign so they can continue where they left off 
+                        in the process.
+                    </apex:outputLabel>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >                
+                    <apex:commandButton action="{!run}" value="Run"/>
+                </apex:pageBlockSectionItem>
+            </apex:pageBlockSection>
+        </apex:pageBlock>
+    </apex:form>
+</apex:page>

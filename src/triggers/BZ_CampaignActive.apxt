@@ -23,7 +23,7 @@ trigger BZ_CampaignActive on Campaign (before update) {
                 
                 // If the campaign is becoming active, queue up tasks to send emails to 
                 // existing member letting them know the app is open.
-                if (campaign.IsActive)
+                if (campaign.IsActive && !BZ_CloseRecruitmentController.IsCloseRecruitmentRunning)
                 {
                     campaignMembersToCreateTasksFor.add(cm);
                 }

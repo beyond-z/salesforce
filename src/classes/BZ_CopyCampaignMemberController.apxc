@@ -1,0 +1,70 @@
+public class BZ_CopyCampaignMemberController extends BZ_ChangeCampaignMemberBase {
+    
+    // This is true when the Copy Campaign Member logic is running
+    public static Boolean IsCopyCampaignMemberRunning {get; set;}
+
+    static {
+        IsCopyCampaignMemberRunning = false;
+    }
+    
+    private String getDebugPrefix(){
+        return 'BZ_CopyCampaignMemberController';
+    }
+    
+    private Boolean shouldResetState(){
+        return true;
+    }
+
+    private void startRun(){
+        IsCopyCampaignMemberRunning = true;
+    }
+
+    private void finishRun(){
+        // NOOP: nothing special to do
+    }
+    
+    private void cleanupRun(){
+        IsCopyCampaignMemberRunning = false;
+    }
+    
+    private void validateNewCampaign(Campaign oldCampaign, Campaign newCampaign){
+        if (newCampaign.Previous_Candidate_New_Invite__c == null || 
+            newCampaign.Previous_Candidate_New_Invite__c == '')
+        {
+            throw new BZ_ChangeCampaignException('The selected Campaign \'' + newCampaign.Name + 
+                                                 '\' doesn\'t have the \'Previous Candidate New Invite\' ' +
+                                                 'email template set.  Please set it before running this.');
+        }
+        
+        if (oldCampaign.IsActive && newCampaign.IsActive){
+                 throw new BZ_ChangeCampaignException(
+                     'Both the current campaign and the specified campaign are Active. '+
+                     'CampaignMembers can only be in one Active campaign at a time. Please ' +
+                     'make the current campaign Inactive before running Copy');
+        }
+
+    }
+    
+    private void adjustClone(CampaignMember clone){
+        clone.Application_Decision_Sent__c = false;
+        if (clone.Application_Status__c == 'Submitted'){
+            clone.Application_Status__c = 'Started';            
+        }
+        clone.Apply_Button_Enabled__c = true;
+        clone.Section_Name_In_LMS__c = null;
+        clone.Selected_Timeslot__c = null;
+        clone.Candidate_Status__c = null;
+    }
+    
+    private Boolean cloneActivityHistory(){
+        return false;
+    }
+    
+    public BZ_CopyCampaignMemberController(ApexPages.StandardController controller) {
+        super(controller);
+    }
+    
+    // ##############################
+    // NOTE: see BZ_ChangeCampaignMemberBase.run() for the core logic.
+    // ##############################
+}

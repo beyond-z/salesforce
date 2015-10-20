@@ -1,0 +1,174 @@
+public class BZ_CloseRecruitmentController {
+
+    private static final String NEW_CAMPAIGN_NAME_PROMPT = '<Please enter new Campaign Name>';
+    private final List<SelectOption> m_emailTemplateOptions;
+    private ApexPages.StandardController m_controller {get; set;}
+    private Campaign m_campaign {get;set;}
+    private Date m_oldStartDate {get; set;}
+    private Date m_oldEndDate {get; set;}
+    
+    // This is true when the Close Recruitment logic is running
+    public static Boolean IsCloseRecruitmentRunning {get; set;}
+    
+    static {
+        IsCloseRecruitmentRunning = false;
+    }
+    
+    public String newCampaignName {get; set;}
+    public String newAvailableMeetingTimes {get; set;}
+    /**
+     * The selected Previous Candidate New Invite email template.
+     */
+    public string prevCandidateEmailTemplate {
+        get; set;
+    }
+
+    /**
+     * Returns the list of all Beyond Z email templates, determined if they are prefixed
+     * with "BZ"
+     */
+    public List<SelectOption> getEmailTemplates(){
+        return m_emailTemplateOptions;
+  }
+    
+    public BZ_CloseRecruitmentController(ApexPages.StandardController controller) {
+        this.m_controller = controller;
+        m_campaign = (Campaign)m_controller.getRecord();
+        m_emailTemplateOptions = BZ_EmailTemplateProvider.getEmailTemplates();
+        newCampaignName = NEW_CAMPAIGN_NAME_PROMPT;
+        newAvailableMeetingTimes = m_campaign.Meeting_Times__c;
+        prevCandidateEmailTemplate = m_campaign.Previous_Candidate_New_Invite__c;
+        m_oldStartDate = m_campaign.StartDate;
+        m_oldEndDate = m_campaign.EndDate;
+    }
+
+    // method called from the VF's action attribute to close recruitment for this campaign
+    public PageReference run() {
+        Savepoint sp = Database.setSavepoint();
+        IsCloseRecruitmentRunning = true;
+        BZ_Notifications.disableNotifyApplyNow = true;
+        try {
+            if (newCampaignName == NEW_CAMPAIGN_NAME_PROMPT){
+                throw new BZ_CloseRecruitmentException('Please enter a \'New Campaign Name\'');
+            }
+            
+            // Note that the cloneController requires the things below to be done in a 
+            // certain order.  I adapted the ClonePlus code from the internet and
+            // didn't take the time to cleanup the class so that you don't need to know the 
+            // internals to use these methods.  I'm so sorry for this.
+            System.Debug('BZ_CloseRecruitmentController.run(): about to clone m_campaign = ' + m_campaign);
+            BZ_ClonePlusController cloneController = new BZ_ClonePlusController(m_campaign.Id, new Set<String>{'CampaignMember', 'Task'});
+            System.Debug('BZ_CloseRecruitmentController.run(): getParentClone()');
+            Campaign clonedCampaign = (Campaign)cloneController.getParentClone(); 
+            System.Debug('BZ_CloseRecruitmentController.run(): insert clonedCampaign = '+clonedCampaign);
+            insert clonedCampaign; // Need to do this before inserting children so that it gets an ID
+            System.Debug('BZ_CloseRecruitmentController.run(): done inserting clonedCampaign = '+clonedCampaign);
+            
+            System.Debug('BZ_CloseRecruitmentController.run(): getChildrenClones()');
+            List<sObject> childrenClones = cloneController.getChildrenClones();
+            System.Debug('BZ_CloseRecruitmentController.run(): insert childrenClones = '+childrenClones);
+            insert childrenClones;
+            System.Debug('BZ_CloseRecruitmentController.run(): inserted childrenClones = '+childrenClones);
+            
+            clonedCampaign.IsActive = false;
+            clonedCampaign.ParentId = m_campaign.Id;
+            update clonedCampaign; // We do a separate update so the trigger runs
+            
+            m_campaign.Name = newCampaignName;
+            m_campaign.Meeting_Times__c = newAvailableMeetingTimes;
+            m_campaign.Previous_Candidate_New_Invite__c = prevCandidateEmailTemplate;
+            update m_campaign;
+            
+            List<CampaignMember> membersToPurge = [SELECT Id, ContactId, CampaignId, Candidate_Status__c FROM CampaignMember 
+                                                   WHERE CampaignId = :m_campaign.Id AND
+                                                   Candidate_Status__c <> 'Waitlisted' AND
+                                                   Candidate_Status__c <> 'Opted Out'];
+            System.Debug('BZ_CloseRecruitmentController.run(): membersToPurge = ' + membersToPurge);
+            if (membersToPurge != null && !membersToPurge.isEmpty()){
+                List<Id> memberContactIdsToPurge = new List<Id>();
+                for (CampaignMember c : membersToPurge){
+                    memberContactIdsToPurge.add(c.ContactId);
+                }
+                BZ_Notifications.changeCampaigns(memberContactIdsToPurge, clonedCampaign.Id, false);
+                System.Debug('BZ_CloseRecruitmentController.run(): deleting membersToPurge = ' + membersToPurge);
+                delete membersToPurge;
+            }
+            List<CampaignMember> membersNotPurged = [SELECT Id, CampaignId, ContactId, Application_Decision_Sent__c,
+                                                     Apply_Button_Enabled__c, Section_Name_In_LMS__c, Selected_Timeslot__c,
+                                                     Candidate_Status__c FROM CampaignMember 
+                                                     WHERE CampaignId = :m_campaign.Id];
+            Set<Id> memberContactIdsToKeepTasksFor = new Set<Id>();
+            for (CampaignMember cm : membersNotPurged){
+                memberContactIdsToKeepTasksFor.add(cm.ContactId);
+            }
+            List<Task> tasksToPurge = [SELECT Id FROM Task 
+                                       WHERE WhoId not in :memberContactIdsToKeepTasksFor AND // Name 
+                                       WhatId = :m_campaign.Id];
+            System.Debug('BZ_CloseRecruitmentController.run(): tasksToPurge = ' + tasksToPurge);
+            if (tasksToPurge != null && !tasksToPurge.isEmpty()){
+                System.Debug('BZ_CloseRecruitmentController.run(): deleting tasksToPurge = ' + tasksToPurge);
+                delete tasksToPurge;
+            }
+             
+            if (membersNotPurged != null && !membersNotPurged.isEmpty()){
+                List<Id> memberContactIdsToRengage = new List<Id>();
+                for (CampaignMember cm : membersNotPurged){
+                    cm.Application_Decision_Sent__c = false;
+                    if (cm.Application_Status__c == 'Submitted'){
+                        cm.Application_Status__c = 'Started';            
+                    }
+                    cm.Apply_Button_Enabled__c = true;
+                    cm.Section_Name_In_LMS__c = null;
+                    cm.Selected_Timeslot__c = null;
+                    cm.Candidate_Status__c = null;
+                    memberContactIdsToRengage.add(cm.ContactId);
+                }
+                
+                // We're not actually changing the campaign, but we want to run the
+                // code to reset the user so that when they login, they can go back to
+                // the application.  Even if they had Canvas access, they should be reset
+                // because we require coaches and everyone to update and resubmit an
+                // application.  E.g. their timeslots or other info may have changed.
+                BZ_Notifications.changeCampaigns(memberContactIdsToRengage, m_campaign.Id, true);
+                
+                List<Task> tasksToAdd = 
+                    BZ_TaskFactory.createEmailTasks(membersNotPurged, 
+                                                    'Reinvite For New Program', 
+                                                    'Previous_Candidate_New_Invite__c');
+                System.Debug('BZ_CloseRecruitmentController.run(): inserting tasksToAdd = ' + tasksToAdd);
+                insert tasksToAdd;
+                
+                // Do this last so that the notifyApplyNow callout happens after any other
+                // places it may be triggered during the clone operation.  This can leave the
+                // Apply Now Enabled option in the wrong state since we can have a Contact in at least
+                // two campaigns with different states of Apply Now Enabled.  We want the Active 
+                // campaign's state to take precedence.
+                // 
+                // TODO: this is a hack just to get the most common use case working.  
+                // It causes the members that are snapshotted to an Inactive campaign but who are not
+                // left in the Active Campaign to maybe still have access to the application.  
+                // The issue is that there is a race condition with the notifyApplyNow call 
+                // and even if we run the code in the right order, the call's aren't gauranteed to be 
+                // executed in that order since they are "future" calls.  So we can't deterministically
+                // choose the final state of the Apply Now button if a Contact is in 2 campaigns with different
+                // states.
+                BZ_Notifications.disableNotifyApplyNow = false;
+                System.Debug('BZ_CloseRecruitmentController.run(): updating membersNotPurged = ' + membersNotPurged);
+                update membersNotPurged;
+            }
+            
+            return new PageReference('/' + m_campaign.Id);
+            
+        } catch (Exception e){
+            // roll everything back in case of error
+            Database.rollback(sp);
+            ApexPages.addMessages(e);
+            return null;
+        } finally {
+            BZ_Notifications.disableNotifyApplyNow = false; // Just make sure it get's set back in case of an exception.
+            IsCloseRecruitmentRunning = false;
+        }
+    }
+    
+    public class BZ_CloseRecruitmentException extends Exception {}
+}
