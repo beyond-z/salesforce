@@ -84,7 +84,7 @@ private class BZ_BulkEmailer_TEST {
         
         String waitlistedEmailDeveloperName='TestWaitlistedEmailTemplateToSend';
         String acceptedEmailDeveloperName='TestAcceptedEmailTemplateToSend';
-        String notAcceptedEmailDeveloperName='TestnotAcceptedEmailTemplateToSend';
+        String notAcceptedEmailDeveloperName='TestNotAcceptedEmailTemplateToSend';
         
         Campaign campaign = BZ_CampaignFactory_TEST.create();
         campaign.Name='Test Send Queued App Decisions Campaign1'; 
@@ -105,15 +105,15 @@ private class BZ_BulkEmailer_TEST {
         testCms.add(waitlistedCm);
         CampaignMember acceptedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=acceptedRecipient.Id, Candidate_Status__c='Accepted');
         testCms.add(acceptedCm);
-        CampaignMember notAcceptedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=notAcceptedRecipient.Id, Candidate_Status__c='notAccepted');
+        CampaignMember notAcceptedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=notAcceptedRecipient.Id, Candidate_Status__c='Not Accepted');
         testCms.add(notAcceptedCm);
-        CampaignMember notAcceptedCm_decisionAlreadySent = new CampaignMember(CampaignId=campaign.Id, ContactId=notAcceptedRecipient_decisionAlreadySent.Id, Candidate_Status__c='notAccepted', Application_Decision_Sent__c=TRUE);
+        CampaignMember notAcceptedCm_decisionAlreadySent = new CampaignMember(CampaignId=campaign.Id, ContactId=notAcceptedRecipient_decisionAlreadySent.Id, Candidate_Status__c='Not Accepted', Application_Decision_Sent__c=TRUE);
         testCms.add(notAcceptedCm_decisionAlreadySent);
         CampaignMember noStatusSetCm_expectNoEmailSent = new CampaignMember(CampaignId=campaign.Id, ContactId=recipientNoStatusSet.Id);
         testCms.add(noStatusSetCm_expectNoEmailSent);
         CampaignMember interviewRequestedCm_expectNoEmailSent = new CampaignMember(CampaignId=campaign.Id, ContactId=interviewRequestedRecipient.Id, Candidate_Status__c='Interview Requested');
         testCms.add(interviewRequestedCm_expectNoEmailSent);
-        CampaignMember notAcceptedCm_anotherCampaign = new CampaignMember(CampaignId=anotherCampaign.Id, ContactId=notAcceptedRecipient_anotherCampaign.Id, Candidate_Status__c='notAccepted');
+        CampaignMember notAcceptedCm_anotherCampaign = new CampaignMember(CampaignId=anotherCampaign.Id, ContactId=notAcceptedRecipient_anotherCampaign.Id, Candidate_Status__c='Not Accepted');
         testCms.add(notAcceptedCm_anotherCampaign);
         insert testCms;
         
@@ -131,7 +131,7 @@ private class BZ_BulkEmailer_TEST {
             // http://www.tgerm.com/2012/04/mixeddmloperation-dml-operation-on.html        
             BZ_SendTemplatedEmail.insertEmailTemplate('Test Waitlisted Email Template', waitlistedEmailDeveloperName, 'text', sender.Id);
             BZ_SendTemplatedEmail.insertEmailTemplate('Test Accepted Email Template', acceptedEmailDeveloperName, 'text', sender.Id);
-            BZ_SendTemplatedEmail.insertEmailTemplate('Test notAccepted Email Template', notAcceptedEmailDeveloperName, 'text', sender.Id);
+            BZ_SendTemplatedEmail.insertEmailTemplate('Test Not Accepted Email Template', notAcceptedEmailDeveloperName, 'text', sender.Id);
             Test.stopTest();
         }
         
@@ -198,7 +198,7 @@ private class BZ_BulkEmailer_TEST {
             
             String waitlistedEmailDeveloperName='TestWaitlistedEmailTemplateToSend';
             String acceptedEmailDeveloperName='TestAcceptedEmailTemplateToSend';
-            String notAcceptedEmailDeveloperName='TestnotAcceptedEmailTemplateToSend';
+            String notAcceptedEmailDeveloperName='TestNotAcceptedEmailTemplateToSend';
             
             campaign = BZ_CampaignFactory_TEST.create();
             campaign.Name='Test Send Queued App Decisions Campaign1'; 
@@ -224,13 +224,13 @@ private class BZ_BulkEmailer_TEST {
             CampaignMember acceptedCm4 = new CampaignMember(CampaignId=campaign.Id, ContactId=acceptedRecipient4.Id, Candidate_Status__c='Accepted');
             testCms.add(acceptedCm4);
             
-            notAcceptedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=notAcceptedRecipient.Id, Candidate_Status__c='notAccepted');
+            notAcceptedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=notAcceptedRecipient.Id, Candidate_Status__c='Not Accepted');
             testCms.add(notAcceptedCm);
-            CampaignMember notAcceptedCm2 = new CampaignMember(CampaignId=campaign.Id, ContactId=notAcceptedRecipient2.Id, Candidate_Status__c='notAccepted');
+            CampaignMember notAcceptedCm2 = new CampaignMember(CampaignId=campaign.Id, ContactId=notAcceptedRecipient2.Id, Candidate_Status__c='Not Accepted');
             testCms.add(notAcceptedCm2);
-            CampaignMember notAcceptedCm3 = new CampaignMember(CampaignId=campaign.Id, ContactId=notAcceptedRecipient3.Id, Candidate_Status__c='notAccepted');
+            CampaignMember notAcceptedCm3 = new CampaignMember(CampaignId=campaign.Id, ContactId=notAcceptedRecipient3.Id, Candidate_Status__c='Not Accepted');
             testCms.add(notAcceptedCm3);
-            CampaignMember notAcceptedCm4 = new CampaignMember(CampaignId=campaign.Id, ContactId=notAcceptedRecipient4.Id, Candidate_Status__c='notAccepted');
+            CampaignMember notAcceptedCm4 = new CampaignMember(CampaignId=campaign.Id, ContactId=notAcceptedRecipient4.Id, Candidate_Status__c='Not Accepted');
             testCms.add(notAcceptedCm4);
             
             insert testCms;
@@ -240,7 +240,7 @@ private class BZ_BulkEmailer_TEST {
             // http://www.tgerm.com/2012/04/mixeddmloperation-dml-operation-on.html        
             BZ_SendTemplatedEmail.insertEmailTemplate('Test Waitlisted Email Template', waitlistedEmailDeveloperName, 'text', sender.Id);
             BZ_SendTemplatedEmail.insertEmailTemplate('Test Accepted Email Template', acceptedEmailDeveloperName, 'text', sender.Id);
-            BZ_SendTemplatedEmail.insertEmailTemplate('Test notAccepted Email Template', notAcceptedEmailDeveloperName, 'text', sender.Id);
+            BZ_SendTemplatedEmail.insertEmailTemplate('Test Not Accepted Email Template', notAcceptedEmailDeveloperName, 'text', sender.Id);
 
             Test.stopTest();
             
