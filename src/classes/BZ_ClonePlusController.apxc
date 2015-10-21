@@ -16,7 +16,6 @@ public class BZ_ClonePlusController {
     
     private SObject headSObject, headClone;
     
-    /* For use with the visualforce page to directly clone objects.  Not using it currently, so commented out.
     // Initialize the controller for use with a VisualForce page.
     // The 'id' and 'childobjecttypes' parameters must be set by the page
     // E.g. <domain>/apex/BZ_ClonePlus?id=701170000007wQW&childobjecttypes=CampaignMember,Activities
@@ -28,7 +27,6 @@ public class BZ_ClonePlusController {
                                   .get('childobjecttypes').split(',')
                                  );
     }
-    */
     
     // Initialize the controller with an objectId to clone, specifying the
     // childObjectTypes to deep clone.  E.g. this would clone a campaign and
@@ -138,7 +136,6 @@ public class BZ_ClonePlusController {
         }
     }
     
-    /* For use with the visualforce page to directly clone objects.  Not using it currently, so commented out.
     // Perform the cloning process.
     // First clone the parent, then all of the child objects. 
     // Then redirect the user to the new object page.
@@ -149,7 +146,6 @@ public class BZ_ClonePlusController {
         cloneSelectedObjects();
         return new PageReference('/' + headClone.Id);
     }
-    */
     
     // Perform the cloning process by first cloning the parent, then all of the child objects. 
     // Return the list of cloned objects that haven't been inserted into the database yet.
