@@ -11,13 +11,21 @@ public class BZ_SyncToLMS {
     private string m_membersToSyncDisplayList;
     
     public BZ_SyncToLMS(ApexPages.StandardController controller){
+        controller.addFields(new List<String>{'IsActive'}); // Avoid error: "SObject row was retrieved via SOQL without querying the requested field"
         m_campaign = (Campaign)controller.getRecord();
-	/*
-             This query should remain in sync - the WHERE condition
-	     is what's important - with the corresponding function
-	     in salesforce.rb method sync_to_lms in the Beyond Z
-	     source.
-	*/
+        if (!m_campaign.IsActive)
+        {
+            m_hasRun = true;
+            m_resultMessage = 'The campaign is Inactive.  You can only use Sync To LMS with Active campaigns.';
+            return;
+        }
+        
+        /* 
+             This query should remain in sync - the WHERE condition 
+             is what's important - with the corresponding function 
+             in salesforce.rb method sync_to_lms in the Beyond Z 
+             source. 
+        */ 
         List<CampaignMember> membersToSync = [
           SELECT
             Contact.FirstName, Contact.LastName, Section_Name_In_LMS__c

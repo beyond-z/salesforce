@@ -71,12 +71,14 @@ public class BZ_CloseRecruitmentController {
             System.Debug('BZ_CloseRecruitmentController.run(): inserted childrenClones = '+childrenClones);
             
             clonedCampaign.IsActive = false;
+            clonedCampaign.Status = 'Completed';
             clonedCampaign.ParentId = m_campaign.Id;
             update clonedCampaign; // We do a separate update so the trigger runs
             
             m_campaign.Name = newCampaignName;
             m_campaign.Meeting_Times__c = newAvailableMeetingTimes;
             m_campaign.Previous_Candidate_New_Invite__c = prevCandidateEmailTemplate;
+            m_campaign.Status = 'In Progress';
             update m_campaign;
             
             List<CampaignMember> membersToPurge = [SELECT Id, ContactId, CampaignId, Candidate_Status__c FROM CampaignMember 

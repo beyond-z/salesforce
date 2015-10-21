@@ -1,17 +1,32 @@
 /**
  * Handles notifying the beyondz.org platform of Salesforce related actions.
  */
-global class BZ_Notifications { 
+global class BZ_Notifications {
+    
+    public static Boolean disableNotifyApplyNow {get;set;}
+    static {
+        disableNotifyApplyNow = false;
+    }
+    
     /**
      * The lists are a comma-separated set of object Ids which should be set 
      */
-    @future (callout=true) 
     public static void notifyApplyNow(String yesList, String noList) { 
+        if (disableNotifyApplyNow) {
+            System.debug('BZ_Notifications: notifyApplyNow is disabled -- NOOP.');
+            return;
+        }
+        else {
+            System.debug('BZ_Notifications: notifyApplyNow is enabled.');
+        }
+        if(Test.isRunningTest()) return;
+        
+        notifyApplyNowImpl(yesList, noList);
+    } 
+    
+    @future (callout=true) 
+    private static void notifyApplyNowImpl(String yesList, String noList) { 
         BZ_Settings__c settings = BZ_Settings__c.getInstance('bz'); 
-	// settings isn't available when testing and we don't
-	// want to do http callouts on test anyway; it'd change
-	// real application state.
-	if(Test.isRunningTest()) return;
         String base_url = settings.base_url__c; 
         String magic_token = settings.magic_token__c; 
         Http http = new Http(); 
@@ -20,7 +35,7 @@ global class BZ_Notifications {
         request.setMethod('GET'); 
         HttpResponse response = http.send(request); 
         response.getBody(); 
-    } 
+    }
     
     /**
      * The format of changes is old:new,old:new,etc. 
@@ -28,7 +43,7 @@ global class BZ_Notifications {
     @future (callout=true) 
     public static void recordConvertedLeads(String changes) { 
         BZ_Settings__c settings = BZ_Settings__c.getInstance('bz'); 
-	if(Test.isRunningTest()) return;
+        if(Test.isRunningTest()) return;
         String base_url = settings.base_url__c; 
         String magic_token = settings.magic_token__c; 
         Http http = new Http(); 
@@ -40,6 +55,48 @@ global class BZ_Notifications {
     } 
     
     /**
+     * Notifies the beyondz.org platform that a CampaignMember is being
+     * changed.  E.g. copied or moved to a new Campaign.  
+     * 
+     * For Copy, this means that the user should
+     * be put in a state where they can login and submit or re-submit the application
+     * for the new campaign and then continue the rest of the acceptance and confirmation
+     * flow.
+     * 
+     * For Move, this means that the user should pick up where they left off from the previous campaign
+     * 
+     * valid values for operation: "move", "copy"
+     */
+    @future (callout=true) 
+    public static void changeCampaigns(List<Id> contactIds, Id newCampaignId, Boolean reset) {
+        BZ_Settings__c settings = BZ_Settings__c.getInstance('bz'); 
+        if(Test.isRunningTest()) return;
+        if (contactIds.isEmpty()){
+            System.Debug('BZ_Notifications.changeCampaigns(): contactIds is empty.  NOOP.');
+            return;
+        }
+
+        String base_url = settings.base_url__c; 
+        String magic_token = settings.magic_token__c; 
+        Http http = new Http(); 
+        HttpRequest request = new HttpRequest();
+        String contactIdsString = '';
+        for (Id i : contactIds){
+            contactIdsString += ',' + i;
+        }
+        contactIdsString = contactIdsString.substring(1);
+        System.Debug('BZ_Notifications.changeCampaigns(): calling change_campaigns with contactIds = ' + contactIdsString);
+        request.setEndpoint(base_url + '/salesforce/change_campaigns?magic_token='+magic_token+'&contactIds=' + contactIdsString +'&campaignId=' + newCampaignId + '&reset=' + reset); 
+        request.setMethod('GET'); 
+        HttpResponse response = http.send(request); 
+        String responseBody = response.getBody();
+        if (response.getStatusCode() != 200)
+        {
+            throw new BZ_NotificationException('BZ_Notifications: changeCampaigns() failed for call to ' + request.getEndpoint() + '\n response: ' + responseBody);
+        }
+    }
+    
+    /**
      * Notifies the beyondz.org platform to pull all Confirmed CampaignMembers
      * for the specified Campaign and to update our Learning
      * Management System enrollments based on their 
@@ -48,7 +105,7 @@ global class BZ_Notifications {
     @future (callout=true) 
     public static void syncToLMS(Id campaignId) {
         BZ_Settings__c settings = BZ_Settings__c.getInstance('bz'); 
-	if(Test.isRunningTest()) return;
+                if(Test.isRunningTest()) return;
         String base_url = settings.base_url__c; 
         String magic_token = settings.magic_token__c; 
         Http http = new Http(); 
@@ -58,4 +115,6 @@ global class BZ_Notifications {
         HttpResponse response = http.send(request); 
         response.getBody(); 
     }
+    
+    public class BZ_NotificationException extends Exception {}
 }
