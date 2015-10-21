@@ -78,6 +78,8 @@
 		Relevant Experience
 		Other Race
 		Pell Grant Recipient
+		Study Abroad
+		Gender Identity
 		Digital Footprint 2
 		Birthdate
 		Student Id
