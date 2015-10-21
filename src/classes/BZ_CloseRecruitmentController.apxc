@@ -97,7 +97,7 @@ public class BZ_CloseRecruitmentController {
             }
             List<CampaignMember> membersNotPurged = [SELECT Id, CampaignId, ContactId, Application_Decision_Sent__c,
                                                      Apply_Button_Enabled__c, Section_Name_In_LMS__c, Selected_Timeslot__c,
-                                                     Candidate_Status__c FROM CampaignMember 
+                                                     Application_Status__c, Candidate_Status__c FROM CampaignMember 
                                                      WHERE CampaignId = :m_campaign.Id];
             Set<Id> memberContactIdsToKeepTasksFor = new Set<Id>();
             for (CampaignMember cm : membersNotPurged){
@@ -117,6 +117,7 @@ public class BZ_CloseRecruitmentController {
                 for (CampaignMember cm : membersNotPurged){
                     cm.Application_Decision_Sent__c = false;
                     if (cm.Application_Status__c == 'Submitted'){
+                        System.Debug('BZ_CloseRecruitmentController.run(): setting Application_Status__c = Started for ' + cm);
                         cm.Application_Status__c = 'Started';            
                     }
                     cm.Apply_Button_Enabled__c = true;
