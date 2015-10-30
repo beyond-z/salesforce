@@ -1,0 +1,22 @@
+trigger BZ_StudentRegistrationCodeChanged on CampaignMember (before update) {
+    System.Debug('BZ_StudentRegistrationCodeChanged: begin trigger');
+
+    List<Contact> contactsToUpdate = new List<Contact>();
+    for (CampaignMember cm : Trigger.new)
+    {
+        if (Trigger.oldMap.get(cm.Id).Student_Registration_Code__c != cm.Student_Registration_Code__c)
+        {
+            
+            Contact contact = [SELECT Id, Student_Registration_Code__c
+                               FROM Contact WHERE Id=:cm.ContactId];
+            System.Debug('BZ_StudentRegistrationCodeChanged: setting contact.Student_Registration_Code__c to ' + cm.Student_Registration_Code__c);
+            contact.Student_Registration_Code__c = cm.Student_Registration_Code__c;
+            contactsToUpdate.add(contact);
+        }
+    }
+    
+    if (!contactsToUpdate.isEmpty())
+    {
+        update contactsToUpdate;
+    }
+}

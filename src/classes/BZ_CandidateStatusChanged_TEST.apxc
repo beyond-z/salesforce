@@ -68,8 +68,8 @@ private class BZ_CandidateStatusChanged_TEST {
         insert contact_accepted;
         Contact contact_waitlisted = new Contact(FirstName='Test', LastName='AppStatClosedWaitlisted1');
         insert contact_waitlisted;
-        Contact contact_rejected = new Contact(FirstName='Test', LastName='AppStatClosedRejected1');
-        insert contact_rejected;
+        Contact contact_not_accepted = new Contact(FirstName='Test', LastName='AppStatClosedNotAccepted1');
+        insert contact_not_accepted;
         
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
         Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
@@ -89,12 +89,12 @@ private class BZ_CandidateStatusChanged_TEST {
         List<Task> t_waitlisted = BZ_TaskFactory.createTasks(new CampaignMember[]{cm_waitlisted}, 'Review submitted application for {0}');
         insert t_waitlisted;
 
-        CampaignMember cm_rejected = new CampaignMember();
-        cm_rejected.CampaignId=campaign.Id;
-        cm_rejected.ContactId=contact_rejected.Id;
-        insert cm_rejected;
-        List<Task> t_rejected = BZ_TaskFactory.createTasks(new CampaignMember[]{cm_rejected}, 'Review submitted application for {0}');
-        insert t_rejected;
+        CampaignMember cm_not_accepted = new CampaignMember();
+        cm_not_accepted.CampaignId=campaign.Id;
+        cm_not_accepted.ContactId=contact_not_accepted.Id;
+        insert cm_not_accepted;
+        List<Task> t_not_accepted = BZ_TaskFactory.createTasks(new CampaignMember[]{cm_not_accepted}, 'Review submitted application for {0}');
+        insert t_not_accepted;
         
         Test.startTest();
 
@@ -118,15 +118,15 @@ private class BZ_CandidateStatusChanged_TEST {
                                            Subject LIKE '%Review submitted application for%'];
         System.assert(resultingTasks_waitlisted.size()==1, 'Expected Task to Review the application to be closed when Waitlisted.');
 
-        cm_rejected.Candidate_Status__c = 'Rejected';
-        update cm_rejected;
+        cm_not_accepted.Candidate_Status__c = 'Not Accepted';
+        update cm_not_accepted;
         
-        List<Task> resultingTasks_rejected = [SELECT Id, Status FROM Task 
-                                     WHERE WhoId=:cm_rejected.ContactId AND 
-                                           WhatId=:cm_rejected.CampaignId AND
+        List<Task> resultingTasks_not_accepted = [SELECT Id, Status FROM Task 
+                                     WHERE WhoId=:cm_not_accepted.ContactId AND 
+                                           WhatId=:cm_not_accepted.CampaignId AND
                                            Status='Completed' AND
                                            Subject LIKE '%Review submitted application for%'];
-        System.assert(resultingTasks_rejected.size()==1, 'Expected Task to Review the application to be closed when Rejected.');
+        System.assert(resultingTasks_not_accepted.size()==1, 'Expected Task to Review the application to be closed when Not Accepted.');
         
         Test.stopTest();
     }

@@ -87,6 +87,6 @@ trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
     {
         insert BZ_TaskFactory.createTasks(campaignMembersToCreateTasksFor, 
                                           'Review submitted application for {0}',
-                                          'Review the application for \"{0}\" by clicking the \"Campaign Member\" link below in the \"Sign Up And Application Info\" section.  Then change their Candidate Status to Accepted, Interview Requested, Waitlisted, or Rejected.');
+                                          'Review the application for \"{0}\" by clicking the \"Campaign Member\" link below in the \"Sign Up And Application Info\" section.  Then change their Candidate Status to Accepted, Interview Requested, Waitlisted, or Not Accepted.');
     }
 }

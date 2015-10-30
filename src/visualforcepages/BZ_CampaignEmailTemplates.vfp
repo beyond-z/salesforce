@@ -35,7 +35,7 @@
                         </apex:selectList>
                     </apex:outputPanel>
                 </apex:pageblockSectionItem>
-                <apex:pageblockSectionItem helpText="Email template sent to users who haven't submitted their application after X days">
+                <!--<apex:pageblockSectionItem helpText="Email template sent to users who haven't submitted their application after X days">
                     <apex:outputLabel value="Submit App Reminder Email Template" styleClass="noWrap"/>
                     <apex:outputPanel layout="block">
             <apex:outputPanel layout="block"/>
@@ -43,7 +43,7 @@
                             <apex:selectoptions value="{!EmailTemplates}"/>
                         </apex:selectList>
                     </apex:outputPanel>
-                </apex:pageblockSectionItem>
+                </apex:pageblockSectionItem>-->
                 <apex:pageblockSectionItem helpText="Email template to notify users that we are requesting an interview with them.">
                     <apex:outputLabel value="App Interview Requested Email Template" styleClass="noWrap"/>
                     <apex:outputPanel layout="block">
@@ -71,11 +71,20 @@
                         </apex:selectList>
                     </apex:outputPanel>
                 </apex:pageblockSectionItem> 
-                <apex:pageblockSectionItem helpText="Email template sent to rejected users">
-                    <apex:outputLabel value="App Rejected Email Template" styleClass="noWrap"/>
+                <apex:pageblockSectionItem helpText="Email template sent to not accepted users">
+                    <apex:outputLabel value="App Not Accepted Email Template" styleClass="noWrap"/>
                     <apex:outputPanel layout="block">
             <apex:outputPanel layout="block"/>
-                        <apex:selectList size="1" value="{!appRejectedEmailTemplate}">
+                        <apex:selectList size="1" value="{!appNotAcceptedEmailTemplate}">
+                            <apex:selectoptions value="{!EmailTemplates}"/>
+                        </apex:selectList>
+                    </apex:outputPanel>
+                </apex:pageblockSectionItem>
+                <apex:pageblockSectionItem helpText="Email template re-inviting previous candidates to apply">
+                    <apex:outputLabel value="Previous Candidate New Invite" styleClass="noWrap"/>
+                    <apex:outputPanel layout="block">
+            <apex:outputPanel layout="block"/>
+                        <apex:selectList size="1" value="{!prevCandidateEmailTemplate}">
                             <apex:selectoptions value="{!EmailTemplates}"/>
                         </apex:selectList>
                     </apex:outputPanel>

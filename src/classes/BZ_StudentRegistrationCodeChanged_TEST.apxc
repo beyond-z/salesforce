@@ -1,0 +1,42 @@
+@isTest 
+private class BZ_StudentRegistrationCodeChanged_TEST {
+    static testMethod void validateCopy() {
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_ascts1', OwnerId=userInfo.getUserId());
+        insert campaignOwner;
+        Contact contact = new Contact(FirstName='Test', LastName='StudentRegCode1');
+        insert contact;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Participants');
+        insert campaign;
+        
+        CampaignMember cm = new CampaignMember();
+        cm.CampaignId=campaign.Id;
+        cm.ContactId=contact.Id;
+       
+        insert cm;
+        
+        String regCode = 'askfdj1423';
+        cm.Student_Registration_Code__c = regCode;
+
+        // This fires the trigger we're testing.
+        update cm;
+    
+        Contact updatedContact = [SELECT Id, Student_Registration_Code__c
+                                  FROM Contact WHERE Id=:cm.ContactId];
+        
+        System.assert(updatedContact.Student_Registration_Code__c == regCode, 'Student_Registration_Code__c not updated on Contact when set on Campaign Member.');
+        
+
+        String regCode2 = null;
+        cm.Student_Registration_Code__c = regCode2;
+
+        // This fires the trigger we're testing.
+        update cm;
+    
+        Contact updatedContact2 = [SELECT Id, Student_Registration_Code__c
+                                  FROM Contact WHERE Id=:cm.ContactId];
+        
+        System.assert(updatedContact2.Student_Registration_Code__c == regCode2, 'Student_Registration_Code__c not updated on Contact when set on Campaign Member. contact = ' + updatedContact2 + ', campaignmember = ' + cm);
+    }
+}

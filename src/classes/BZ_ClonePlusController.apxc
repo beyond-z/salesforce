@@ -1,0 +1,366 @@
+// E.g. try this to clone a campaign, campaign members, and activity history for the
+// 'Testing Cohort Transitions - Participants - Fall 2015' Campaign:
+// /apex/BZ_ClonePlus?id=701170000007wQW&childobjecttypes=CampaignMember,Activities
+public class BZ_ClonePlusController {
+    
+    public List<relatedObjects> objectChildren  { get; set; }
+    public String               objectTypeName  { get; set; }
+    public String               objectName      { get; set; }
+    //public Id                   clonedObjectId  { get { return headClone.Id; } }
+    
+    // The ID of the object to clone
+    private String m_objectId { get; set; }
+    
+    // The list of child object types to clone.  E.g. Activites, CampaignMember
+    private Set<String> m_childObjectTypes { get; set; }
+    
+    private SObject headSObject, headClone;
+    
+    // Initialize the controller for use with a VisualForce page.
+    // The 'id' and 'childobjecttypes' parameters must be set by the page
+    // E.g. <domain>/apex/BZ_ClonePlus?id=701170000007wQW&childobjecttypes=CampaignMember,Activities
+    public BZ_ClonePlusController()
+    {
+        m_objectID = ApexPages.currentPage().getParameters().get('id');
+        
+        m_childObjectTypes.addAll(ApexPages.currentPage().getParameters()
+                                  .get('childobjecttypes').split(',')
+                                 );
+    }
+    
+    // Initialize the controller with an objectId to clone, specifying the
+    // childObjectTypes to deep clone.  E.g. this would clone a campaign and
+    // all CampaignMember and Activities
+    // E.g. new BZ_ClonePlusController("701170000007wQW", "CampaignMember,Activities").doClone();
+    public BZ_ClonePlusController(Id objectId, Set<String> childObjectTypes){
+        m_objectId = objectId;
+        m_childObjectTypes = childObjectTypes;
+        initialiseObjectsForCloning();
+    }
+    
+    // Initialisation method called when the clone plus page is loaded.
+    // Use the id page parameter to find out what kind of 
+    // object we are trying to clone.
+    // Then load the object from the database.
+    // Finally call the populateObjectChildren method to      
+    public void initialiseObjectsForCloning()
+    {
+        
+        // Here we generate a keyprefixmap using the global describe 
+        // Then compare that to our object to determine type.  
+        Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe(); 
+        Map<String,String> keyPrefixMap = new Map<String,String>{};      
+        for(String sObj : gd.keySet())
+        {
+            Schema.DescribeSObjectResult r =  gd.get(sObj).getDescribe();
+            keyPrefixMap.put(r.getKeyPrefix(), r.getName());
+        }
+        
+        String objectTypeKey = m_objectId.subString(0,3);
+        objectTypeName = keyPrefixMap.get(objectTypeKey);
+        
+        String primaryObjectQueryString = 'SELECT Id, Name FROM '
+            + objectTypeName
+            + ' WHERE Id = \''
+            + m_objectId
+            + '\'';
+        
+        headSObject = Database.query(primaryObjectQueryString);
+        objectName  = '' + headSObject.get('Name');
+        populateObjectChildren();    
+    }
+    
+    // Get all of the children of the current object that have a 
+    // object type contained in the child object types page parameter.
+    // Not restricting the child objects to particular types 
+    // results in unclonable system objects being added to the options, 
+    // which we need to avoid (You will not want to clone these!)
+    // Making these object type choices also allows us 
+    // focus our efforts on the specific kinds of objects 
+    // we want to allow users to clone.  
+    public void populateObjectChildren()
+    {
+        objectChildren = new List<relatedObjects>{};                
+            
+        // Use the sobjecttype describe method to retrieve all 
+        // child relationships for the object to be cloned.    
+        Schema.DescribeSObjectResult headDescribe = 
+            headsObject.getSObjectType().getDescribe();
+        
+        List<Schema.ChildRelationship> childRelationships = 
+            headDescribe.getChildRelationships(); 
+        
+        // Iterate through each relationship, 
+        // and retrieve the related objects.       
+        for (Schema.ChildRelationship childRelationship : childRelationships)
+        {
+            Schema.SObjectType childObjectType = childRelationship.getChildSObject();
+            
+            // Only retrieve the objects if their type is 
+            // included in the page argument.  
+            System.Debug('BZ_ClonePlusController: childRelationship = ' + childObjectType.getDescribe().getName());        
+            DescribeSObjectResult childObjectDescribe = childObjectType.getDescribe();
+            if (m_childObjectTypes.contains(childObjectDescribe.getName()))
+            {
+                List<relatedObjectRow> relatedObjectsForChildField = new List<relatedObjectRow>{};                        
+                Schema.SObjectField childObjectField = childRelationship.getField();
+                
+                String queryForNameField = ''; // Some entities don't have a Name field
+                Set<String> objectFields = childObjectDescribe.fields.getMap().keySet();
+                if(objectFields.contains('Name')) {
+                    queryForNameField = ', Name';
+                }
+                
+                String relatedChildSObjectsquery = 
+                    'SELECT ID' + queryForNameField + ' FROM ' 
+                    + childObjectDescribe.getName()
+                    + ' WHERE '
+                    + childObjectField.getDescribe().getName()
+                    + ' = \'' 
+                    + headsObject.Id
+                    + '\''; 
+                
+                System.Debug('BZ_ClonePlusController: relatedChildSObjectsquery = '+relatedChildSObjectsquery);
+                for (SObject childObject : Database.query(relatedChildSObjectsquery))
+                {
+                    relatedObjectsForChildField.add(new relatedObjectRow(childObject));
+                }
+                
+                if (!relatedObjectsForChildField.isEmpty())
+                {
+                    objectChildren.add(new relatedObjects(relatedObjectsForChildField, 
+                                                          childObjectDescribe.getLabelPlural(), 
+                                                          childObjectField.getDescribe().getName()));
+                }
+            }
+        }
+    }
+    
+    // Perform the cloning process.
+    // First clone the parent, then all of the child objects. 
+    // Then redirect the user to the new object page.
+    public PageReference doClone()
+    {
+        headClone = cloneObjects(new List<sObject>{headSObject}).get(0);
+        insert headClone;
+        cloneSelectedObjects();
+        return new PageReference('/' + headClone.Id);
+    }
+    
+    // Perform the cloning process by first cloning the parent, then all of the child objects. 
+    // Return the list of cloned objects that haven't been inserted into the database yet.
+    public List<sObject> getClones()
+    {
+        List<sObject> clones = new List<sObject>();
+        headClone = cloneObjects(new List<sObject>{headSObject}).get(0);
+        clones.add(headClone);
+        clones.addAll(getSelectedObjectsClones());
+        return clones;
+    }
+    
+    // Return a clone of the main parent object that hasn't been insert into the database yet.
+    public sObject getParentClone(){
+        List<sObject> clones = new List<sObject>();
+        // it's important to set the headClone variable if you're going to access child clones after.
+        headClone = cloneObjects(new List<sObject>{headSObject}).get(0);
+        return headClone;
+    }
+    
+    // Return a the child clones of the main parent object that haven't been insert into the database yet.
+    // Note: the getParentClone() method must be called before this will work.
+    public List<sObject> getChildrenClones(){
+        if (headClone == null){
+            throw new BZ_ClonePlusControllerException('BZ_ClonePlusController.getChildrenClones(): please call getParentClone() first');
+        }
+        List<sObject> clones = new List<sObject>();
+        clones.addAll(getSelectedObjectsClones());
+        return clones;
+    }
+
+    
+    // Clone the selected child objects but don't insert them into the database.
+    // Associate the cloned objects with the new cloned parent object.
+    public List<sObject> getSelectedObjectsClones()
+    {
+        List<sObject> clonedObjects = new List<sObject>{};
+        List<sObject> selectedRelatedObjects;
+        
+        for (relatedObjects relatedObject : objectChildren)
+        {
+            System.Debug('BZ_ClonePlusController.getSelectedObjectsClones(): relatedObject = '+relatedObject);
+            selectedRelatedObjects = new List<sObject>{};                      
+            for (relatedObjectRow row : relatedObject.objectRows) 
+            {
+                if (row.selected)
+                {
+                    selectedRelatedObjects.add(row.obj);
+                }
+            }
+            
+            if (!selectedRelatedObjects.isEmpty())
+            {
+                List<sObject> clones = cloneObjects(selectedRelatedObjects); 
+                System.Debug('BZ_ClonePlusController.getSelectedObjectsClones(): clonedObjects = '+clonedObjects);
+                for (sObject clone : clones)
+                {
+                    System.Debug('BZ_ClonePlusController.getSelectedObjectsClones(): clone = '+clone + ', relatdObject = '+relatedObject + ', headClone = '+headClone);
+                    clone.put(relatedObject.relatedFieldName, headClone.Id);  
+                }
+                clonedObjects.addAll(clones);
+            }
+        }
+        return clonedObjects;
+    }
+    
+    // Clone the selected child objects.
+    // Associate the cloned objects with the new cloned parent object.
+    public void cloneSelectedObjects()
+    {
+        List<sObject> clonedObjects = getSelectedObjectsClones();
+        if (!clonedObjects.isEmpty())
+        {
+            insert clonedObjects;
+        }
+    }
+    
+    // Clone a list of objects to a particular object type
+    // Parameters 
+    // - List<sObject> sObjects - the list of objects to be cloned 
+    // The sObjects you pass in must include the ID field, 
+    // and the object must exist already in the database, 
+    // otherwise the method will not work.
+    public static List<sObject> cloneObjects(List<sObject> sObjects){
+        
+        Schema.SObjectType objectType = sObjects.get(0).getSObjectType();
+        
+        // A list of IDs representing the objects to clone
+        List<Id> sObjectIds = new List<Id>{};
+        // A list of fields for the sObject being cloned
+        List<String> sObjectFields = new List<String>{};
+        // A list of new cloned sObjects
+        List<sObject> clonedSObjects = new List<sObject>{};
+                    
+        // Get all the fields from the selected object type using 
+        // the get describe method on the object type.    
+        if(objectType != null)
+        {
+            for (Schema.SObjectField objField : 
+                 objectType.getDescribe().fields.getMap().values())
+            { 
+                Schema.DescribeFieldResult fieldDesc = objField.getDescribe();
+                // If the field type is location, then do not include it,
+                // otherwise it will cause a soql exception.
+                // Note that excluding the field does not stop the location from
+                // being copied to the new cloned object.
+                if(fieldDesc.getType() != DisplayType.LOCATION)
+                {
+                    sObjectFields.add(fieldDesc.Name);
+                }
+            }
+        }
+        
+        // If there are no objects sent into the method, 
+        // then return an empty list
+        if (sObjects != null || 
+            sObjects.isEmpty() || 
+            sObjectFields.isEmpty())
+        {
+                
+            // Strip down the objects to just a list of Ids.
+            for (sObject objectInstance: sObjects){
+                sObjectIds.add(objectInstance.Id);
+            }
+                
+            /* Using the list of sObject IDs and the object type, 
+we can construct a string based SOQL query 
+to retrieve the field values of all the objects.*/
+            
+            String allSObjectFieldsQuery = 'SELECT ' + sObjectFields.get(0); 
+            
+            for (Integer i=1 ; i < sObjectFields.size() ; i++)
+            {
+                allSObjectFieldsQuery += ', ' + sObjectFields.get(i);
+            }
+                
+            allSObjectFieldsQuery += ' FROM ' + 
+                objectType.getDescribe().getName() + 
+                ' WHERE ID IN (\'' + sObjectIds.get(0) + 
+                '\'';
+            
+            for (Integer i=1 ; i < sObjectIds.size() ; i++)
+            {
+                allSObjectFieldsQuery += ', \'' + sObjectIds.get(i) + '\'';
+            }
+            allSObjectFieldsQuery += ')';
+            
+            System.Debug('BZ_ClonePlusController.cloneObjects(): allSObjectFieldsQuery = ' + allSObjectFieldsQuery);
+                
+            try
+            {
+                
+                // Execute the query. For every result returned, 
+                // use the clone method on the generic sObject 
+                // and add to the collection of cloned objects
+                for (SObject sObjectFromDatabase : Database.query(allSObjectFieldsQuery))
+                {
+                    System.Debug('BZ_ClonePlusController.cloneObjects(): about to clone sObjectFromDatabase = '+sObjectFromDatabase);
+                    sObject clonedObject = sObjectFromDatabase.clone(false,true);
+                    System.Debug('BZ_ClonePlusController.cloneObjects(): clonedObject = '+clonedObject);
+                    clonedSObjects.add(clonedObject);  
+                }
+                
+            } catch (exception e){
+                System.Debug(e);
+            }
+                
+        }
+        return clonedSObjects; 
+    }
+    
+    // Related objects data construct - 
+    // used to store a collection of child objects connected to 
+    // the head object through the same relationship field.
+    public class relatedObjects
+    {
+        public List<relatedObjectRow> objectRows { get; set; }
+        public String                 pluralLabel      { get; set; }
+        public String                 relatedFieldName { get; set; }
+        
+        public relatedObjects(List<relatedObjectRow> objectRows, 
+                              String pluralLabel, 
+                              String relatedFieldName) 
+        {
+            this.objectRows       = objectRows;
+            this.pluralLabel      = pluralLabel;
+            this.relatedFieldName = relatedFieldName;
+        }   
+    }     
+    
+    // An indidual child object row. 
+    // Each instance simply contains the object definition, 
+    // and a checkbox to select the row for cloning 
+    // on the clone plus page.
+    public class relatedObjectRow
+    {
+        public sObject obj      { get; set; }
+        public Boolean selected { get; set; }
+        
+        public relatedObjectRow(Sobject obj)
+        {
+            this.obj      = obj;
+            // All object rows are selected by default.
+            this.selected     = true;
+        }
+        
+        public String getName(){
+            try{
+                return '' + obj.get('Name');
+            } catch (Exception e){
+                System.Debug(e);
+                return '';
+            }    
+        }   
+    }
+    
+    public class BZ_ClonePlusControllerException extends Exception {}
+}

@@ -84,7 +84,7 @@ public class BZ_BulkEmailer {
     
     /**
      * Goes through all Campaign Members for the specified campaign and
-     * if their Application Status is set to “Waitlisted”, “Accepted”, or “Rejected” 
+     * if their Application Status is set to “Waitlisted”, “Accepted”, or “Not Accepted” 
      * then returns a Map of the associated Email Template from the Campaign to the
      * List of Campaign Members that should be sent that email.
      */
@@ -122,18 +122,18 @@ public class BZ_BulkEmailer {
             emailTemplateToRecipients.put(campaign.App_Waitlisted_Email_Template__c, waitlistedUsers);
         }
 
-        List<CampaignMember> rejectedUsers = 
+        List<CampaignMember> notAcceptedUsers = 
             [SELECT CampaignId, ContactId, Contact.Email, Contact.Name FROM CampaignMember 
              WHERE CampaignId = :campaign.Id AND
                    Application_Decision_Sent__c = FALSE AND
-                   Candidate_Status__c = 'Rejected'
+                   Candidate_Status__c = 'Not Accepted'
             ];
-        //System.debug('BZ_BulkEmailer.getQueuedApplicationDecisions: rejectedUsers.size() = '+rejectedUsers.size());
-        //System.Debug('BZ_BulkEmailer.getQueuedApplicationDecisions: rejectedUsers.get(0).Contact.Email = ' + rejectedUsers.get(0).Contact.Email);
-        if (rejectedUsers != null && rejectedUsers.size() > 0)
+        //System.debug('BZ_BulkEmailer.getQueuedApplicationDecisions: notAcceptedUsers.size() = '+notAcceptedUsers.size());
+        //System.Debug('BZ_BulkEmailer.getQueuedApplicationDecisions: notAcceptedUsers.get(0).Contact.Email = ' + notAcceptedUsers.get(0).Contact.Email);
+        if (notAcceptedUsers != null && notAcceptedUsers.size() > 0)
         {
-            count += rejectedUsers.size();
-            emailTemplateToRecipients.put(campaign.App_Rejected_Email_Template__c, rejectedUsers);
+            count += notAcceptedUsers.size();
+            emailTemplateToRecipients.put(campaign.App_Not_Accepted_Email_Template__c, notAcceptedUsers);
         }
 
         if (count > 10)
