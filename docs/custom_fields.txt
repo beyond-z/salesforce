@@ -142,6 +142,7 @@
 		Hometown 
 		Participant Information
 		Volunteer Information
+    Student Registration Code
 		
 	LEAD
 		Account Activated?
