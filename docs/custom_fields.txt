@@ -29,6 +29,7 @@
 		Sourcing Info Options
 
 	CAMPAIGN MEMBER
+		Date App Submitted
 		Selected Timeslot
 		Company
 		Industry
