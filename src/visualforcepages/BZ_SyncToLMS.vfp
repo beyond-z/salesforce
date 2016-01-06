@@ -3,7 +3,7 @@
     <apex:form >
     <apex:pageBlock id="buttons" rendered="{!hasRun==false}">
         <apex:pageMessages id="messages"/>
-        <apex:pageMessage severity="confirm" title="Are you sure?" summary="You are about to take all the members of this campaign and add them / update them in our Learning Management System. If you're sure you want to do this hit Sync" />
+        <apex:pageMessage severity="confirm" title="Are you sure?" summary="You are about to take all the members of this campaign who are 'Confirmed' and have their 'Section Name in LMS' set and add them / update them in our Learning Management System. If you're sure you want to do this hit Sync" />
         <apex:pageBlockSection >
             <apex:pageBlockSectionItem >
                 <apex:outputText id="previewMembersToSync" value="{!membersToSyncDisplayList}" escape="false">
