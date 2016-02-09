@@ -4,7 +4,7 @@ trigger BZ_LeadUpdated on Lead (after update) {
     {
         if (lead.Account_Activated__c == true &&
             lead.IsConverted == false &&
-            (lead.User_Type__c == 'Undergrad' || lead.User_Type__c == 'Volunteer'))
+            (lead.User_Type__c == 'Undergrad' || lead.User_Type__c == 'Volunteer' || lead.User_Type__c == 'Temp Volunteer'))
         {
             System.debug('BZ_LeadUpdated: lead.Id=' + lead.Id);
             System.debug('BZ_LeadUpdated: lead.FirstName=' + lead.FirstName);

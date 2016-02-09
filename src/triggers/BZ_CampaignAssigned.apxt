@@ -58,6 +58,10 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
             // Ditto on above comment
             contact.Participant_Information__c = 'Participant Pipeline';
             isApplicableCampaign = true;
+        } else if (campaign.Type == 'Volunteer'){
+            // Ditto on above comment
+            contact.Volunteer_Information__c = 'Temp Volunteer';
+            isApplicableCampaign = true;
         } else if (campaign.Type == 'Partners')
         {
             // Website signup as employer partner or university partner
