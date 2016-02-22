@@ -11,11 +11,12 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
         campaignIds.add(cm.CampaignId);
     }
     Map<Id, Contact> contactMap = new Map<Id, Contact>([SELECT Id, Volunteer_Information__c, Participant_Information__c, User_Type__c FROM Contact WHERE Id in :contactIds]);
-    Map<Id, Campaign> campaignMap = new Map<Id, Campaign>([SELECT Id, Type FROM Campaign WHERE Id in :campaignIds]);
+    Map<Id, Campaign> campaignMap = new Map<Id, Campaign>([SELECT Id, Type, Request_Student_Id__c FROM Campaign WHERE Id in :campaignIds]);
     //System.Debug('BZ_CandidateStatusChanged: contactMap='+contactMap);
     //System.Debug('BZ_CandidateStatusChanged: campaignMap='+campaignMap);
     
-    List<CampaignMember> campaignMembersToCreateTasksFor = new List<CampaignMember>();
+    List<CampaignMember> campaignMembersToCreateInterviewTasksFor = new List<CampaignMember>();
+    List<CampaignMember> campaignMembersToCreateRegistrationCodeTasksFor = new List<CampaignMember>();
     
     for (CampaignMember cm : Trigger.new)
     {
@@ -33,7 +34,7 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
             if (cm.Candidate_Status__c == 'Interview Requested')
             {
                 closeReviewAppTask = true;
-                campaignMembersToCreateTasksFor.add(cm);
+                campaignMembersToCreateInterviewTasksFor.add(cm);
             }
             else if(cm.Candidate_Status__c == 'Accepted')
             {   
@@ -49,6 +50,16 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
                     contactsToUpdate.add(contact);
                 } else if (campaign.Type == 'Program Participants'){
                     contact.Participant_Information__c = 'Participant';
+                    contactsToUpdate.add(contact);
+                    
+                    // Queue up task to set the Student Registration Code if this is a Campaign for 
+                    // colleges where the student has to register the course in the college's 
+                    // registration system.
+                    if (campaign.Request_Student_Id__c == true){
+                        campaignMembersToCreateRegistrationCodeTasksFor.add(cm);
+                    }
+                } else if (campaign.Type == 'Volunteer'){
+                    contact.Volunteer_Information__c = 'Temp Volunteer';
                     contactsToUpdate.add(contact);
                 }
             } else if(cm.Candidate_Status__c == 'Not Accepted' || cm.Candidate_Status__c == 'Waitlisted')
@@ -73,16 +84,22 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
                 }
             }
             
-            
             update contactsToUpdate;
             update tasksToUpdate;
         }
     }
     
-    if (campaignMembersToCreateTasksFor.size() > 0)
+    if (campaignMembersToCreateInterviewTasksFor.size() > 0)
     {
-        insert BZ_TaskFactory.createEmailTasks(campaignMembersToCreateTasksFor, 
+        insert BZ_TaskFactory.createEmailTasks(campaignMembersToCreateInterviewTasksFor, 
                                                'Send Interview Request Email', 
                                                'App_Interview_Requested_Email_Template__c');
+    }
+    
+    if (campaignMembersToCreateRegistrationCodeTasksFor.size() > 0)
+    {
+        insert BZ_TaskFactory.createTasks(campaignMembersToCreateRegistrationCodeTasksFor, 
+                                          'Set Student Registration Code for {0}',
+                                          'Retrieve a \"Student Registration Code\" for \"{0}\" by getting a code from the college registrar, then clicking the \"Campaign Member\" link below in the \"Sign Up And Application Info\" section, and populating the field with the code.  Dont forget to Save!');
     }
 }

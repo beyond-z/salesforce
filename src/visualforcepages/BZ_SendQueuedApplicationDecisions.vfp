@@ -27,6 +27,7 @@
     </apex:pageBlock>
     <apex:outputPanel id="resultmessage">
         {!resultMessage}
+        <br/>
         <apex:commandButton action="{!cancel}" value="OK" rendered="{!hasRun}" />
   <!--<apex:commandLink action="{!ApexPages.currentPage().getParameters().get('retURL')}"/>-->
     </apex:outputPanel>
