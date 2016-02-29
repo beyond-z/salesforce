@@ -58,6 +58,30 @@ private class BZ_CandidateStatusChanged_TEST {
         System.assert(resultingTasks.size()==1, 'Expected Task to be created to Set Student Registration Code');
     }
     
+    static testMethod void validateConfirmed() {
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_confirmed1', OwnerId=userInfo.getUserId());
+        insert campaignOwner;
+        Contact contact = new Contact(FirstName='Test', LastName='AppStatChangedToConfirmed1');
+        insert contact;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        insert campaign;
+        
+        CampaignMember cm = new CampaignMember();
+        cm.CampaignId=campaign.Id;
+        cm.ContactId=contact.Id;
+       
+        insert cm;
+        
+        // This fires the trigger we're testing.
+        cm.Candidate_Status__c = 'Confirmed';
+        update cm;
+    
+        Contact updatedContact = [SELECT Id, Volunteer_Information__c FROM Contact WHERE Id=:cm.ContactId];
+        System.assert(updatedContact.Volunteer_Information__c == 'Current LC', 'When a Contact is Confirmed, their Volunteer Information should be set.');
+    }
+    
     static testMethod void validateAccepted() {
         Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_aqmct1', OwnerId=userInfo.getUserId());
         insert campaignOwner;
@@ -86,7 +110,32 @@ private class BZ_CandidateStatusChanged_TEST {
         System.assert(resultingTasks.size()==1, 'Expected Task to be created to Map the cohort'); */
         
         Contact updatedContact = [SELECT Id, Volunteer_Information__c FROM Contact WHERE Id=:cm.ContactId];
-        System.assert(updatedContact.Volunteer_Information__c == 'Current LC', 'When a Contact is Accepted, their Volunteer Information should be set.');
+        System.assert(updatedContact.Volunteer_Information__c == 'LC Pipeline', 'When a Contact is Accepted, their Volunteer Information should not be changed.');
+    }
+    
+    static testMethod void validateOptedOut() {
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_ooct1', OwnerId=userInfo.getUserId());
+        insert campaignOwner;
+        Contact contact = new Contact(FirstName='Test', LastName='AppStatChangedToOptedOut1', Volunteer_Information__c='Current LC');
+        insert contact;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        insert campaign;
+        
+        CampaignMember cm = new CampaignMember();
+        cm.CampaignId=campaign.Id;
+        cm.ContactId=contact.Id;
+       
+        insert cm;
+        
+        // This fires the trigger we're testing.
+        cm.Candidate_Status__c = 'Opted Out';
+        cm.Opted_Out_Reason__c = 'Dropped';
+        update cm;
+    
+        Contact updatedContact = [SELECT Id, Volunteer_Information__c FROM Contact WHERE Id=:cm.ContactId];
+        System.assert(updatedContact.Volunteer_Information__c == 'LC Pipeline', 'When a Contact is Opted Out, their Volunteer Information should be set back to be in the pipeline.');
     }
     
     static testMethod void validateReviewAppTaskClosed() {

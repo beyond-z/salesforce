@@ -3,7 +3,7 @@ public class BZ_CloseRecruitmentController {
     private static final String NEW_CAMPAIGN_NAME_PROMPT = '<Please enter new Campaign Name>';
     private final List<SelectOption> m_emailTemplateOptions;
     private ApexPages.StandardController m_controller {get; set;}
-    private Campaign m_campaign {get;set;}
+    private Campaign m_campaign {get;set;} // Active campaign
     private Date m_oldStartDate {get; set;}
     private Date m_oldEndDate {get; set;}
     
@@ -35,7 +35,7 @@ public class BZ_CloseRecruitmentController {
         this.m_controller = controller;
         m_campaign = (Campaign)m_controller.getRecord();
         m_emailTemplateOptions = BZ_EmailTemplateProvider.getEmailTemplates();
-        newCampaignName = NEW_CAMPAIGN_NAME_PROMPT;
+        newCampaignName = NEW_CAMPAIGN_NAME_PROMPT; // campaign snapshot
         newAvailableMeetingTimes = m_campaign.Meeting_Times__c;
         prevCandidateEmailTemplate = m_campaign.Previous_Candidate_New_Invite__c;
         m_oldStartDate = m_campaign.StartDate;
@@ -60,6 +60,9 @@ public class BZ_CloseRecruitmentController {
             BZ_ClonePlusController cloneController = new BZ_ClonePlusController(m_campaign.Id, new Set<String>{'CampaignMember', 'Task'});
             System.Debug('BZ_CloseRecruitmentController.run(): getParentClone()');
             Campaign clonedCampaign = (Campaign)cloneController.getParentClone(); 
+            clonedCampaign.IsActive = false;
+            clonedCampaign.Status = 'Completed'; // This allows the Campaign Assigned trigger to update the alumni status
+            clonedCampaign.ParentId = m_campaign.Id;
             System.Debug('BZ_CloseRecruitmentController.run(): insert clonedCampaign = '+clonedCampaign);
             insert clonedCampaign; // Need to do this before inserting children so that it gets an ID
             System.Debug('BZ_CloseRecruitmentController.run(): done inserting clonedCampaign = '+clonedCampaign);
@@ -69,11 +72,6 @@ public class BZ_CloseRecruitmentController {
             System.Debug('BZ_CloseRecruitmentController.run(): insert childrenClones = '+childrenClones);
             insert childrenClones;
             System.Debug('BZ_CloseRecruitmentController.run(): inserted childrenClones = '+childrenClones);
-            
-            clonedCampaign.IsActive = false;
-            clonedCampaign.Status = 'Completed';
-            clonedCampaign.ParentId = m_campaign.Id;
-            update clonedCampaign; // We do a separate update so the trigger runs
             
             m_campaign.Name = newCampaignName;
             m_campaign.Meeting_Times__c = newAvailableMeetingTimes;
@@ -86,25 +84,57 @@ public class BZ_CloseRecruitmentController {
                                                    Candidate_Status__c <> 'Waitlisted' AND
                                                    Candidate_Status__c <> 'Opted Out'];
             System.Debug('BZ_CloseRecruitmentController.run(): membersToPurge = ' + membersToPurge);
+            
+            Set<Id> confirmedMemberIds = new Set<Id>();
             if (membersToPurge != null && !membersToPurge.isEmpty()){
                 List<Id> memberContactIdsToPurge = new List<Id>();
                 for (CampaignMember c : membersToPurge){
                     memberContactIdsToPurge.add(c.ContactId);
+                    if (c.Candidate_Status__c == 'Confirmed'){
+                        confirmedMemberIds.add(c.ContactId);
+                    }
                 }
+                
                 BZ_Notifications.changeCampaigns(memberContactIdsToPurge, clonedCampaign.Id, false);
                 System.Debug('BZ_CloseRecruitmentController.run(): deleting membersToPurge = ' + membersToPurge);
                 delete membersToPurge;
             }
+            
+            /* 
+             * Note: this was moved to the Campaign Assigned trigger instead since the members
+             * are already having their Participant and Volunteer Information set
+             */
+            /*
+            if (!confirmedMemberIds.isEmpty())
+            {
+                // When we close recruitment, all Confirmed members become Alumni
+                Map<Id, Contact> confirmedContactMap = new Map<Id, Contact>([SELECT Id, Volunteer_Information__c, Participant_Information__c, User_Type__c FROM Contact WHERE Id in :confirmedMemberIds]);
+                List<Contact> contactsToUpdate = new List<Contact>();
+                for (Id i : confirmedMemberIds)
+                {
+                    Contact contact = confirmedContactMap.get(i);
+                    if (m_campaign.Type == 'Leadership Coaches') {
+                        contact.Volunteer_Information__c = 'Former LC';
+                        contactsToUpdate.add(contact);
+                    } else if (m_campaign.Type == 'Program Participants'){
+                        contact.Participant_Information__c = 'Program Alum';
+                        contactsToUpdate.add(contact);
+                    }
+                }
+                update contactsToUpdate;
+            } */
+            
             List<CampaignMember> membersNotPurged = [SELECT Id, CampaignId, ContactId, Application_Decision_Sent__c,
                                                      Apply_Button_Enabled__c, Section_Name_In_LMS__c, Selected_Timeslot__c,
                                                      Application_Status__c, Candidate_Status__c FROM CampaignMember 
                                                      WHERE CampaignId = :m_campaign.Id];
-            Set<Id> memberContactIdsToKeepTasksFor = new Set<Id>();
+            Set<Id> memberContactIdsNotPurged = new Set<Id>();
             for (CampaignMember cm : membersNotPurged){
-                memberContactIdsToKeepTasksFor.add(cm.ContactId);
+                memberContactIdsNotPurged.add(cm.ContactId);
             }
+
             List<Task> tasksToPurge = [SELECT Id FROM Task 
-                                       WHERE WhoId not in :memberContactIdsToKeepTasksFor AND // Name 
+                                       WHERE WhoId not in :memberContactIdsNotPurged AND // Name 
                                        WhatId = :m_campaign.Id];
             System.Debug('BZ_CloseRecruitmentController.run(): tasksToPurge = ' + tasksToPurge);
             if (tasksToPurge != null && !tasksToPurge.isEmpty()){

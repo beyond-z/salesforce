@@ -22,7 +22,7 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
         campaignIds.add(cm.CampaignId);
     }
     Map<Id, Contact> contactMap = new Map<Id, Contact>([SELECT Id, Volunteer_Information__c, Participant_Information__c, User_Type__c FROM Contact WHERE Id in :contactIds]);
-    Map<Id, Campaign> campaignMap = new Map<Id, Campaign>([SELECT Id, Type FROM Campaign WHERE Id in :campaignIds]);
+    Map<Id, Campaign> campaignMap = new Map<Id, Campaign>([SELECT Id, Type, IsActive, Status FROM Campaign WHERE Id in :campaignIds]);
     //System.Debug('BZ_CampaignAssigned: contactMap='+contactMap);
     //System.Debug('BZ_CampaignAssigned: campaignMap='+campaignMap);
                  
@@ -48,15 +48,26 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
         }
         
         boolean isApplicableCampaign = false;
+        boolean isCampaignSnapshot = (campaign.IsActive == false && campaign.Status == 'Completed');
+        System.debug('BZ_CampaignAssigned: isCampaignSnapshot = '+isCampaignSnapshot +', campaign.IsActive='+campaign.IsActive+', campaign.Status='+campaign.Status);
+        System.debug('BZ_CampaignAssigned: cm.Candidate_Status__c = '+cm.Candidate_Status__c);
         if (campaign.Type == 'Leadership Coaches') {
             // Note: this is also set in a Workflow when the Lead is converted, 
             // but they may signup as one type but then we determine that they are really 
             // a different type so we still want to run this.
-            contact.Volunteer_Information__c = 'LC Pipeline';
+            if (isCampaignSnapshot && cm.Candidate_Status__c == 'Confirmed'){
+                contact.Volunteer_Information__c = 'Former LC';
+            } else {
+                contact.Volunteer_Information__c = 'LC Pipeline';
+            }
             isApplicableCampaign = true;
         } else if (campaign.Type == 'Program Participants'){
             // Ditto on above comment
-            contact.Participant_Information__c = 'Participant Pipeline';
+            if (isCampaignSnapshot && cm.Candidate_Status__c == 'Confirmed'){
+                contact.Participant_Information__c = 'Program Alum';
+            } else {
+                contact.Participant_Information__c = 'Participant Pipeline';
+            }
             isApplicableCampaign = true;
         } else if (campaign.Type == 'Volunteer'){
             // Ditto on above comment

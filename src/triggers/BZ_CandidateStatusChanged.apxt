@@ -42,6 +42,22 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
                 
                 Campaign campaign = campaignMap.get(cm.CampaignId);
                 //System.debug('BZ_CandidateStatusChanged: campaign='+campaign);
+        
+                if (campaign.Type == 'Program Participants'&& campaign.Request_Student_Id__c == true){
+                    
+                    // Queue up task to set the Student Registration Code if this is a Campaign for 
+                    // colleges where the student has to register the course in the college's 
+                    // registration system.
+                    campaignMembersToCreateRegistrationCodeTasksFor.add(cm);
+                }
+            } 
+            else if(cm.Candidate_Status__c == 'Not Accepted' || cm.Candidate_Status__c == 'Waitlisted')
+            {
+                closeReviewAppTask = true;
+            }
+            else if (cm.Candidate_Status__c == 'Confirmed') {
+                Campaign campaign = campaignMap.get(cm.CampaignId);
+                //System.debug('BZ_CandidateStatusChanged: campaign='+campaign);
                 Contact contact = contactMap.get(cm.ContactId);
                 //System.debug('BZ_CandidateStatusChanged: contact='+contact); 
         
@@ -51,21 +67,27 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
                 } else if (campaign.Type == 'Program Participants'){
                     contact.Participant_Information__c = 'Participant';
                     contactsToUpdate.add(contact);
-                    
-                    // Queue up task to set the Student Registration Code if this is a Campaign for 
-                    // colleges where the student has to register the course in the college's 
-                    // registration system.
-                    if (campaign.Request_Student_Id__c == true){
-                        campaignMembersToCreateRegistrationCodeTasksFor.add(cm);
-                    }
                 } else if (campaign.Type == 'Volunteer'){
                     contact.Volunteer_Information__c = 'Temp Volunteer';
                     contactsToUpdate.add(contact);
                 }
-            } else if(cm.Candidate_Status__c == 'Not Accepted' || cm.Candidate_Status__c == 'Waitlisted')
-            {
-                closeReviewAppTask = true;
             }
+            else if (cm.Candidate_Status__c == 'Opted Out') {
+                Campaign campaign = campaignMap.get(cm.CampaignId);
+                //System.debug('BZ_CandidateStatusChanged: campaign='+campaign);
+                Contact contact = contactMap.get(cm.ContactId);
+                //System.debug('BZ_CandidateStatusChanged: contact='+contact); 
+        
+                // They may have been Confirmed, but later Opted Out (e.g. Dropped)
+                // So we set them back to being in the pipeline
+                if (campaign.Type == 'Leadership Coaches') {
+                    contact.Volunteer_Information__c = 'LC Pipeline';
+                    contactsToUpdate.add(contact);
+                } else if (campaign.Type == 'Program Participants'){
+                    contact.Participant_Information__c = 'Participant Pipeline';
+                    contactsToUpdate.add(contact);
+                }
+            } 
             
             if (closeReviewAppTask)
             {
