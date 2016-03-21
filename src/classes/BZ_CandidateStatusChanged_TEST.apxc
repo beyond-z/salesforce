@@ -30,7 +30,7 @@ private class BZ_CandidateStatusChanged_TEST {
         System.assert(resultingTasks.size()==1, 'Expected Task to be created to Send Interview Request Email');
     }
     
-    static testMethod void validateStudentRegistrationCodeTask() {
+    /*static testMethod void validateStudentRegistrationCodeTask() {
         Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_srct1', OwnerId=userInfo.getUserId());
         insert campaignOwner;
         Contact contact = new Contact(FirstName='Test', LastName='AppStatChanged2');
@@ -56,7 +56,7 @@ private class BZ_CandidateStatusChanged_TEST {
                                           WhatId=:cm.CampaignId AND
                                           Subject LIKE '%Set Student Registration Code%'];
         System.assert(resultingTasks.size()==1, 'Expected Task to be created to Set Student Registration Code');
-    }
+    }*/
     
     static testMethod void validateConfirmed() {
         Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_confirmed1', OwnerId=userInfo.getUserId());

@@ -35,7 +35,7 @@ public class BZ_SendQueuedApplicationDecisions {
         }
         else
         {
-            m_resultMessage = 'There are no queued application decisions to send.  Application decisions are only sent for Campaign Members marked as Accepted, Waitlisted, or Not Accepted.  Note: for Accepted members, if the Campaign requires a Student ID then the Student Registration Code must also be set.  If you dont see the application decision here, make sure that is the case.';
+            m_resultMessage = 'There are no queued application decisions to send.  Application decisions are only sent for Campaign Members marked as Accepted, Waitlisted, or Not Accepted.';
             m_hasRun = true;
         }
     }

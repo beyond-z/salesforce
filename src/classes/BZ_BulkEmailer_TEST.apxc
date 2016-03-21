@@ -145,11 +145,13 @@ private class BZ_BulkEmailer_TEST {
         System.Debug('BZ_BulkEmailer_TEST: BZ_BulkEmailer.sendQueuedApplicationDecisions(BZ_BulkEmailer.getQueuedApplicationDecisions(campaign='+campaign+'))');
         emailsSent = BZ_BulkEmailer.sendQueuedApplicationDecisions(BZ_BulkEmailer.getQueuedApplicationDecisions(campaign));
         
-        System.assertEquals(3, emailsSent, 'Expected 3 emails to be sent, not '+emailsSent);
+        System.assertEquals(4, emailsSent, 'Expected 4 emails to be sent, not '+emailsSent);
         CampaignMember waitlistedCmResult = [SELECT Application_Decision_Sent__c FROM CampaignMember WHERE Id = :waitlistedCm.Id];
         System.assertEquals(TRUE, waitlistedCmResult.Application_Decision_Sent__c);
         CampaignMember acceptedCmResult = [SELECT Application_Decision_Sent__c FROM CampaignMember WHERE Id = :acceptedCm.Id];
         System.assertEquals(TRUE, acceptedCmResult.Application_Decision_Sent__c);
+        CampaignMember acceptedNoRegCodeCmResult = [SELECT Application_Decision_Sent__c FROM CampaignMember WHERE Id = :acceptedCmNoRegCode.Id];
+        System.assertEquals(TRUE, acceptedNoRegCodeCmResult.Application_Decision_Sent__c);
         CampaignMember notAcceptedCmResult = [SELECT Application_Decision_Sent__c FROM CampaignMember WHERE Id = :notAcceptedCm.Id];
         System.assertEquals(TRUE, notAcceptedCmResult.Application_Decision_Sent__c);
     }

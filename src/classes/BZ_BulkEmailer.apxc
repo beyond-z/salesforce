@@ -87,9 +87,6 @@ public class BZ_BulkEmailer {
      * if their Application Status is set to “Waitlisted”, “Accepted”, or “Not Accepted” 
      * then returns a Map of the associated Email Template from the Campaign to the
      * List of Campaign Members that should be sent that email.
-     * 
-     * Note: there is a special case for Accepted people without a Student Registration Code set.
-     * It only applies to campaigns where students register with the campus registrar.
      */
     public static Map<String, List<CampaignMember>> getQueuedApplicationDecisions(Campaign campaign)
     {
@@ -98,7 +95,7 @@ public class BZ_BulkEmailer {
         Integer count = 0;
         
         List<CampaignMember> acceptedUsers;
-        if (campaign.Request_Student_Id__c == true)
+        /*if (campaign.Request_Student_Id__c == true)
         {
             // Exclude students without Registration Code set since it's required for the email
             // template to give them a code to use to register with the campus registrar
@@ -110,13 +107,13 @@ public class BZ_BulkEmailer {
             ];
         }
         else
-        {
+        {*/
             acceptedUsers = [SELECT CampaignId, ContactId, Contact.Email, Contact.Name FROM CampaignMember 
                 WHERE CampaignId = :campaign.Id AND
                    Application_Decision_Sent__c = FALSE AND
                    Candidate_Status__c = 'Accepted'
             ];
-        }
+        /*}*/
         
         //System.debug('BZ_BulkEmailer.getQueuedApplicationDecisions: acceptedUsers.size() = '+acceptedUsers.size());
         //System.Debug('BZ_BulkEmailer.getQueuedApplicationDecisions: acceptedUsers.get(0).Contact.Email = ' + acceptedUsers.get(0).Contact.Email);
