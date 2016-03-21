@@ -3,13 +3,13 @@ private class BZ_CloseRecruitmentController_TEST {
     static testMethod void validateRun() {
         Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
         insert campaignOwner;
-        Contact contactWaitlist = new Contact(FirstName='Test', LastName='UserWaitlisted');
+        Contact contactWaitlist = new Contact(FirstName='Test', LastName='UserWaitlisted', Volunteer_Information__c='LC Pipeline');
         insert contactWaitlist;
-        Contact contactConfirmed = new Contact(FirstName='Test', LastName='UserConfirmed');
+        Contact contactConfirmed = new Contact(FirstName='Test', LastName='UserConfirmed', Volunteer_Information__c='Current LC');
         insert contactConfirmed;
         
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
-        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Blah');
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
         String reinviteEmailTemplateName = 'reinviteEmailTemplate';
         campaign.Previous_Candidate_New_Invite__c = reinviteEmailTemplateName;
         insert campaign;
@@ -25,6 +25,7 @@ private class BZ_CloseRecruitmentController_TEST {
         cmConfirmed.CampaignId=campaign.Id;
         cmConfirmed.ContactId=contactConfirmed.Id;
         cmConfirmed.Candidate_Status__c = 'Confirmed';
+        cmConfirmed.Application_Status__c = 'Submitted';
         insert cmConfirmed;
         
         Task tWaitlist = new Task(Subject='Test CampaignWaitlist', CampaignMemberId__c=cmWaitlist.Id, WhoId=contactWaitlist.Id, WhatId=campaign.Id);
@@ -66,6 +67,12 @@ private class BZ_CloseRecruitmentController_TEST {
         }
         System.Assert(foundWaitlistTask, 'tWaitlist not found in campaign');
         System.Assert(foundReinviteTask, 'Task to reinvite member to apply not found in campaign');
+        
+        Contact updatedConfirmedContact = [SELECT Id, Volunteer_Information__c FROM Contact WHERE Id = :contactConfirmed.Id];
+        System.Assert(updatedConfirmedContact.Volunteer_Information__c == 'Former LC', 'When Close Recruitment runs, Confirmed members should become alumni');
+        
+        Contact updatedWaitlistedContact = [SELECT Id, Volunteer_Information__c FROM Contact WHERE Id = :contactWaitlist.Id];
+        System.Assert(updatedWaitlistedContact.Volunteer_Information__c == 'LC Pipeline', 'When Close Recruitment runs, non-Confirmed members should still be in the pipeline.');
         
         ////////////
         // TODO: validate that a snapshot campaign was taken

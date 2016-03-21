@@ -6,16 +6,16 @@ Place to keep code, docs, and other information related to our Salesforce integr
 1. Login as a System Administrator
 1. Under "Setup | Administer | Security Controls | Remote Site Settings" add these
    two remote sites
-  * Name = "BZ Production SSL", Value = "https://www.beyondz.org"
-  * Name = "BZ Production", Value = "http://www.beyondz.org"
+  * Name = "BZ Production SSL", Value = "https://join.bebraven.org"
+  * Name = "BZ Production", Value = "http://join.bebraven.org"
 1. Under "Setup | Build | Create | Apps | Connected Apps" create an app
    called "Beyond Z Production" with the following settings
-  * DescriptionAllows the https://www.beyondz.org server to connect to Salesforcerce.
+  * DescriptionAllows the https://join.bebraven.org server to connect to Salesforcerce.
   * Permitted Users: All users may self-authorize
   * This application has permission to: Perform requests on your behalf at any time
   * This application has permission to: Full access
   * Refresh Token Policy: Refresh token is valid until revoked
-  * Callback URL: https://www.beyondz.org/
+  * Callback URL: https://join.bebraven.org/
   This will create the following two values that have to be set on the
 BZ Org Website below:
   * Consumer Key: [[someLongConsumerKey]] 
@@ -30,7 +30,7 @@ BZ Org Website below:
   * Field Label - API Name - Data Type - Value
   * Magic token - magic_token__c - Text(64) -
     [[insertSomethingArbitrary]]
-  * Site base URL - base_url__c - URL - https://www.beyondz.org
+  * Site base URL - base_url__c - URL - https://join.bebraven.org
   Note that the setting is documented
 [here](https://github.com/beyond-z/salesforce/blob/master/docs/settings.txt)
 1. Create some credentials for the BZ Website to connect as admin.

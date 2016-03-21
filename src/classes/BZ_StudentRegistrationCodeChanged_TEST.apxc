@@ -7,7 +7,7 @@ private class BZ_StudentRegistrationCodeChanged_TEST {
         insert contact;
         
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
-        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Participants');
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
         insert campaign;
         
         CampaignMember cm = new CampaignMember();
@@ -38,5 +38,40 @@ private class BZ_StudentRegistrationCodeChanged_TEST {
                                   FROM Contact WHERE Id=:cm.ContactId];
         
         System.assert(updatedContact2.Student_Registration_Code__c == regCode2, 'Student_Registration_Code__c not updated on Contact when set on Campaign Member. contact = ' + updatedContact2 + ', campaignmember = ' + cm);
+    }
+    
+    static testMethod void validateCloseSetStudentRegCodeTasks() {
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_cssrc1', OwnerId=userInfo.getUserId());
+        insert campaignOwner;
+        Contact contact = new Contact(FirstName='Test', LastName='StudentRegCode2');
+        insert contact;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
+        insert campaign;
+        
+        CampaignMember cm = new CampaignMember();
+        cm.CampaignId=campaign.Id;
+        cm.ContactId=contact.Id;
+        insert cm;
+        List<Task> setRegCodeTasks = BZ_TaskFactory.createTasks(new CampaignMember[]{cm}, 'Set Student Registration Code for {0}');                                          
+        insert setRegCodeTasks;
+        
+        String regCode = 'askfdj14232345adsf';
+        cm.Student_Registration_Code__c = regCode;
+        
+        Test.startTest();
+        
+        // This fires the trigger we're testing.
+        update cm;
+
+        List<Task> resultingTasks = [SELECT Id, Status FROM Task 
+                                     WHERE WhoId=:cm.ContactId AND 
+                                           WhatId=:cm.CampaignId AND
+                                           Status='Completed' AND
+                                           Subject LIKE '%Set Student Registration Code for%'];
+        System.assert(resultingTasks.size()==1, 'Expected Task to Set Student Registration Code to be closed when code is set.');
+        
+        Test.stopTest();
     }
 }

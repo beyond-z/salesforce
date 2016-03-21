@@ -70,6 +70,8 @@ private class BZ_BulkEmailer_TEST {
         testContacts.add(waitlistedRecipient);
         Contact acceptedRecipient = new Contact(FirstName='TestAcceptedEmail', LastName='Recipient', Email='TestAcceptedEmail.Recipient@bz.org');
         testContacts.add(acceptedRecipient);
+        Contact acceptedRecipientNoRegCode = new Contact(FirstName='TestAcceptedNoRegCodeEmail', LastName='Recipient', Email='TestAcceptedNoRegCodeEmail.Recipient@bz.org');
+        testContacts.add(acceptedRecipientNoRegCode);
         Contact notAcceptedRecipient = new Contact(FirstName='TestnotAcceptedEmail', LastName='Recipient', Email='TestnotAcceptedEmail.Recipient@bz.org');
         testContacts.add(notAcceptedRecipient);
         Contact notAcceptedRecipient_decisionAlreadySent = new Contact(FirstName='TestnotAcceptedEmailAlreadySent', LastName='Recipient', Email='TestnotAcceptedEmailAlreadySent.Recipient@bz.org');
@@ -87,10 +89,12 @@ private class BZ_BulkEmailer_TEST {
         String notAcceptedEmailDeveloperName='TestNotAcceptedEmailTemplateToSend';
         
         Campaign campaign = BZ_CampaignFactory_TEST.create();
-        campaign.Name='Test Send Queued App Decisions Campaign1'; 
+        campaign.Name='Test Send Queued App Decisions Campaign1';
+        campaign.Type='Program Participants';
         campaign.App_Waitlisted_Email_Template__c=waitlistedEmailDeveloperName;
         campaign.App_Accepted_Email_Template__c=acceptedEmailDeveloperName;
         campaign.App_Not_Accepted_Email_Template__c=notAcceptedEmailDeveloperName;
+        campaign.Request_Student_Id__c = true;
         insert campaign; 
         
         Campaign anotherCampaign = BZ_CampaignFactory_TEST.create();
@@ -103,8 +107,10 @@ private class BZ_BulkEmailer_TEST {
         List<CampaignMember> testCms = new List<CampaignMember>();
         CampaignMember waitlistedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=waitlistedRecipient.Id, Candidate_Status__c='Waitlisted');
         testCms.add(waitlistedCm);
-        CampaignMember acceptedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=acceptedRecipient.Id, Candidate_Status__c='Accepted');
+        CampaignMember acceptedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=acceptedRecipient.Id, Candidate_Status__c='Accepted', Student_Registration_Code__c='TestRegCode');
         testCms.add(acceptedCm);
+        CampaignMember acceptedCmNoRegCode = new CampaignMember(CampaignId=campaign.Id, ContactId=acceptedRecipientNoRegCode.Id, Candidate_Status__c='Accepted');
+        testCms.add(acceptedCmNoRegCode);
         CampaignMember notAcceptedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=notAcceptedRecipient.Id, Candidate_Status__c='Not Accepted');
         testCms.add(notAcceptedCm);
         CampaignMember notAcceptedCm_decisionAlreadySent = new CampaignMember(CampaignId=campaign.Id, ContactId=notAcceptedRecipient_decisionAlreadySent.Id, Candidate_Status__c='Not Accepted', Application_Decision_Sent__c=TRUE);
@@ -139,11 +145,13 @@ private class BZ_BulkEmailer_TEST {
         System.Debug('BZ_BulkEmailer_TEST: BZ_BulkEmailer.sendQueuedApplicationDecisions(BZ_BulkEmailer.getQueuedApplicationDecisions(campaign='+campaign+'))');
         emailsSent = BZ_BulkEmailer.sendQueuedApplicationDecisions(BZ_BulkEmailer.getQueuedApplicationDecisions(campaign));
         
-        System.assertEquals(3, emailsSent, 'Expected 3 emails to be sent, not '+emailsSent);
+        System.assertEquals(4, emailsSent, 'Expected 4 emails to be sent, not '+emailsSent);
         CampaignMember waitlistedCmResult = [SELECT Application_Decision_Sent__c FROM CampaignMember WHERE Id = :waitlistedCm.Id];
         System.assertEquals(TRUE, waitlistedCmResult.Application_Decision_Sent__c);
         CampaignMember acceptedCmResult = [SELECT Application_Decision_Sent__c FROM CampaignMember WHERE Id = :acceptedCm.Id];
         System.assertEquals(TRUE, acceptedCmResult.Application_Decision_Sent__c);
+        CampaignMember acceptedNoRegCodeCmResult = [SELECT Application_Decision_Sent__c FROM CampaignMember WHERE Id = :acceptedCmNoRegCode.Id];
+        System.assertEquals(TRUE, acceptedNoRegCodeCmResult.Application_Decision_Sent__c);
         CampaignMember notAcceptedCmResult = [SELECT Application_Decision_Sent__c FROM CampaignMember WHERE Id = :notAcceptedCm.Id];
         System.assertEquals(TRUE, notAcceptedCmResult.Application_Decision_Sent__c);
     }
