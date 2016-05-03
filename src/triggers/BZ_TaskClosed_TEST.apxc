@@ -1,0 +1,25 @@
+@isTest
+private class BZ_TaskClosed_TEST {
+    static testMethod void validateHaveMetUpdated() {
+
+        User sender = [SELECT Id FROM User Where Id = :System.UserInfo.getUserId()];
+
+        Contact contact = new Contact(FirstName='Test', LastName='TaskClosed1');
+        insert contact;
+
+        Task t1 = new Task(Subject='Test Interaction Task1', Status='Completed', OwnerId=sender.Id, WhoId=contact.Id);
+        insert t1;
+
+        t1.Interaction_Type__c = 'Text dialogue';
+        update t1;
+
+        Contact updatedContact = [SELECT Id, Name, Have_Met__c FROM Contact WHERE Id = :contact.Id];
+        System.assert(updatedContact.Have_Met__c == false, 'Text dialogue interaction doesnt mean weve met them');
+
+        t1.Interaction_Type__c = 'Attended BZ Function';
+        update t1;
+
+        updatedContact = [SELECT Id, Name, Have_Met__c FROM Contact WHERE Id = :contact.Id];
+        System.assert(updatedContact.Have_Met__c == true, 'Have Met? should have been set to true.')
+    }
+}

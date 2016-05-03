@@ -1,0 +1,30 @@
+trigger BZ_TaskClosed on Task (after update) {
+    System.Debug('BZ_TaskClosed: begin trigger');
+
+    Set<Id> contactIdsWeHaveMet = new Set<Id>();
+    for (Task task : Trigger.new)
+    {
+        if (task.Status == 'Completed')
+        {
+            //System.Debug('BZ_TaskClosed: found Completed task');
+
+            // All other Interaction_Type__c values other than Text correspond to those
+            // that we have met in some way.
+            if (task.Interaction_Type__c != null && task.Interaction_Type__c != '' &&
+                task.Interaction_Type__c != '--None--' && task.Interaction_Type__c != 'Text dialogue')
+            {
+                //System.Debug('BZ_TaskClosed: adding Contact Id '+ task.WhoId + ' to contactIdsWeHaveMet');
+                contactIdsWeHaveMet.add(task.WhoId);
+            }
+        }
+    }
+    List<Contact> contactsWeHaveMet = new List<Contact>([SELECT Id, Name, Have_Met__c FROM Contact WHERE Id in :contactIdsWeHaveMet]);
+    for (Contact c : contactsWeHaveMet)
+    {
+        c.Have_Met__c = true;
+    }
+    if (!contactsWeHaveMet.isEmpty())
+    {
+        update contactsWeHaveMet;
+    }
+}
