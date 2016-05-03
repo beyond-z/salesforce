@@ -20,6 +20,6 @@ private class BZ_TaskClosed_TEST {
         update t1;
 
         updatedContact = [SELECT Id, Name, Have_Met__c FROM Contact WHERE Id = :contact.Id];
-        System.assert(updatedContact.Have_Met__c == true, 'Have Met? should have been set to true.')
+        System.assert(updatedContact.Have_Met__c == true, 'Have Met? should have been set to true.');
     }
 }
