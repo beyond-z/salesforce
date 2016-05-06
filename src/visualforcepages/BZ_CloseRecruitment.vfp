@@ -24,7 +24,7 @@
                         'Waitlisted' - means that we wanted to accept them, but there were no more spots.<br/>
                     </apex:outputLabel>
                     <apex:outputLabel style="padding-left:5em">
-                        'Opted Out' - means that during the interview they indicated that they couldn’t commit to the program at that time.<br/>
+                        'Opted Out' - with an 'Opted Out Reason' of 'No Time', 'No Available Units', or 'No Interest Right Now' means that during the interview they indicated that they couldn’t commit to the program at that time but may be interested in the future.<br/>
                     </apex:outputLabel>
                     <apex:outputLabel >
                         <br/>
