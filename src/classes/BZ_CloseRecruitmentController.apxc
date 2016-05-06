@@ -79,10 +79,19 @@ public class BZ_CloseRecruitmentController {
             m_campaign.Status = 'In Progress';
             update m_campaign;
             
-            List<CampaignMember> membersToPurge = [SELECT Id, ContactId, CampaignId, Candidate_Status__c FROM CampaignMember 
+            List<CampaignMember> membersToPurge = [SELECT Id, ContactId, CampaignId, Candidate_Status__c, Opted_Out_Reason__c FROM CampaignMember 
                                                    WHERE CampaignId = :m_campaign.Id AND
                                                    Candidate_Status__c <> 'Waitlisted' AND
-                                                   Candidate_Status__c <> 'Opted Out'];
+                                                   (
+                                                       Candidate_Status__c <> 'Opted Out' OR
+                                                       (Candidate_Status__c = 'Opted Out' AND 
+                                                           (
+                                                               Opted_Out_Reason__c <> 'No Time' AND
+                                                               Opted_Out_Reason__c <> 'No Available Units' AND
+                                                               Opted_Out_Reason__c <> 'No Interest Right Now'
+                                                           )
+                                                        )
+                                                   )];
             System.Debug('BZ_CloseRecruitmentController.run(): membersToPurge = ' + membersToPurge);
             
             Set<Id> confirmedMemberIds = new Set<Id>();
