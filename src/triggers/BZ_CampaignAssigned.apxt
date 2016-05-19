@@ -8,6 +8,7 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
     List<Task> tasksToAdd = new List<Task>(); 
     List<Task> tasksToUpdate = new List<Task>(); 
     List<Contact> contactsToUpdate = new List<Contact>();
+    List<CampaignMember> campaignMembersToCreateInviteTasksFor = new List<CampaignMember>();
     List<CampaignMember> campaignMembersToCreateIntroTasksFor = new List<CampaignMember>();
     List<CampaignMember> campaignMembersToCreateReinviteTasksFor = new List<CampaignMember>();
     
@@ -21,7 +22,7 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
         //System.Debug('BZ_CampaignAssigned: adding CampaignId='+cm.CampaignId + ' to campaignIds ' + campaignIds);
         campaignIds.add(cm.CampaignId);
     }
-    Map<Id, Contact> contactMap = new Map<Id, Contact>([SELECT Id, Volunteer_Information__c, Participant_Information__c, User_Type__c FROM Contact WHERE Id in :contactIds]);
+    Map<Id, Contact> contactMap = new Map<Id, Contact>([SELECT Id, Volunteer_Information__c, Participant_Information__c, User_Type__c, Signup_Date__c, BZ_User_Id__c FROM Contact WHERE Id in :contactIds]);
     Map<Id, Campaign> campaignMap = new Map<Id, Campaign>([SELECT Id, Type, IsActive, Status FROM Campaign WHERE Id in :campaignIds]);
     //System.Debug('BZ_CampaignAssigned: contactMap='+contactMap);
     //System.Debug('BZ_CampaignAssigned: campaignMap='+campaignMap);
@@ -48,9 +49,10 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
         }
         
         boolean isApplicableCampaign = false;
+        boolean hasSignedUpOnWebsite = (contact.BZ_User_Id__c != null && contact.Signup_Date__c != null);
         boolean isCampaignSnapshot = (campaign.IsActive == false && campaign.Status == 'Completed');
         System.debug('BZ_CampaignAssigned: isCampaignSnapshot = '+isCampaignSnapshot +', campaign.IsActive='+campaign.IsActive+', campaign.Status='+campaign.Status);
-        System.debug('BZ_CampaignAssigned: cm.Candidate_Status__c = '+cm.Candidate_Status__c);
+        System.debug('BZ_CampaignAssigned: cm.Candidate_Status__c = '+cm.Candidate_Status__c +', cm='+cm);
         if (campaign.Type == 'Leadership Coaches') {
             // Note: this is also set in a Workflow when the Lead is converted, 
             // but they may signup as one type but then we determine that they are really 
@@ -90,7 +92,10 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
         if (isApplicableCampaign)
         {   
             contactsToUpdate.add(contact);
-            contactIdsOfTasksToClose.add(contact.Id);
+            if (hasSignedUpOnWebsite)
+            {
+                contactIdsOfTasksToClose.add(contact.Id);
+            }
             
             if (BZ_CopyCampaignMemberController.IsCopyCampaignMemberRunning)
             {
@@ -112,10 +117,24 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
             }
             else
             {
-              campaignMembersToCreateIntroTasksFor.add(cm);
-                System.Debug('BZ_CampaignAssigned: queuing up Intro email for '+cm);
+                if (hasSignedUpOnWebsite)
+                {
+                  campaignMembersToCreateIntroTasksFor.add(cm);
+                    System.Debug('BZ_CampaignAssigned: queuing up Intro email for '+cm);
+                }
+                else
+                {
+                    campaignMembersToCreateInviteTasksFor.add(cm);
+                    System.Debug('BZ_CampaignAssigned: queuing up Invite email for '+cm);
+                }
             }
         }
+    }
+
+    if (campaignMembersToCreateInviteTasksFor.size() > 0)
+    {
+        tasksToAdd = BZ_TaskFactory.createEmailTasks(campaignMembersToCreateInviteTasksFor, 
+                                                 'Send Invite Email', 'Invite_Email_Template__c');
     }
     
     if (campaignMembersToCreateIntroTasksFor.size() > 0)
