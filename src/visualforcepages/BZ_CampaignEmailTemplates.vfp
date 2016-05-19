@@ -17,6 +17,15 @@
                 <apex:commandButton value="Save" action="{!save}"/>
             </apex:pageBlockButtons>
             <apex:pageBlockSection columns="1">
+                <apex:pageblockSectionItem helpText="Email template sent to prospective candidates who haven’t signed up yet">
+                    <apex:outputLabel value="Invite Email Template" styleClass="noWrap"/>
+                    <apex:outputPanel layout="block">
+            <apex:outputPanel layout="block"/>
+                        <apex:selectList size="1" value="{!inviteEmailTemplate}">
+                            <apex:selectoptions value="{!EmailTemplates}"/>
+                        </apex:selectList>
+                    </apex:outputPanel>
+                </apex:pageblockSectionItem>
                 <apex:pageblockSectionItem helpText="Email template sent to new users who haven't started their application">
                     <apex:outputLabel value="Intro Email Template" styleClass="noWrap"/>
                     <apex:outputPanel layout="block">

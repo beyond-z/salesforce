@@ -2,7 +2,7 @@
 private class BZ_CampaignAssigned_TEST {
     static testMethod void validateLCCampaignAssigned() {
         // This also create the task that we want to test if it gets closed by the trigger.
-        Lead l = new Lead(OwnerId=UserInfo.getUserId(), User_Type__c='Volunteer', Account_Activated__c=true, LeadSource='Website Signup', FirstName='Someone', LastName='New', Company='Someone New (individual)', Status='Open');
+        Lead l = new Lead(OwnerId=UserInfo.getUserId(), User_Type__c='Volunteer', Signup_Date__c=Datetime.now(), BZ_User_Id__c=1234, Account_Activated__c=true, LeadSource='Website Signup', FirstName='Someone', LastName='New', Company='Someone New (individual)', Status='Open');
         insert l;
         
         // THis happens automatically now on lead insertion above.
@@ -49,7 +49,7 @@ private class BZ_CampaignAssigned_TEST {
     static testMethod void validateUniversityCampaignAssigned() {
         Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner2', OwnerId=userInfo.getUserId());
         insert campaignOwner;
-        Contact contact = new Contact(FirstName='Test', LastName='User2', User_Type__c='University');
+        Contact contact = new Contact(FirstName='Test', LastName='User2', User_Type__c='University', Signup_Date__c=Datetime.now(), BZ_User_Id__c=1234);
         insert contact;
         
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
@@ -76,7 +76,7 @@ private class BZ_CampaignAssigned_TEST {
         insert campaignOwner;
         
         // Mimic someone who signed up and chose "Other" as "I am interested in..."
-        Contact contact = new Contact(FirstName='Test', LastName='User3', User_Type__c='Other');
+        Contact contact = new Contact(FirstName='Test', LastName='User3', Signup_Date__c=Datetime.now(), BZ_User_Id__c=1234, User_Type__c='Other');
         insert contact;
         
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
@@ -123,5 +123,32 @@ private class BZ_CampaignAssigned_TEST {
                                            WhatId=:updatedCm.CampaignId AND
                                            Subject LIKE '%Send Intro Email%'];
         System.assert(resultingTasks.size()==0, 'Expected NO Task to be created to Send Intro Email to a Referral Program Campaigns');
+    }
+    
+    static testMethod void validateProspectCampaignAssigned() {
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner5', OwnerId=userInfo.getUserId());
+        insert campaignOwner;
+        
+        // Mimic someone who we manually entered and added to a Participant Campaign. e.g. no signup date or BZ User Id
+        Contact contact = new Contact(FirstName='Test', LastName='User5', User_Type__c='Undergrad');
+        insert contact;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
+        insert campaign;
+        
+        CampaignMember cm = new CampaignMember();
+        cm.CampaignId=campaign.Id;
+        cm.ContactId=contact.Id;
+        
+        // This fires the trigger we're testing.
+        insert cm;
+        
+        CampaignMember updatedCm = [SELECT Id, ContactId, CampaignId FROM CampaignMember WHERE Id=:cm.Id];
+        List<Task> resultingTasks = [SELECT Id, WhoId, WhatId FROM Task
+                                     WHERE WhoId=:updatedCm.ContactId AND
+                                           WhatId=:updatedCm.CampaignId AND
+                                           Subject LIKE '%Send Invite Email%'];
+        System.assert(resultingTasks.size()==1, 'Expected Task to be created to Send Invite Email to a Program Participants that didnt signup');
     }
 }

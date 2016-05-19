@@ -12,6 +12,7 @@
 		Coach Course ID # for the coach playbook
 		Section Name in LMS Coach Course # this is for the coach only - the class where Coaches are students. Set on the campaign because it is always the same for individuals within it.
 		Section Name Site Prefix # prefix for automatically making section names in this site. e.g. "NYC" or "SJSU" when we do "NYC Abby Mon 5"
+    Invite Email Template
 		App Open Email Template
 		App Submit Reminder Template
 		App Waitlisted Email Template
