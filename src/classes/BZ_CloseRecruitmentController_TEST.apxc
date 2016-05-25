@@ -82,6 +82,7 @@ private class BZ_CloseRecruitmentController_TEST {
         System.Assert(result != null, 'controller.run() returned null');
         System.assert(controller.newCampaignName == newCampaignName, 'The BZ_CloseRecruitmentController should have newCampaignName = '+newCampaignName +' . Not newCampaignName ='+controller.newCampaignName);
         System.assert(controller.newAvailableMeetingTimes == newAvailableMeetingTimes, 'The BZ_CloseRecruitmentController should have newAvailableMeetingTimes = '+newAvailableMeetingTimes +' . Not newAvailableMeetingTimes ='+controller.newAvailableMeetingTimes);
+        System.assert(controller.m_campaign.ParentId == controller.m_campaignSnapshot.Id, 'The Campaign Snapshot should be set to the parent of the Active campaign.  controller.m_campaign.ParentId = '+controller.m_campaign.ParentId +' . Not controller.m_campaignSnapshot.Id ='+controller.m_campaignSnapshot.Id);
         System.Assert(controller.getEmailTemplates() != null, 'controller.getEmailTemplates() is null');
         List<CampaignMember> campaignMembersNotPurged = [SELECT Id, Name, Status, CampaignId, ContactId, Candidate_Status__c FROM CampaignMember WHERE CampaignId = :campaign.Id];
         System.Assert(campaignMembersNotPurged.size() == 2, 'Expected 2 CampaignMember to not be purged. Found '+campaignMembersNotPurged.size());
