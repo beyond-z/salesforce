@@ -3,7 +3,8 @@ public class BZ_CloseRecruitmentController {
     private static final String NEW_CAMPAIGN_NAME_PROMPT = '<Please enter new Campaign Name>';
     private final List<SelectOption> m_emailTemplateOptions;
     private ApexPages.StandardController m_controller {get; set;}
-    private Campaign m_campaign {get;set;} // Active campaign
+    public Campaign m_campaign {get;set;} // Active campaign
+    public Campaign m_campaignSnapshot {get;set;} // Cloned Snapshot campaign
     private Date m_oldStartDate {get; set;}
     private Date m_oldEndDate {get; set;}
     
@@ -59,13 +60,12 @@ public class BZ_CloseRecruitmentController {
             System.Debug('BZ_CloseRecruitmentController.run(): about to clone m_campaign = ' + m_campaign);
             BZ_ClonePlusController cloneController = new BZ_ClonePlusController(m_campaign.Id, new Set<String>{'CampaignMember', 'Task'});
             System.Debug('BZ_CloseRecruitmentController.run(): getParentClone()');
-            Campaign clonedCampaign = (Campaign)cloneController.getParentClone(); 
-            clonedCampaign.IsActive = false;
-            clonedCampaign.Status = 'Completed'; // This allows the Campaign Assigned trigger to update the alumni status
-            clonedCampaign.ParentId = m_campaign.Id;
-            System.Debug('BZ_CloseRecruitmentController.run(): insert clonedCampaign = '+clonedCampaign);
-            insert clonedCampaign; // Need to do this before inserting children so that it gets an ID
-            System.Debug('BZ_CloseRecruitmentController.run(): done inserting clonedCampaign = '+clonedCampaign);
+            m_campaignSnapshot = (Campaign)cloneController.getParentClone(); 
+            m_campaignSnapshot.IsActive = false;
+            m_campaignSnapshot.Status = 'Completed'; // This allows the Campaign Assigned trigger to update the alumni status
+            System.Debug('BZ_CloseRecruitmentController.run(): insert m_campaignSnapshot = '+m_campaignSnapshot);
+            insert m_campaignSnapshot; // Need to do this before inserting children so that it gets an ID
+            System.Debug('BZ_CloseRecruitmentController.run(): done inserting m_campaignSnapshot = '+m_campaignSnapshot);
             
             System.Debug('BZ_CloseRecruitmentController.run(): getChildrenClones()');
             List<sObject> childrenClones = cloneController.getChildrenClones();
@@ -77,6 +77,7 @@ public class BZ_CloseRecruitmentController {
             m_campaign.Meeting_Times__c = newAvailableMeetingTimes;
             m_campaign.Previous_Candidate_New_Invite__c = prevCandidateEmailTemplate;
             m_campaign.Status = 'In Progress';
+            m_campaign.ParentId = m_campaignSnapshot.Id;
             update m_campaign;
             
             List<CampaignMember> membersToPurge = [SELECT Id, ContactId, CampaignId, Candidate_Status__c, Opted_Out_Reason__c FROM CampaignMember 
@@ -104,7 +105,7 @@ public class BZ_CloseRecruitmentController {
                     }
                 }
                 
-                BZ_Notifications.changeCampaigns(memberContactIdsToPurge, clonedCampaign.Id, false);
+                BZ_Notifications.changeCampaigns(memberContactIdsToPurge, m_campaignSnapshot.Id, false);
                 System.Debug('BZ_CloseRecruitmentController.run(): deleting membersToPurge = ' + membersToPurge);
                 delete membersToPurge;
             }
