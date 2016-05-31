@@ -1,0 +1,184 @@
+@isTest 
+private class BZ_BulkInviteController_TEST {
+    static testMethod void validateInvite() {
+        List<Contact> contactsToInsert = new List<Contact>();
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(campaignOwner);
+        String existingEmail = 'brian.testexisting1@example.com';
+        Contact existingContact = new Contact(FirstName='Brian', LastName='xTestExisting1', Email=existingEmail, OwnerId=userInfo.getUserId());
+        contactsToInsert.add(existingContact);
+        insert contactsToInsert;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        campaign.Invite_Email_Template__c = 'BZ INVITE: test template';
+        insert campaign;
+        
+        CampaignMember existingCm = new CampaignMember();
+        existingCm.CampaignId=campaign.Id;
+        existingCm.ContactId=existingContact.Id;
+        insert existingCm;
+        
+        BZ_SettingsFactory_TEST.setSettings();
+        System.assert(BZ_Settings__c.getInstance('bz') != null, 'BZ_Settings__c is null');
+        
+        ApexPages.StandardController sc = new ApexPages.standardController(campaign);
+        PageReference pageRef = Page.BZ_BulkInvite;
+        Test.setCurrentPage(pageRef);
+        
+        String noInteractionEmail = 'brian.testnointeractiontypeinfo1@example.com';
+        String interactionDescription = 'Description of phone call';
+        String noInteractionDescription = 'Added using Bulk Invite with no InteractionType information';
+      BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
+        String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
+            'Brian,xTest1,brian.test1@example.com,5554443333,Phone Call,'+interactionDescription+'\n'+
+            'Brian,xTest2,brian.test2@example.com,,Phone Call,'+interactionDescription+'\n'+
+            'Brian,xTestExisting1,'+existingEmail+',5554443334,Phone Call,'+interactionDescription+'\n'+
+            'Brian,xTestNoInteractionTypeInfo1,'+noInteractionEmail+',5554443335,,\n';
+        
+        Test.startTest();
+        PageReference result = controller.ProcessFile(csvContents);
+        String textMessageBody = controller.getTextMessageBody();
+        controller.setTextMessageBody(textMessageBody + 'SLIGHTLY CHANGED!');
+        if (controller.getContactsLoaded() && !String.isEmpty(controller.getContactsToInviteDisplay()))
+        {
+            controller.sendTextMessages();
+        }
+        Test.stopTest();
+        
+        System.assert(controller.getTextMessagesSent(), 'Text messages not sent!');
+        Set<Id> contactIdsWithInitialConnectionSet = new Set<Id>();
+        List<CampaignMember> campaignMembers = [SELECT Id, Name, FirstName, LastName, Email, Phone, ContactId FROM CampaignMember WHERE CampaignId = :campaign.Id];
+        List<CampaignMember> campaignMembersAddedByBulkInvite = new List<CampaignMember>();
+        List<CampaignMember> campaignMembersWithNoInteractionInfo = new List<CampaignMember>();
+        for (CampaignMember cm : campaignMembers)
+        {
+            if (cm.Email != existingEmail){
+                campaignMembersAddedByBulkInvite.add(cm);
+                contactIdsWithInitialConnectionSet.add(cm.ContactId); // Note that the contact with no interaction info will still get a placeholder "Initial Connection" value set
+                if (cm.Email == noInteractionEmail){
+                    campaignMembersWithNoInteractionInfo.add(cm);
+                } 
+            }
+            
+            System.assert(cm.FirstName == 'Brian', 'CampaignMember with First Name found not in list of expected members: FirstName = ' + cm.FirstName);
+            System.assert(cm.LastName.startsWith('xTest'), 'CampaignMember with Last Name found not in list of expected members: LastName = ' + cm.LastName);
+            System.assert(cm.Email.startsWith('brian.test'), 'CampaignMember with Email found not in list of expected members: Email = ' + cm.Email);
+            System.assert(cm.Phone == null || cm.Phone == '' || cm.Phone == '5554443333' || cm.Phone == '5554443334' || cm.Phone == '5554443335', 
+                          'CampaignMember with Phone found not in list of expected members: Phone = ' + cm.Phone);
+        }
+        System.Assert(campaignMembers.size() == 4, 'Expected 4 CampaignMembers. Found '+campaignMembers.size());
+        System.Assert(campaignMembersAddedByBulkInvite.size() == 3, 'Expected 3 CampaignMembers added by Bulk Invite code. Found '+campaignMembersAddedByBulkInvite.size());
+        System.Assert(campaignMembersWithNoInteractionInfo.size() == 1, 'Expected 1 CampaignMembers added by Bulk Invite code with no InteractionType info. Found '+campaignMembersWithNoInteractionInfo.size());
+        List<Task> tasks = [SELECT Id, Subject, WhoId, WhatId, Status, Interaction_Type__c, Description, EmailTemplate__c FROM Task WHERE WhatId = :campaign.Id];
+        System.Assert(tasks.size() == 7, 'Expected 4 INVITE Tasks and 3 Interation tasks. Found '+tasks.size()+' tasks');
+        for (Task t : tasks)
+        {
+            if (t.Subject.startsWith('Email:')){
+                System.assert(t.EmailTemplate__c.startsWith('BZ INVITE:'), 'Expected BZ INVITE: email template.  Found EmailTemplate__c = ' + t.EmailTemplate__c);
+            }
+            else if (t.Subject.startsWith('Interaction:'))
+            {
+                System.assert(t.WhoId == campaignMembersAddedByBulkInvite[0].ContactId || t.WhoId == campaignMembersAddedByBulkInvite[1].ContactId || t.WhoId == campaignMembersAddedByBulkInvite[2].ContactId, 
+                              'Task with WhoId found not in list of expected tasks: Interaction_Type__c = ' + t.WhoId);
+                System.assert(t.WhatId == campaign.Id, 'Task with WhatId found not in list of expected tasks: WhatId = ' + t.WhatId);
+                System.assert(t.Status == 'Completed', 'Task with Status found not in list of expected tasks: Status = ' + t.Status);
+
+                if (t.WhoId == campaignMembersWithNoInteractionInfo[0].ContactId)
+                {
+                    System.assert(t.Description == noInteractionDescription, 'Task with Description found not in list of expected tasks: Description = ' + t.Description);
+                }
+                else
+                {
+                    System.assert(t.Interaction_Type__c == 'Phone Call', 'Task with Interaction_Type__c found not in list of expected tasks: Interaction_Type__c = ' + t.Interaction_Type__c);
+                    System.assert(t.Description == interactionDescription, 'Task with Description found not in list of expected tasks: Description = ' + t.Description);
+                }
+            }
+            else
+            {
+                System.assert(false, 'Task found with unrecognized subject = ' + t.Subject);
+            }
+        }
+        
+        List<Contact> contacts = [SELECT Id, Email, Initial_Connection__c FROM Contact WHERE Id in :contactIdsWithInitialConnectionSet];
+        for (Contact c : contacts){
+            if (c.Email == noInteractionEmail){
+                System.assert(c.Initial_Connection__c == noInteractionDescription, 'Unrecognized Initial Connection for Contact with no Interaction info.  c.Initial_Connection__c = ' + c.Initial_Connection__c);
+            }
+            else{
+                System.assert(c.Initial_Connection__c == interactionDescription, 'Unrecognized Initial Connection.  Expected '+interactionDescription+'. Found c.Initial_Connection__c = ' + c.Initial_Connection__c);
+            }
+        }
+    }
+    
+    static testMethod void validateFailed() {
+        List<Contact> contactsToInsert = new List<Contact>();
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(campaignOwner);
+        insert contactsToInsert;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        campaign.Invite_Email_Template__c = 'BZ INVITE: test template';
+        insert campaign;
+        
+        BZ_SettingsFactory_TEST.setSettings();
+        System.assert(BZ_Settings__c.getInstance('bz') != null, 'BZ_Settings__c is null');
+        
+        ApexPages.StandardController sc = new ApexPages.standardController(campaign);
+        PageReference pageRef = Page.BZ_BulkInvite;
+        Test.setCurrentPage(pageRef);
+        
+      BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
+        String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
+            'Brian,xTest1,,5554443333,Phone Call,Description of phone call\n'+
+            'Brian,xTest5,email@email.com,badPhone,Phone Call,Description of phone call\n'+
+            'Brian,,brian.test2@example.com,,Phone Call,Description of phone call\n'+
+            ',,brian.test3@example.com,,Phone Call,Description of phone call\n'+
+            'Brian,xTest3\n'+
+            'Brian,xTest4,badEmail,badPhone,,,,\n'+
+            'badRow\n';
+        
+        Test.startTest();
+        PageReference result = controller.ProcessFile(csvContents);
+        Test.stopTest();
+
+        System.assert(!String.isEmpty(controller.getResultMessage()), 'Result Message should be set');
+        System.assert(controller.getTextMessagesSent() == false, 'Text messages should not be sent!');
+
+        List<CampaignMember> campaignMembers = [SELECT Id, Name, FirstName, LastName, Email, Phone, ContactId FROM CampaignMember WHERE CampaignId = :campaign.Id];
+        System.Assert(campaignMembers.size() == 0, 'Expected 0 CampaignMembers. Found '+campaignMembers.size());
+    }
+    
+    static testMethod void validateBadCsv() {
+        List<Contact> contactsToInsert = new List<Contact>();
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(campaignOwner);
+        insert contactsToInsert;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        campaign.Invite_Email_Template__c = 'BZ INVITE: test template';
+        insert campaign;
+        
+        BZ_SettingsFactory_TEST.setSettings();
+        System.assert(BZ_Settings__c.getInstance('bz') != null, 'BZ_Settings__c is null');
+        
+        ApexPages.StandardController sc = new ApexPages.standardController(campaign);
+        PageReference pageRef = Page.BZ_BulkInvite;
+        Test.setCurrentPage(pageRef);
+        
+      BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
+        String csvContents = '';
+        
+        Test.startTest();
+        PageReference result = controller.ProcessFile(csvContents);
+        Test.stopTest();
+
+        System.assert(!String.isEmpty(controller.getResultMessage()), 'Result Message should be set');
+        System.assert(controller.getTextMessagesSent() == false, 'Text messages should not be sent!');
+
+        List<CampaignMember> campaignMembers = [SELECT Id, Name, FirstName, LastName, Email, Phone, ContactId FROM CampaignMember WHERE CampaignId = :campaign.Id];
+        System.Assert(campaignMembers.size() == 0, 'Expected 0 CampaignMembers. Found '+campaignMembers.size());
+    }
+}

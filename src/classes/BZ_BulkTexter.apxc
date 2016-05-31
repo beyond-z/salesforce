@@ -1,0 +1,54 @@
+public class BZ_BulkTexter {
+    private List<Map<String,String>> m_smsInfoList = new List<Map<String,String>>();
+    private BZ_Settings__c m_settings = BZ_Settings__c.getInstance('bz');
+
+    /**
+     * Constructor that takes a list of contacts and a text message to send to them
+     * in bulk.  Note: this supports the merge field {!Contact.FirstName} in the
+     * textMessageBody.  If present, it will be replaced by each Contact's actual first name.
+     */
+    public BZ_BulkTexter(List<Contact> contacts, String textMessageBody)
+    {
+        System.debug('BZ_BulkTexter('+contacts+', '+textMessageBody+'): enter');
+        for (Contact c : contacts)
+        {
+            if (!String.isEmpty(c.Phone))
+            {
+                Map<String,String> smsParams = new Map<String,String>{
+                    'To'   => c.Phone,
+                    'From' => m_settings.BZ_Twilio_From_Phone__c,
+                    'Body' => textMessageBody.replace('{!Contact.FirstName}', c.FirstName)
+                };
+                m_smsInfoList.add(smsParams);
+                System.debug('BZ_BulkTexter: adding Contact to list to receive text message: ' + c + '. smsParams = '+smsParams);
+            }
+            else
+            {
+                System.debug('BZ_BulkTexter: skipping sending Contact text message b/c missing Phone number: ' + c);
+            }
+        }
+    }
+
+    public PageReference sendTextMessages() {
+        System.debug('BZ_BulkTexter.sendTextMessages(): enter');
+        String account = m_settings.BZ_Twilio_Account__c;
+        String token = m_settings.BZ_Twilio_Token__c;
+        TwilioSmsList smsSender;
+        if(!Test.isRunningTest()) {
+            TwilioRestClient client = new TwilioRestClient(account, token);
+            smsSender = client.getAccount().getSMSMessages();
+        }
+
+        for (Map<String,String> smsParams : m_smsInfoList)
+        {
+            if(Test.isRunningTest()) {
+                System.debug('BZ_BulkTexter.sendTextMessages(): SKIPPING smsSender.create('+smsParams+') b/c were running unit tests'); 
+            }
+            else{
+                TwilioSMS smsResult = smsSender.create(smsParams);
+            }
+        }
+
+        return null;
+    }
+}
