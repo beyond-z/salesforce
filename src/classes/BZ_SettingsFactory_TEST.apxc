@@ -1,0 +1,14 @@
+@isTest
+public class BZ_SettingsFactory_TEST {
+    public static void setSettings()
+    {
+        BZ_Settings__c testSettings = new BZ_Settings__c();
+        testSettings.Name = 'bz';
+        testSettings.base_url__c = 'https://example.com';
+        testSettings.magic_token__c = 'faketoken';
+        testSettings.BZ_Twilio_From_Phone__c = '55555555555';
+        testSettings.BZ_Twilio_Account__c = 'blahblahblah';
+        testSettings.BZ_Twilio_Token__c = 'blahblahblah';
+        insert testSettings;
+    }
+}

@@ -1,0 +1,152 @@
+/**
+ * Controller to handle adding and inviting users in bulk.
+ * Queues up an INVITE email and a text message invite (if there is a phone number set). 
+ */
+public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
+    private ApexPages.StandardController m_controller {get; set;}
+    private Campaign m_campaign {get;set;}
+    Map<String, Contact> m_contactsToAdd;
+    private String m_textMessageBody;
+    private String m_resultMessage;
+    private String m_contactsToInviteDisplay;
+    private boolean m_contactsLoaded;
+    private boolean m_textMessagesSent;
+    
+    public BZ_BulkInviteController(ApexPages.StandardController controller) {
+        System.debug('BZ_BulkInviteController(): begin');
+        this.m_controller = controller;
+        this.m_contactsToAdd = new Map<String, Contact>();
+        this.m_textMessageBody = '{!Contact.FirstName}, ready to join Braven? Go to: https://join.bebraven.org/signup/new or reply STOP to stop receiving text messages.';
+        this.m_contactsLoaded = false;
+        this.m_textMessagesSent = false;
+        this.m_resultMessage = '';
+        this.m_campaign = (Campaign)m_controller.getRecord();
+    }
+    
+    // method called from the VF's action attribute to run the logic
+    public PageReference sendTextMessages() {
+        System.debug('BZ_BulkInviteController(): run()');
+        try 
+        {
+            BZ_BulkTexter texter = new BZ_BulkTexter(m_contactsToAdd.values(), m_textMessageBody);
+            texter.sendTextMessages();
+            System.debug('BZ_BulkInviteController(): finished calling BZ_BulkTexter.sendTextMessages()');
+            m_textMessagesSent = true;
+            m_resultMessage = 'Text Messages Sent!';
+        } 
+        catch (Exception e){
+            ApexPages.addMessages(e);
+            System.Debug('BZ_BulkInviteController.run(): Exception = ' + e);
+            m_resultMessage = 'Failed sending the text messages.  Details: ' + e;
+        }
+        return null;
+    }
+    
+    /**
+     * Called when the file contents are done being read and ProcessRow has been
+     * called for each row.
+     */
+    private void finishRead(){
+        System.debug('BZ_BulkInviteController: finishRead() begin');
+        m_resultMessage = ''; // Need to reset previous errors.
+        List<Contact> contacts = getContacts();
+
+        if (contacts.size() > 0)
+        {
+            for (Contact c : contacts)
+            {
+                m_contactsToAdd.put(c.Email, c);
+            }
+            List<Contact> existingContacts = [SELECT Id, Email FROM Contact Where Email in :m_contactsToAdd.keySet()];
+            if (existingContacts.size() > 0)
+            {
+                for (Contact c : existingContacts)
+                {
+                    m_contactsToAdd.remove(c.Email);
+                }
+            }
+            
+            Savepoint sp = Database.setSavepoint();
+            try
+            {
+                insert m_contactsToAdd.values();
+                                
+                List<CampaignMember> cms = new List<CampaignMember>();
+                m_contactsToInviteDisplay = '<table border="1"><tr><td style="padding:0 15px 0 15px;"><strong>Name</strong></td><td style="padding:0 15px 0 15px;"><strong>Email</strong></td><td style="padding:0 15px 0 15px;"><strong>Phone</strong></td></tr>';
+                for (Contact c : m_contactsToAdd.values())
+                {
+                    CampaignMember cm = new CampaignMember(ContactId=c.Id, campaignId=m_campaign.Id);
+                    cms.add(cm);
+                    m_contactsToInviteDisplay += '<tr><td style="padding:0 15px 0 15px;">' + c.FirstName + ' ' + c.LastName + '</td><td style="padding:0 15px 0 15px;">' + c.Email + '</td><td style="padding:0 15px 0 15px;">' + c.Phone + '</td></tr>';    
+                }
+                m_contactsToInviteDisplay += '</table>';
+                insert cms;
+                
+                Map<String, String[]> interactionInfoMap = getInteractionInfoMap();
+                Map<Id, Contact> contactsToCreateInteractionInfoFor = new Map<Id, Contact>();
+                for (Contact c : m_contactsToAdd.values()){
+                    contactsToCreateInteractionInfoFor.put(c.Id, c);
+                }
+                List<Task> interactionTasksToAdd = BZ_TaskFactory.createTasks(cms, 'Interaction: How We Met {0}');
+                for (Task t : interactionTasksToAdd){
+                    Contact c = contactsToCreateInteractionInfoFor.get(t.WhoId);
+                    String[] interactionInfo = interactionInfoMap.get(c.Email);
+                    if (interactionInfo != null){
+                        t.Interaction_Type__c = interactionInfo[0];
+                        t.Description = interactionInfo[1];
+                        c.Initial_Connection__c = interactionInfo[1];
+                    }
+                    else {
+                        System.debug('BZ_BulkInviteController.finishRead(): no interaction info found for "'+c.Email+'" -- SKIPPING task creation.');
+                        t.Description = 'Added using Bulk Invite with no InteractionType information';
+                        c.Initial_Connection__c = t.Description;
+                    }
+                    t.Status = 'Completed';
+                    t.IsReminderSet = false;
+                }
+                insert interactionTasksToAdd;
+                update contactsToCreateInteractionInfoFor.values();
+
+                m_contactsLoaded = true;
+            } 
+            catch (Exception e)
+            {
+                // roll everything back in case of error
+                Database.rollback(sp);
+                ApexPages.addMessages(e);
+                System.Debug('BZ_BulkInviteController.run(): Exception = ' + e);
+                m_resultMessage = 'Failed adding the specified users.  Details: ' + e;
+            }
+        }
+        else
+        {
+            System.debug('BZ_BulkInviteController(): BZ_CsvContactsUploader.getContacts() returned 0');
+            m_resultMessage = 'There are no Contacts to invite.  Double check the spreadsheet?';
+        }
+    }
+    
+    public String getTextMessageBody(){
+        return m_textMessageBody;
+    }
+    
+    public void setTextMessageBody(String value){
+        System.debug('BZ_BulkInviteController.setTextMessageBody(value = '+value+')');
+        m_textMessageBody = value; 
+    }
+
+    public String getResultMessage(){
+        return m_resultMessage;
+    }
+    
+    public boolean getContactsLoaded(){
+        return m_contactsLoaded;
+    }
+    
+    public boolean getTextMessagesSent(){
+        return m_textMessagesSent;
+    }
+
+    public String getContactsToInviteDisplay(){
+        return m_contactsToInviteDisplay;
+    }
+}

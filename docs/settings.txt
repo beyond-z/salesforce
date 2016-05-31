@@ -24,4 +24,16 @@ class BZ_Settings {
 	///
 	/// It must match on the Salesforce settings side and on the BZ environment.
 	String magic_token;
+
+  /// The Phone number that outoing Twilio text messages come from.
+  /// This number is what we have our Twilio account configured to use.
+  /// We must own it.
+  String BZ_Twilio_From_Phone__c;
+
+  /// The Acount SID used to connect to our Twilio account using the
+  /// API
+  String BZ_Twilio_Account__c;
+
+  /// The token used to connection to our Twilio account using the API
+  String BZ_Twilio_Token__c;
 }
