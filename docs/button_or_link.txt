@@ -4,3 +4,6 @@ CAMPAIGN
   Sync_Contacts_to_LMS
   Close Recruitment
   Bulk Invite
+
+CONTACT LIST VIEW
+  Mass Text

@@ -12,7 +12,7 @@ public class BZ_TaskFactory {
         return createEmailTasks(cms, taskSubjectPrefix, emailTemplateCampaignFieldName, 
                                'Send the email by clicking on the Campaign in the \'Releated To\' field, then clicking the \'Send My Queued Emails\' button.');
     }
-    
+
     /**
      * Creates Tasks with the specified CampaignMember's 
      * 'Email Template To Send' field populated with the EmailTemplate 
@@ -30,13 +30,13 @@ public class BZ_TaskFactory {
         Set<Id> contactIds = new Set<Id>();
         Set<Id> campaignIds = new Set<Id>();
         for (CampaignMember cm : cms)
-        {        
+        {
             if (cm.ContactId != null) // Test if CampaignMember is Lead
             {
                 //System.Debug('BZ_TaskFactory: adding ContactId='+cm.ContactId + ' to contactIds ' + contactIds);
                 contactIds.add(cm.ContactId);
             }
-            
+
             //System.Debug('BZ_TaskFactory: adding CampaignId='+cm.CampaignId + ' to campaignIds ' + campaignIds);
             campaignIds.add(cm.CampaignId);
         }
@@ -62,7 +62,7 @@ public class BZ_TaskFactory {
                 }
             }
         }
-            
+ 
         List<Task> tasks = new List<Task>();
         for (CampaignMember cm : cms)
         {
@@ -77,12 +77,12 @@ public class BZ_TaskFactory {
                 WhatId = cm.CampaignId,         // Related To
                 EmailTemplate__c = emailTemplateMap.get(cm.CampaignId),   // Email Template To Send
                 CampaignMemberId__c = cm.Id);
-            
+
             tasks.add(t);
         }
         return tasks;
     }
-    
+
     /**
      * See createTasks(CampaignMember[], String, String) for more info
      */
@@ -90,7 +90,7 @@ public class BZ_TaskFactory {
     {
         return createTasks(cms, taskSubjectPattern, '');
     }
-    
+
     /**
      * Creates Tasks for the owner of each Campaign for the specified CampaignMembers.
      * 
@@ -113,19 +113,19 @@ public class BZ_TaskFactory {
         Set<Id> contactIds = new Set<Id>();
         Set<Id> campaignIds = new Set<Id>();
         for (CampaignMember cm : cms)
-        {        
+        {
             if (cm.ContactId != null) // Test if CampaignMember is Lead
             {
                 //System.Debug('BZ_TaskFactory: adding ContactId='+cm.ContactId + ' to contactIds ' + contactIds);
                 contactIds.add(cm.ContactId);
             }
-            
+
             //System.Debug('BZ_TaskFactory: adding CampaignId='+cm.CampaignId + ' to campaignIds ' + campaignIds);
             campaignIds.add(cm.CampaignId);
         }
         Map<Id, Contact> contactMap = new Map<Id, Contact>([SELECT Id, Name FROM Contact WHERE Id in :contactIds]);
         Map<Id, Campaign> campaignMap = new Map<Id, Campaign>([SELECT Id, OwnerId FROM Campaign WHERE Id in :campaignIds]);
-    
+
         for (CampaignMember cm : cms)
         {
             Id contactId = cm.ContactId;
@@ -151,6 +151,48 @@ public class BZ_TaskFactory {
                 
                 tasksToAdd.add(t);
             }
+        }
+        return tasksToAdd;
+    }
+
+    /**
+     * Creates Tasks for the owner of the Campaign for the specified Contacts.
+     * 
+     * taskSubjectPattern is the Subject of the Task where the name of the Contact
+     * is added in the location that you specify.  You specify the location with a single
+     * replacement token used with String.format(String,List<String>) method.  
+     * e.g. createTask(contacts, 'The person {0} need something to happen', ...)
+     * 
+     * descriptionPattern is the Description of the Task where the name of the Contact
+     * is added in the location that you specify.  You specify the location with a single
+     * replacement token used with String.format(String,List<String>) method.  
+     * e.g. createTask(contacts, ... , 'Click on the name of {0} and then...')
+     * 
+     * Note: in the parameters that take a pattern, you can omit the replacement token if you 
+     *       don't need the Contact name in there.
+     */
+    public static List<Task> createTasks(Contact[] contacts, Campaign campaign, String taskSubjectPattern, String descriptionPattern, String status, boolean setReminder) 
+    {
+        List<Task> tasksToAdd = new List<Task>();
+        for (Contact c : contacts){
+
+            Task t = new Task(
+                        OwnerId = campaign.OwnerId,           // Assigned To
+                        Subject = System.String.format(taskSubjectPattern, new String[]{c.Name}),
+                        Description = System.String.format(descriptionPattern, new String[]{c.Name}),
+                        IsReminderSet = setReminder,
+                        Status = status,
+                        ActivityDate = Date.today(),          // Due Date
+                        WhoId = c.Id,                     // Name
+                        WhatId = campaign.Id                    // Related To
+                        );
+            
+            if (setReminder)
+            {
+                t.ReminderDateTime = System.now();
+            }   
+
+            tasksToAdd.add(t);
         }
         return tasksToAdd;
     }

@@ -1,0 +1,100 @@
+/**
+ * Controller to handle mass texting contacts.
+ */
+public with sharing class BZ_MassTextController {
+
+    private ApexPages.StandardSetController m_controller {get; set;}
+    private List<Contact> m_selectedContactsWithPhone = new List<Contact>();
+    private Campaign m_relatedCampaign;
+
+    public BZ_MassTextController(ApexPages.StandardSetController controller) {
+        System.debug('BZ_MassTextController(): begin');
+
+        if (!Test.isRunningTest()){
+            // Avoid error: "SObject row was retrieved via SOQL without querying the requested field"
+            controller.addFields(new List<String>{'Phone', 'Name', 'Email'});
+        }
+
+        // This is a dummy object that the Visualforce page will populate
+        campaignLookup = new CampaignMember();
+        this.m_controller = controller;
+        List<Contact> allSelectedContacts = (List<Contact>)controller.getSelected();
+        System.debug('BZ_MassTextController: allSelectedContacts.size() = ' + allSelectedContacts.size());
+        for (Contact c : allSelectedContacts){
+            if (c.Phone != null && !String.isEmpty(c.Phone)){
+                m_selectedContactsWithPhone.add(c);
+            }
+        }
+        System.debug('BZ_MassTextController: m_selectedContactsWithPhone.size() = ' + m_selectedContactsWithPhone.size());
+
+        if (m_selectedContactsWithPhone == null || m_selectedContactsWithPhone.size() <= 0){
+            this.textMessagesSent = true;
+            this.resultMessage = 'No selected Contacts with Phone numbers to text.  Please go back and select contacts with Phone numbers first.';
+        } else {
+            this.textMessagesSent = false;
+            this.resultMessage = '';
+        }
+    }
+
+    public PageReference sendTextMessages() {
+        System.debug('BZ_MassTextController(): sendTextMessages()');
+        if (this.textMessagesSent) return null;
+        try
+        {
+            if (String.isEmpty(textMessageBody)){
+                throw new TextMessageEmptyException('You must set the text message before sending.');
+            }
+
+            List<Campaign> campaigns = [SELECT Id, Name, OwnerId FROM Campaign WHERE Id = :campaignLookup.CampaignId];
+            if (campaigns == null || campaigns.size() != 1){
+                throw new InvalidCampaignException('Please select a valid campaign to record the text message history on.');
+            }
+
+            BZ_BulkTexter texter = new BZ_BulkTexter(m_selectedContactsWithPhone, textMessageBody, campaigns[0]);
+            texter.sendTextMessages();
+            System.debug('BZ_MassTextController(): finished calling BZ_BulkTexter.sendTextMessages(contacts= '+m_selectedContactsWithPhone+', textMessageBody='+textMessageBody+')');
+            this.textMessagesSent = true;
+            this.resultMessage = 'Text Messages Sent!';
+        } 
+        catch (Exception e){
+            ApexPages.addMessages(e);
+            System.Debug('BZ_MassTextController.sendTextMessages(): Exception = ' + e);
+            this.resultMessage = 'Failed sending some text messages.  Details: ' + e;
+        }
+        return null;
+    }
+
+    public List<Contact> selectedContactsWithPhone {
+        get { return m_selectedContactsWithPhone; }
+        private set { m_selectedContactsWithPhone = value; }
+    }
+
+    public String textMessageBody {
+        get;
+        set;
+    }
+
+    public boolean hasTextMessageBody {
+        get {
+            return !String.isEmpty(textMessageBody);
+        }
+    }
+
+    public boolean textMessagesSent {
+        get;
+        private set;
+    }
+
+    public CampaignMember campaignLookup {
+        get;
+        set;
+    }
+
+    public String resultMessage {
+        get;
+        private set;
+    }
+
+    public class TextMessageEmptyException extends Exception {}
+    public class InvalidCampaignException extends Exception {}
+}
