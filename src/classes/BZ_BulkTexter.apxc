@@ -1,36 +1,31 @@
 public class BZ_BulkTexter {
-    private List<Map<String,String>> m_smsInfoList = new List<Map<String,String>>();
     private BZ_Settings__c m_settings = BZ_Settings__c.getInstance('bz');
+    private Campaign m_campaign;
+    private List<Contact> m_contacts;
+    private String m_textMessageBody;
+    public static boolean SimilateExceptionWhileSendingTexts {get; set;} // To get max test coverage, use this to have exception thrown when sending texts.
+    static {
+        SimilateExceptionWhileSendingTexts = false;
+    }
 
     /**
-     * Constructor that takes a list of contacts and a text message to send to them
-     * in bulk.  Note: this supports the merge field {!Contact.FirstName} in the
+     * Constructor that takes a list of contacts, a text message to send to them,
+     * and the Campaign to record that the text activity will be recorded
+     * on in bulk.  Note: this supports the merge field {!Contact.FirstName} in the
      * textMessageBody.  If present, it will be replaced by each Contact's actual first name.
      */
-    public BZ_BulkTexter(List<Contact> contacts, String textMessageBody)
+    public BZ_BulkTexter(List<Contact> contacts, String textMessageBody, Campaign campaign)
     {
-        System.debug('BZ_BulkTexter('+contacts+', '+textMessageBody+'): enter');
-        for (Contact c : contacts)
-        {
-            if (!String.isEmpty(c.Phone))
-            {
-                Map<String,String> smsParams = new Map<String,String>{
-                    'To'   => c.Phone,
-                    'From' => m_settings.BZ_Twilio_From_Phone__c,
-                    'Body' => textMessageBody.replace('{!Contact.FirstName}', c.FirstName)
-                };
-                m_smsInfoList.add(smsParams);
-                System.debug('BZ_BulkTexter: adding Contact to list to receive text message: ' + c + '. smsParams = '+smsParams);
-            }
-            else
-            {
-                System.debug('BZ_BulkTexter: skipping sending Contact text message b/c missing Phone number: ' + c);
-            }
-        }
+        System.debug('BZ_BulkTexter('+contacts+', '+textMessageBody+', '+ campaign +'): enter');
+        m_contacts = contacts;
+        m_textMessageBody = textMessageBody;
+        m_campaign = campaign;
     }
 
     public PageReference sendTextMessages() {
         System.debug('BZ_BulkTexter.sendTextMessages(): enter');
+        List<Task> textTasks = new List<Task>();
+        List<String> phoneNumbersThatFailed = new List<String>();
         String account = m_settings.BZ_Twilio_Account__c;
         String token = m_settings.BZ_Twilio_Token__c;
         TwilioSmsList smsSender;
@@ -39,16 +34,61 @@ public class BZ_BulkTexter {
             smsSender = client.getAccount().getSMSMessages();
         }
 
-        for (Map<String,String> smsParams : m_smsInfoList)
+        for (Contact c : m_contacts)
         {
-            if(Test.isRunningTest()) {
-                System.debug('BZ_BulkTexter.sendTextMessages(): SKIPPING smsSender.create('+smsParams+') b/c were running unit tests'); 
+            if (!String.isEmpty(c.Phone))
+            {
+                String effectiveTextMessageBody = m_textMessageBody.replace('{!Contact.FirstName}', c.FirstName);
+                Map<String,String> smsParams = new Map<String,String>{
+                    'To'   => c.Phone,
+                    'From' => m_settings.BZ_Twilio_From_Phone__c,
+                    'Body' => effectiveTextMessageBody
+                };
+
+                try {
+                    if(Test.isRunningTest()) {
+                        if (SimilateExceptionWhileSendingTexts){
+                            throw new TextMessageSendException('BZ_BulkTexter: Simulating an exception being thrown while sending a text');
+                        } else {
+                            System.debug('BZ_BulkTexter.sendTextMessages(): SKIPPING smsSender.create('+smsParams+') b/c were running unit tests'); 
+                        }
+                    }
+                    else {
+                        System.debug('BZ_BulkTexter: sending text message to: ' + c + '. smsParams = '+smsParams);
+                        TwilioSMS smsResult = smsSender.create(smsParams);
+                    }
+
+                    boolean setReminder = false;
+                    textTasks.addAll(BZ_TaskFactory.createTasks(new Contact[]{c}, m_campaign, 
+                                                                'Text Message: Sent text to {0}', 
+                                                                '{0} was sent a text message saying:\n\n"'+effectiveTextMessageBody+'"',
+                                                                'Completed',
+                                                                setReminder
+                                                               ));
+                }
+                catch(Exception e){
+                    phoneNumbersThatFailed.add(c.Phone);
+                    System.debug('BZ_BulkTexter: caught exception sending the following text message: ' + smsParams +'. Exception details: ' + e);
+                }
             }
-            else{
-                TwilioSMS smsResult = smsSender.create(smsParams);
+            else
+            {
+                System.debug('BZ_BulkTexter: skipping sending Contact text message b/c missing Phone number: ' + c);
             }
+        }
+
+        insert textTasks;
+
+        if (phoneNumbersThatFailed.size() > 0){
+            String exceptionMessage = 'Failed sending text messages to the following phone numbers: ';
+            for (String phone : phoneNumbersThatFailed){
+                exceptionMessage = exceptionMessage + phone + ', ';
+            }
+            throw new TextMessageSendException(exceptionMessage);
         }
 
         return null;
     }
+
+    public class TextMessageSendException extends Exception {}
 }

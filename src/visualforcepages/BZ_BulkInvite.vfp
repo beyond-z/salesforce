@@ -5,10 +5,23 @@
     <apex:pageBlock id="uploadSection" rendered="{!contactsLoaded==false}">
         <apex:pageMessage severity="confirm" title="Upload a .csv file of user information to add to this campaign" summary="The users uploaded will be added to this campaign as Prospects and have an INVITE email and text message queued up." />
         <!--  Component to allow user to upload file from local machine -->
-        <apex:inputFile value="{!contentFile}" filename="{!nameFile}" /> 
+        <apex:inputFile value="{!contentFile}" filename="{!nameFile}" />
         <apex:commandButton action="{!ReadFile}" value="Invite Them!" id="uploadButton" style="width:150px;"/>
-        <br/> <br/> 
-        <font color="red"> <b>Note: </b></font> the .csv should have 6 columns with this info: First Name, Last Name, Email, Phone Number, InteractionType, Interaction Description.  Please use <a href="https://drive.google.com/a/beyondz.org/file/d/0BxkyYmQz77njdHdpRk9IeXRlLVk/view?usp=sharing" target="_blank"> this template </a> to upload Contacts.  The value of the InteractionType MUST exactly match the avaible values on a <a href="https://na17.salesforce.com/00No0000008PVQD?setupid=ActivityFields">Task/Activity</a>.
+        <br/> <br/>
+        <font color="red"> <b>Note: </b></font> the .csv should have 6 columns with the info below.
+        Please use <a href="https://drive.google.com/a/beyondz.org/file/d/0BxkyYmQz77njdHdpRk9IeXRlLVk/view?usp=sharing" target="_blank"> this template </a>.
+        The value of the InteractionType MUST exactly match the available values for a <a href="https://na17.salesforce.com/00No0000008PVQD?setupid=ActivityFields">Task or Activity</a>.
+        <br/> <br/>
+        <table border="1">
+            <tr>
+            <td style="padding:0 10px 0 10px;">First Name</td>
+            <td style="padding:0 10px 0 10px;">Last Name</td>
+            <td style="padding:0 10px 0 10px;">Email</td>
+            <td style="padding:0 10px 0 10px;">Phone</td>
+            <td style="padding:0 10px 0 10px;">InteractionType</td>
+            <td style="padding:0 10px 0 10px;">InteractionDescription</td>
+            </tr>
+        </table>
     </apex:pageBlock>
     <apex:outputPanel id="sendTextMessageSection" style="display:block;width:100%;"> <!-- Needed to rerender child on button press.  Cant do it directly. -->
     <apex:pageBlock rendered="{!contactsLoaded==true && textMessagesSent==false}">
@@ -68,5 +81,5 @@
             <apex:commandButton action="{!cancel}" value="Ok" rendered="{!textMessagesSent==true}" />
         </apex:outputPanel>
     </apex:outputPanel>
-    </apex:form>    
+    </apex:form>
 </apex:page>

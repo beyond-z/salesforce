@@ -8,34 +8,34 @@ private class BZ_BulkInviteController_TEST {
         Contact existingContact = new Contact(FirstName='Brian', LastName='xTestExisting1', Email=existingEmail, OwnerId=userInfo.getUserId());
         contactsToInsert.add(existingContact);
         insert contactsToInsert;
-        
+
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
         Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
         campaign.Invite_Email_Template__c = 'BZ INVITE: test template';
         insert campaign;
-        
+
         CampaignMember existingCm = new CampaignMember();
         existingCm.CampaignId=campaign.Id;
         existingCm.ContactId=existingContact.Id;
         insert existingCm;
-        
+
         BZ_SettingsFactory_TEST.setSettings();
         System.assert(BZ_Settings__c.getInstance('bz') != null, 'BZ_Settings__c is null');
-        
+
         ApexPages.StandardController sc = new ApexPages.standardController(campaign);
         PageReference pageRef = Page.BZ_BulkInvite;
         Test.setCurrentPage(pageRef);
-        
+
         String noInteractionEmail = 'brian.testnointeractiontypeinfo1@example.com';
         String interactionDescription = 'Description of phone call';
         String noInteractionDescription = 'Added using Bulk Invite with no InteractionType information';
-      BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
+        BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
         String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
             'Brian,xTest1,brian.test1@example.com,5554443333,Phone Call,'+interactionDescription+'\n'+
             'Brian,xTest2,brian.test2@example.com,,Phone Call,'+interactionDescription+'\n'+
             'Brian,xTestExisting1,'+existingEmail+',5554443334,Phone Call,'+interactionDescription+'\n'+
             'Brian,xTestNoInteractionTypeInfo1,'+noInteractionEmail+',5554443335,,\n';
-        
+
         Test.startTest();
         PageReference result = controller.ProcessFile(csvContents);
         String textMessageBody = controller.getTextMessageBody();
@@ -45,7 +45,7 @@ private class BZ_BulkInviteController_TEST {
             controller.sendTextMessages();
         }
         Test.stopTest();
-        
+
         System.assert(controller.getTextMessagesSent(), 'Text messages not sent!');
         Set<Id> contactIdsWithInitialConnectionSet = new Set<Id>();
         List<CampaignMember> campaignMembers = [SELECT Id, Name, FirstName, LastName, Email, Phone, ContactId FROM CampaignMember WHERE CampaignId = :campaign.Id];
@@ -60,7 +60,7 @@ private class BZ_BulkInviteController_TEST {
                     campaignMembersWithNoInteractionInfo.add(cm);
                 } 
             }
-            
+
             System.assert(cm.FirstName == 'Brian', 'CampaignMember with First Name found not in list of expected members: FirstName = ' + cm.FirstName);
             System.assert(cm.LastName.startsWith('xTest'), 'CampaignMember with Last Name found not in list of expected members: LastName = ' + cm.LastName);
             System.assert(cm.Email.startsWith('brian.test'), 'CampaignMember with Email found not in list of expected members: Email = ' + cm.Email);
@@ -71,7 +71,7 @@ private class BZ_BulkInviteController_TEST {
         System.Assert(campaignMembersAddedByBulkInvite.size() == 3, 'Expected 3 CampaignMembers added by Bulk Invite code. Found '+campaignMembersAddedByBulkInvite.size());
         System.Assert(campaignMembersWithNoInteractionInfo.size() == 1, 'Expected 1 CampaignMembers added by Bulk Invite code with no InteractionType info. Found '+campaignMembersWithNoInteractionInfo.size());
         List<Task> tasks = [SELECT Id, Subject, WhoId, WhatId, Status, Interaction_Type__c, Description, EmailTemplate__c FROM Task WHERE WhatId = :campaign.Id];
-        System.Assert(tasks.size() == 7, 'Expected 4 INVITE Tasks and 3 Interation tasks. Found '+tasks.size()+' tasks');
+        System.Assert(tasks.size() == 9, 'Expected 4 INVITE Tasks, 2 Text Message tasks, and 3 Interation tasks. Found '+tasks.size()+' total tasks');
         for (Task t : tasks)
         {
             if (t.Subject.startsWith('Email:')){
@@ -94,12 +94,15 @@ private class BZ_BulkInviteController_TEST {
                     System.assert(t.Description == interactionDescription, 'Task with Description found not in list of expected tasks: Description = ' + t.Description);
                 }
             }
+            else if (t.Subject.startsWith('Text Message:')){
+                System.assert(t.Status == 'Completed', 'Expected Text Message task to be Completed.  t = '+t);
+            }
             else
             {
                 System.assert(false, 'Task found with unrecognized subject = ' + t.Subject);
             }
         }
-        
+
         List<Contact> contacts = [SELECT Id, Email, Initial_Connection__c FROM Contact WHERE Id in :contactIdsWithInitialConnectionSet];
         for (Contact c : contacts){
             if (c.Email == noInteractionEmail){
@@ -110,25 +113,25 @@ private class BZ_BulkInviteController_TEST {
             }
         }
     }
-    
+
     static testMethod void validateFailed() {
         List<Contact> contactsToInsert = new List<Contact>();
         Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
         contactsToInsert.add(campaignOwner);
         insert contactsToInsert;
-        
+
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
         Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
         campaign.Invite_Email_Template__c = 'BZ INVITE: test template';
         insert campaign;
-        
+
         BZ_SettingsFactory_TEST.setSettings();
         System.assert(BZ_Settings__c.getInstance('bz') != null, 'BZ_Settings__c is null');
-        
+
         ApexPages.StandardController sc = new ApexPages.standardController(campaign);
         PageReference pageRef = Page.BZ_BulkInvite;
         Test.setCurrentPage(pageRef);
-        
+
       BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
         String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
             'Brian,xTest1,,5554443333,Phone Call,Description of phone call\n'+
@@ -138,7 +141,7 @@ private class BZ_BulkInviteController_TEST {
             'Brian,xTest3\n'+
             'Brian,xTest4,badEmail,badPhone,,,,\n'+
             'badRow\n';
-        
+
         Test.startTest();
         PageReference result = controller.ProcessFile(csvContents);
         Test.stopTest();
@@ -149,28 +152,66 @@ private class BZ_BulkInviteController_TEST {
         List<CampaignMember> campaignMembers = [SELECT Id, Name, FirstName, LastName, Email, Phone, ContactId FROM CampaignMember WHERE CampaignId = :campaign.Id];
         System.Assert(campaignMembers.size() == 0, 'Expected 0 CampaignMembers. Found '+campaignMembers.size());
     }
-    
+
+    static testMethod void validateFailedTextSend() {
+        List<Contact> contactsToInsert = new List<Contact>();
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(campaignOwner);
+        insert contactsToInsert;
+
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        campaign.Invite_Email_Template__c = 'BZ INVITE: test template';
+        insert campaign;
+
+        BZ_SettingsFactory_TEST.setSettings();
+
+        ApexPages.StandardController sc = new ApexPages.standardController(campaign);
+        PageReference pageRef = Page.BZ_BulkInvite;
+        Test.setCurrentPage(pageRef);
+        BZ_BulkInviteController controller;
+        Test.startTest();
+        try {
+            BZ_BulkTexter.SimilateExceptionWhileSendingTexts = true;
+            controller = new BZ_BulkInviteController(sc);
+            String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
+                'Brian,xTest1,email@email.com,5554443333,Phone Call,Description of phone call\n'+
+                'Brian,xTest2,email2@email.com,5554443334,Phone Call,Description of phone call\n';
+            PageReference result = controller.ProcessFile(csvContents);
+            if (controller.getContactsLoaded() && !String.isEmpty(controller.getContactsToInviteDisplay()))
+            {
+                controller.sendTextMessages();
+            }
+        } finally {
+            BZ_BulkTexter.SimilateExceptionWhileSendingTexts = false;
+        }
+        Test.stopTest();
+
+        System.assert(!String.isEmpty(controller.getResultMessage()), 'Result Message should be set');
+        System.assert(controller.getResultMessage().contains('Failed sending text messages to the following phone numbers'),'The result message of trying to send texts isnt what was expected.  Actual: '+controller.getResultMessage());
+    }
+
     static testMethod void validateBadCsv() {
         List<Contact> contactsToInsert = new List<Contact>();
         Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
         contactsToInsert.add(campaignOwner);
         insert contactsToInsert;
-        
+
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
         Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
         campaign.Invite_Email_Template__c = 'BZ INVITE: test template';
         insert campaign;
-        
+
         BZ_SettingsFactory_TEST.setSettings();
         System.assert(BZ_Settings__c.getInstance('bz') != null, 'BZ_Settings__c is null');
-        
+
         ApexPages.StandardController sc = new ApexPages.standardController(campaign);
         PageReference pageRef = Page.BZ_BulkInvite;
         Test.setCurrentPage(pageRef);
-        
+
       BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
         String csvContents = '';
-        
+
         Test.startTest();
         PageReference result = controller.ProcessFile(csvContents);
         Test.stopTest();

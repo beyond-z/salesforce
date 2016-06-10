@@ -4,15 +4,15 @@ trigger BZ_LeadConverted on Lead (before update) {
     // When a Lead is converted to a Contact, grab the new ContactId and let
     // the bz.org platform know about it so that the User on the platform
     // stays tied to the Contact
-    String changes = ''; 
+    String changes = '';
     Map<Id, BZ_LeadConvertedState> contactsToUpdateStateMap = new Map<Id, BZ_LeadConvertedState>();
-    
+
     for (Lead lead : Trigger.new) { 
         if(lead.IsConverted != Trigger.oldMap.get(lead.Id).IsConverted) { 
             if (lead.IsConverted) { 
                 System.debug('BZ_LeadConverted: processing converted lead = '+lead);
                 changes += ',' + lead.Id + ':' + lead.ConvertedContactId; 
-                        
+
                 String company = null;
                 String industry = null;
                 String phone = null;
@@ -27,17 +27,17 @@ trigger BZ_LeadConverted on Lead (before update) {
                     // works for on a Contact.
                     company = lead.Company;
                 }
-                
+
                 if (lead.Industry != null && lead.Industry != '')
                 {
-                    industry = lead.Industry;                    
+                    industry = lead.Industry;
                 }
-                
+
                 if (lead.Phone != null && lead.Phone != '')
                 {
-                    phone = lead.Phone;                    
+                    phone = lead.Phone;
                 }
-                
+
                 if (company != null || industry != null || phone != null)
                 {
                     contactsToUpdateStateMap.put(lead.ConvertedContactId, new BZ_LeadConvertedState(company, industry, phone));
@@ -45,8 +45,8 @@ trigger BZ_LeadConverted on Lead (before update) {
             } 
         } 
     }
-    
-    
+
+
     if (contactsToUpdateStateMap.size() > 0)
     {
         List<Contact> contactsToUpdate = new List<Contact>([SELECT Id, Company__c, Industry__c, HomePhone FROM Contact WHERE Id in :contactsToUpdateStateMap.keySet()]);
@@ -66,13 +66,18 @@ trigger BZ_LeadConverted on Lead (before update) {
             }
             if(state.phone != null)
             {
-                System.debug('BZ_LeadConverted: setting Contact.HomePhone to ' + state.phone);
-                contact.HomePhone = state.phone;
+                // There is some weirdness with phones.  The actual Phone field is not shown
+                // in the page layout, but there are some Workflow rules that update the 
+                // HomePhone, OtherPhone, etc using the PreferredPhone selection whenever
+                // the backing Phone field is set.  We rely on those to copy over the 
+                // phone to the UI.
+                System.debug('BZ_LeadConverted: setting Contact.Phone to ' + state.phone);
+                contact.Phone = state.phone;
             }
         }
         update contactsToUpdate;
     }
-    
-    if(changes.length() > 0) 
-        BZ_Notifications.recordConvertedLeads(changes); 
+
+    if(changes.length() > 0)
+        BZ_Notifications.recordConvertedLeads(changes);
 }
