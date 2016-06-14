@@ -15,7 +15,7 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
     public BZ_BulkInviteController(ApexPages.StandardController controller) {
         System.debug('BZ_BulkInviteController(): begin');
         if(!Test.isRunningTest()) {
-            controller.addFields(new String[]{'Id', 'OwnerId'}); // Avoid error: "SObject row was retrieved via SOQL without querying the requested field".  These fields are used when creating a Task history of the text messages sent.
+            controller.addFields(new String[]{'Id', 'OwnerId', 'Type', 'Program_Site__c'}); // Avoid error: "SObject row was retrieved via SOQL without querying the requested field".  These fields are used when creating a Task history of the text messages sent.
         }
         this.m_controller = controller;
         this.m_contactsToAdd = new Map<String, Contact>();
@@ -60,15 +60,28 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
     private void finishRead(){
         System.debug('BZ_BulkInviteController: finishRead() begin');
         m_resultMessage = ''; // Need to reset previous errors.
-        List<Contact> contacts = getContacts();
+        
+        // Ensure that there is an Account/Affiliation with the same name as the Program Site
+        // so that it doesn't throw an exception when setting it.
+        Id primaryAffiliationId;
+        List<Account> accounts = [SELECT Id, Name FROM Account WHERE Name = :m_campaign.Program_Site__c];
+        if (accounts == null || accounts.size() <=0){
+            Account a = new Account(Name=m_campaign.Program_Site__c);
+            insert a;
+            primaryAffiliationId = a.Id;
+            System.debug('BZ_BulkInviteController.finishRead(): created new Account '+ a + ' to set added Contacts Primary Affiliation to.');
+        } else {
+            primaryAffiliationId = accounts[0].Id;
+        }
 
+        List<Contact> contacts = getContacts();
         if (contacts.size() > 0)
         {
             for (Contact c : contacts)
             {
                 m_contactsToAdd.put(c.Email, c);
             }
-            List<Contact> existingContacts = [SELECT Id, Email FROM Contact Where Email in :m_contactsToAdd.keySet()];
+            List<Contact> existingContacts = [SELECT Id, Email, npsp__Primary_Affiliation__c, Undergrad_University__c  FROM Contact Where Email in :m_contactsToAdd.keySet()];
             if (existingContacts.size() > 0)
             {
                 for (Contact c : existingContacts)
@@ -86,7 +99,12 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
                 m_contactsToInviteDisplay = '<table border="1"><tr><td style="padding:0 15px 0 15px;"><strong>Name</strong></td><td style="padding:0 15px 0 15px;"><strong>Email</strong></td><td style="padding:0 15px 0 15px;"><strong>Phone</strong></td></tr>';
                 for (Contact c : m_contactsToAdd.values())
                 {
-                    CampaignMember cm = new CampaignMember(ContactId=c.Id, campaignId=m_campaign.Id);
+                    CampaignMember cm;
+                    if (m_campaign.Type == 'Program Participants'){
+                        cm = new CampaignMember(ContactId=c.Id, campaignId=m_campaign.Id, Undergrad_University__c=m_campaign.Program_Site__c);
+                    } else {
+                        cm = new CampaignMember(ContactId=c.Id, campaignId=m_campaign.Id);
+                    }
                     cms.add(cm);
                     m_contactsToInviteDisplay += '<tr><td style="padding:0 15px 0 15px;">' + c.FirstName + ' ' + c.LastName + '</td><td style="padding:0 15px 0 15px;">' + c.Email + '</td><td style="padding:0 15px 0 15px;">' + c.Phone + '</td></tr>';    
                 }
@@ -114,6 +132,10 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
                     }
                     t.Status = 'Completed';
                     t.IsReminderSet = false;
+                    if (m_campaign.Type == 'Program Participants'){
+                        c.Undergrad_University__c = m_campaign.Program_Site__c;
+                    }
+                    c.npsp__Primary_Affiliation__c = primaryAffiliationId;
                 }
                 insert interactionTasksToAdd;
                 update contactsToCreateInteractionInfoFor.values();
@@ -125,13 +147,13 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
                 // roll everything back in case of error
                 Database.rollback(sp);
                 ApexPages.addMessages(e);
-                System.Debug('BZ_BulkInviteController.run(): Exception = ' + e);
+                System.Debug('BZ_BulkInviteController.finishRead(): Exception = ' + e);
                 m_resultMessage = 'Failed adding the specified users.  Details: ' + e;
             }
         }
         else
         {
-            System.debug('BZ_BulkInviteController(): BZ_CsvContactsUploader.getContacts() returned 0');
+            System.debug('BZ_BulkInviteController.finishRead(): BZ_CsvContactsUploader.getContacts() returned 0');
             m_resultMessage = 'There are no Contacts to invite.  Double check the spreadsheet?';
         }
     }

@@ -10,7 +10,6 @@
         <br/> <br/>
         <font color="red"> <b>Note: </b></font> the .csv should have 6 columns with the info below.
         Please use <a href="https://drive.google.com/a/beyondz.org/file/d/0BxkyYmQz77njdHdpRk9IeXRlLVk/view?usp=sharing" target="_blank"> this template </a>.
-        The value of the InteractionType MUST exactly match the available values for a <a href="https://na17.salesforce.com/00No0000008PVQD?setupid=ActivityFields">Task or Activity</a>.
         <br/> <br/>
         <table border="1">
             <tr>
@@ -22,6 +21,24 @@
             <td style="padding:0 10px 0 10px;">InteractionDescription</td>
             </tr>
         </table>
+        <br/><br/>
+        The value of the InteractionType MUST exactly match the available values for a <a href="https://na17.salesforce.com/00No0000008PVQD?setupid=ActivityFields">Task or Activity</a>.
+        At the time of writing, the possible values for InteractionType are following (but that could change):
+        <ul>
+            <li>Phone Call</li>
+            <li>Camera to Camera Virtual Meeting</li>
+            <li>1:1 In-Person Meeting</li>
+            <li>Small Group In-Person Meeting</li>
+            <li>Interaction at Larger Function</li>
+            <li>Attended BZ Function</li>
+            <li>Text dialogue</li>
+        </ul>
+        <em>Notes:</em>
+        <ul>
+            <li>The InteractionDescription is also used to set the Initial Connection on the Contact record</li>
+            <li>The Primary Affiliation is set to the value of the Program Site on the Campaign</li>
+            <li>For Fellows, the Undergraduate University is set to the Program Site on the Campaign.  You can change this after if you'd like.</li>
+        </ul>
     </apex:pageBlock>
     <apex:outputPanel id="sendTextMessageSection" style="display:block;width:100%;"> <!-- Needed to rerender child on button press.  Cant do it directly. -->
     <apex:pageBlock rendered="{!contactsLoaded==true && textMessagesSent==false}">
