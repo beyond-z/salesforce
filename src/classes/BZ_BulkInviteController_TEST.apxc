@@ -1,6 +1,7 @@
 @isTest 
 private class BZ_BulkInviteController_TEST {
     static testMethod void validateInvite() {
+        System.debug('BZ_BulkInviteController_TEST.validateInvite() - begin');
         List<Contact> contactsToInsert = new List<Contact>();
         Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
         contactsToInsert.add(campaignOwner);
@@ -10,7 +11,7 @@ private class BZ_BulkInviteController_TEST {
         insert contactsToInsert;
 
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
-        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
         campaign.Invite_Email_Template__c = 'BZ INVITE: test template';
         insert campaign;
 
@@ -36,6 +37,9 @@ private class BZ_BulkInviteController_TEST {
             'Brian,xTestExisting1,'+existingEmail+',5554443334,Phone Call,'+interactionDescription+'\n'+
             'Brian,xTestNoInteractionTypeInfo1,'+noInteractionEmail+',5554443335,,\n';
 
+        String primaryAffiliationName = campaign.Program_Site__c;
+        String undergradUniversityName = campaign.Program_Site__c;
+        
         Test.startTest();
         PageReference result = controller.ProcessFile(csvContents);
         String textMessageBody = controller.getTextMessageBody();
@@ -48,7 +52,7 @@ private class BZ_BulkInviteController_TEST {
 
         System.assert(controller.getTextMessagesSent(), 'Text messages not sent!');
         Set<Id> contactIdsWithInitialConnectionSet = new Set<Id>();
-        List<CampaignMember> campaignMembers = [SELECT Id, Name, FirstName, LastName, Email, Phone, ContactId FROM CampaignMember WHERE CampaignId = :campaign.Id];
+        List<CampaignMember> campaignMembers = [SELECT Id, Name, FirstName, LastName, Email, Phone, ContactId, Undergrad_University__c FROM CampaignMember WHERE CampaignId = :campaign.Id];
         List<CampaignMember> campaignMembersAddedByBulkInvite = new List<CampaignMember>();
         List<CampaignMember> campaignMembersWithNoInteractionInfo = new List<CampaignMember>();
         for (CampaignMember cm : campaignMembers)
@@ -58,7 +62,8 @@ private class BZ_BulkInviteController_TEST {
                 contactIdsWithInitialConnectionSet.add(cm.ContactId); // Note that the contact with no interaction info will still get a placeholder "Initial Connection" value set
                 if (cm.Email == noInteractionEmail){
                     campaignMembersWithNoInteractionInfo.add(cm);
-                } 
+                }
+                System.assert(cm.Undergrad_University__c == undergradUniversityName, 'Expected Undergrad University to be set to: ' + undergradUniversityName + '.  Found: ' + cm.Undergrad_University__c + ' instead.');
             }
 
             System.assert(cm.FirstName == 'Brian', 'CampaignMember with First Name found not in list of expected members: FirstName = ' + cm.FirstName);
@@ -103,7 +108,7 @@ private class BZ_BulkInviteController_TEST {
             }
         }
 
-        List<Contact> contacts = [SELECT Id, Email, Initial_Connection__c FROM Contact WHERE Id in :contactIdsWithInitialConnectionSet];
+        List<Contact> contacts = [SELECT Id, Email, Initial_Connection__c, Undergrad_University__c, npsp__Primary_Affiliation__c FROM Contact WHERE Id in :contactIdsWithInitialConnectionSet];
         for (Contact c : contacts){
             if (c.Email == noInteractionEmail){
                 System.assert(c.Initial_Connection__c == noInteractionDescription, 'Unrecognized Initial Connection for Contact with no Interaction info.  c.Initial_Connection__c = ' + c.Initial_Connection__c);
@@ -111,10 +116,16 @@ private class BZ_BulkInviteController_TEST {
             else{
                 System.assert(c.Initial_Connection__c == interactionDescription, 'Unrecognized Initial Connection.  Expected '+interactionDescription+'. Found c.Initial_Connection__c = ' + c.Initial_Connection__c);
             }
+            
+            System.assert(c.Undergrad_University__c == undergradUniversityName, 'Expected Undergrad University to be set to: ' + undergradUniversityName + '.  Found: ' + c.Undergrad_University__c + ' instead.');
+            List<Account> primaryAffiliationAccounts = [SELECT Id FROM Account WHERE Name = :primaryAffiliationName];
+            Id primaryAffiliationId = primaryAffiliationAccounts[0].Id;
+            System.assert(c.npsp__Primary_Affiliation__c == primaryAffiliationId, 'Expected Primary Affiliation to be set to: ' + primaryAffiliationName + '.  Found: ' + [SELECT Name FROM Account WHERE Id = :c.npsp__Primary_Affiliation__c] + ' instead.');
         }
     }
 
     static testMethod void validateFailed() {
+        System.debug('BZ_BulkInviteController_TEST.validateFailed() - begin');
         List<Contact> contactsToInsert = new List<Contact>();
         Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
         contactsToInsert.add(campaignOwner);
@@ -154,6 +165,7 @@ private class BZ_BulkInviteController_TEST {
     }
 
     static testMethod void validateFailedTextSend() {
+        System.debug('BZ_BulkInviteController_TEST.validateFailedTextSend() - begin');
         List<Contact> contactsToInsert = new List<Contact>();
         Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
         contactsToInsert.add(campaignOwner);
@@ -192,6 +204,7 @@ private class BZ_BulkInviteController_TEST {
     }
 
     static testMethod void validateBadCsv() {
+        System.debug('BZ_BulkInviteController_TEST.validateBadCsv() - begin');
         List<Contact> contactsToInsert = new List<Contact>();
         Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
         contactsToInsert.add(campaignOwner);
