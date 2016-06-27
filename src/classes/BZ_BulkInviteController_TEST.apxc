@@ -5,25 +5,56 @@ private class BZ_BulkInviteController_TEST {
         List<Contact> contactsToInsert = new List<Contact>();
         Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
         contactsToInsert.add(campaignOwner);
-        String existingEmail = 'brian.testexisting1@example.com';
-        Contact existingContact = new Contact(FirstName='Brian', LastName='xTestExisting1', Email=existingEmail, OwnerId=userInfo.getUserId());
-        contactsToInsert.add(existingContact);
+        String existingEmail1 = 'brian.testexisting1@example.com';
+        Contact existingContact1 = new Contact(FirstName='Brian', LastName='xTestExisting1', Email=existingEmail1, OwnerId=userInfo.getUserId());
+        contactsToInsert.add(existingContact1);
+        String existingEmailInactiveCampaign1 = 'brian.testexistinginactivecampaign1@example.com';
+        Contact existingContactInactiveCampaign1 = new Contact(FirstName='Brian', LastName='xTestExistingInactiveCampaign1', Email=existingEmailInactiveCampaign1, OwnerId=userInfo.getUserId());
+        contactsToInsert.add(existingContactInactiveCampaign1);
+        String existingEmailActiveCampaign1 = 'brian.testexistingactivecampaign1@example.com';
+        Contact existingContactActiveCampaign1 = new Contact(FirstName='Brian', LastName='xTestExistingActiveCampaign1', Email=existingEmailActiveCampaign1, OwnerId=userInfo.getUserId());
+        contactsToInsert.add(existingContactActiveCampaign1);
         insert contactsToInsert;
 
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
-        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
-        campaign.Invite_Email_Template__c = 'BZ INVITE: test template';
-        insert campaign;
-
-        CampaignMember existingCm = new CampaignMember();
-        existingCm.CampaignId=campaign.Id;
-        existingCm.ContactId=existingContact.Id;
-        insert existingCm;
+        List<Campaign> campaignsToInsert = new List<Campaign>();
+        Campaign campaignToInviteTo = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
+        campaignToInviteTo.Invite_Email_Template__c = 'BZ INVITE: test template';
+        campaignToInviteTo.Name = 'campaignToInviteTo';
+        campaignToInviteTo.IsActive = true;
+        campaignsToInsert.add(campaignToInviteTo);
+        
+        Campaign inactiveCampaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
+        inactiveCampaign.Invite_Email_Template__c = 'BZ INVITE: test template';
+        inactiveCampaign.IsActive = false;
+        inactiveCampaign.Name = 'inactiveCampaign';
+        campaignsToInsert.add(inactiveCampaign);
+        
+        Campaign activeCampaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        activeCampaign.Invite_Email_Template__c = 'BZ INVITE: test template';
+        activeCampaign.IsActive = true;
+        activeCampaign.Name = 'activeCampaign';
+        campaignsToInsert.add(activeCampaign);
+        
+        insert campaignsToInsert;
+        
+        List<CampaignMember> existingCampaignMembersToInsert = new List<CampaignMember>();
+        CampaignMember existingInactiveCm = new CampaignMember();
+        existingInactiveCm.CampaignId=inactiveCampaign.Id;
+        existingInactiveCm.ContactId=existingContactInactiveCampaign1.Id;
+        existingCampaignMembersToInsert.add(existingInactiveCm);
+        
+        CampaignMember existingActiveCm = new CampaignMember();
+        existingActiveCm.CampaignId=activeCampaign.Id;
+        existingActiveCm.ContactId=existingContactActiveCampaign1.Id;
+        existingCampaignMembersToInsert.add(existingActiveCm);
+        
+        insert existingCampaignMembersToInsert;
 
         BZ_SettingsFactory_TEST.setSettings();
         System.assert(BZ_Settings__c.getInstance('bz') != null, 'BZ_Settings__c is null');
 
-        ApexPages.StandardController sc = new ApexPages.standardController(campaign);
+        ApexPages.StandardController sc = new ApexPages.standardController(campaignToInviteTo);
         PageReference pageRef = Page.BZ_BulkInvite;
         Test.setCurrentPage(pageRef);
 
@@ -34,11 +65,13 @@ private class BZ_BulkInviteController_TEST {
         String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
             'Brian,xTest1,brian.test1@example.com,5554443333,Phone Call,'+interactionDescription+'\n'+
             'Brian,xTest2,brian.test2@example.com,,Phone Call,'+interactionDescription+'\n'+
-            'Brian,xTestExisting1,'+existingEmail+',5554443334,Phone Call,'+interactionDescription+'\n'+
-            'Brian,xTestNoInteractionTypeInfo1,'+noInteractionEmail+',5554443335,,\n';
+            'Brian,xTestExisting1,'+existingEmail1+',5554443334,Phone Call,'+interactionDescription+'\n'+
+            'Brian,xTestNoInteractionTypeInfo1,'+noInteractionEmail+',5554443335,,\n'+
+            'Brian,xTestExistingInactiveCamapign1,'+existingEmailInactiveCampaign1+',5554443334,Phone Call,'+interactionDescription+'\n'+
+            'Brian,xTestExistingActiveCampaign1,'+existingEmailActiveCampaign1+',5554443334,Phone Call,'+interactionDescription+'\n';
 
-        String primaryAffiliationName = campaign.Program_Site__c;
-        String undergradUniversityName = campaign.Program_Site__c;
+        String primaryAffiliationName = campaignToInviteTo.Program_Site__c;
+        String undergradUniversityName = campaignToInviteTo.Program_Site__c;
         
         Test.startTest();
         PageReference result = controller.ProcessFile(csvContents);
@@ -49,34 +82,36 @@ private class BZ_BulkInviteController_TEST {
             controller.sendTextMessages();
         }
         Test.stopTest();
-
+        
         System.assert(controller.getTextMessagesSent(), 'Text messages not sent!');
         Set<Id> contactIdsWithInitialConnectionSet = new Set<Id>();
-        List<CampaignMember> campaignMembers = [SELECT Id, Name, FirstName, LastName, Email, Phone, ContactId, Undergrad_University__c FROM CampaignMember WHERE CampaignId = :campaign.Id];
-        List<CampaignMember> campaignMembersAddedByBulkInvite = new List<CampaignMember>();
+        List<CampaignMember> campaignMembers = [SELECT Id, Name, FirstName, LastName, Email, Phone, ContactId, Undergrad_University__c FROM CampaignMember WHERE CampaignId = :campaignToInviteTo.Id];
+        System.Assert(campaignMembers.size() == 5, 'Expected 5 CampaignMembers. Found '+campaignMembers.size());
         List<CampaignMember> campaignMembersWithNoInteractionInfo = new List<CampaignMember>();
         for (CampaignMember cm : campaignMembers)
         {
-            if (cm.Email != existingEmail){
-                campaignMembersAddedByBulkInvite.add(cm);
+            if (cm.Email == existingEmailActiveCampaign1){
+                System.assert(false, 'Found Contact already in Active campaign was added using Bulk Invite: ' + cm);
+            } else {
+            
                 contactIdsWithInitialConnectionSet.add(cm.ContactId); // Note that the contact with no interaction info will still get a placeholder "Initial Connection" value set
                 if (cm.Email == noInteractionEmail){
                     campaignMembersWithNoInteractionInfo.add(cm);
                 }
                 System.assert(cm.Undergrad_University__c == undergradUniversityName, 'Expected Undergrad University to be set to: ' + undergradUniversityName + '.  Found: ' + cm.Undergrad_University__c + ' instead.');
-            }
-
-            System.assert(cm.FirstName == 'Brian', 'CampaignMember with First Name found not in list of expected members: FirstName = ' + cm.FirstName);
-            System.assert(cm.LastName.startsWith('xTest'), 'CampaignMember with Last Name found not in list of expected members: LastName = ' + cm.LastName);
-            System.assert(cm.Email.startsWith('brian.test'), 'CampaignMember with Email found not in list of expected members: Email = ' + cm.Email);
-            System.assert(cm.Phone == null || cm.Phone == '' || cm.Phone == '5554443333' || cm.Phone == '5554443334' || cm.Phone == '5554443335', 
+                System.assert(cm.FirstName == 'Brian', 'CampaignMember with First Name found not in list of expected members: FirstName = ' + cm.FirstName);
+                System.assert(cm.LastName.startsWith('xTest'), 'CampaignMember with Last Name found not in list of expected members: LastName = ' + cm.LastName);
+                System.assert(cm.Email.startsWith('brian.test'), 'CampaignMember with Email found not in list of expected members: Email = ' + cm.Email);
+                System.assert(cm.Phone == null || cm.Phone == '' || cm.Phone == '5554443333' || cm.Phone == '5554443334' || cm.Phone == '5554443335', 
                           'CampaignMember with Phone found not in list of expected members: Phone = ' + cm.Phone);
+            }            
         }
-        System.Assert(campaignMembers.size() == 4, 'Expected 4 CampaignMembers. Found '+campaignMembers.size());
-        System.Assert(campaignMembersAddedByBulkInvite.size() == 3, 'Expected 3 CampaignMembers added by Bulk Invite code. Found '+campaignMembersAddedByBulkInvite.size());
         System.Assert(campaignMembersWithNoInteractionInfo.size() == 1, 'Expected 1 CampaignMembers added by Bulk Invite code with no InteractionType info. Found '+campaignMembersWithNoInteractionInfo.size());
-        List<Task> tasks = [SELECT Id, Subject, WhoId, WhatId, Status, Interaction_Type__c, Description, EmailTemplate__c FROM Task WHERE WhatId = :campaign.Id];
-        System.Assert(tasks.size() == 9, 'Expected 4 INVITE Tasks, 2 Text Message tasks, and 3 Interation tasks. Found '+tasks.size()+' total tasks');
+        List<Task> tasks = [SELECT Id, Subject, WhoId, WhatId, Status, Interaction_Type__c, Description, EmailTemplate__c FROM Task WHERE WhatId = :campaignToInviteTo.Id];
+        for (Task t : tasks){
+            System.debug('Found task: '+t);
+        }
+        System.Assert(tasks.size() == 14, 'Expected 5 INVITE Tasks, 4 Text Message tasks, and 5 Interation tasks. Found '+tasks.size()+' total tasks');
         for (Task t : tasks)
         {
             if (t.Subject.startsWith('Email:')){
@@ -84,9 +119,13 @@ private class BZ_BulkInviteController_TEST {
             }
             else if (t.Subject.startsWith('Interaction:'))
             {
-                System.assert(t.WhoId == campaignMembersAddedByBulkInvite[0].ContactId || t.WhoId == campaignMembersAddedByBulkInvite[1].ContactId || t.WhoId == campaignMembersAddedByBulkInvite[2].ContactId, 
+                System.assert(t.WhoId == campaignMembers[0].ContactId || 
+                              t.WhoId == campaignMembers[1].ContactId || 
+                              t.WhoId == campaignMembers[2].ContactId ||
+                              t.WhoId == campaignMembers[3].ContactId || 
+                              t.WhoId == campaignMembers[4].ContactId, 
                               'Task with WhoId found not in list of expected tasks: Interaction_Type__c = ' + t.WhoId);
-                System.assert(t.WhatId == campaign.Id, 'Task with WhatId found not in list of expected tasks: WhatId = ' + t.WhatId);
+                System.assert(t.WhatId == campaignToInviteTo.Id, 'Task with WhatId found not in list of expected tasks: WhatId = ' + t.WhatId);
                 System.assert(t.Status == 'Completed', 'Task with Status found not in list of expected tasks: Status = ' + t.Status);
 
                 if (t.WhoId == campaignMembersWithNoInteractionInfo[0].ContactId)
