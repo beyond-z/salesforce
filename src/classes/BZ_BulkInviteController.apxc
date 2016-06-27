@@ -19,7 +19,7 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
         }
         this.m_controller = controller;
         this.m_contactsToAdd = new Map<String, Contact>();
-        this.m_textMessageBody = '{!Contact.FirstName}, ready to join Braven? Go to: https://join.bebraven.org/signup/new or reply STOP to stop receiving text messages.';
+        this.m_textMessageBody = '{!Contact.FirstName}, ready to apply for Braven? Go to: https://join.bebraven.org/signup/new or reply STOP to stop receiving text messages.';
         this.m_contactsLoaded = false;
         this.m_textMessagesSent = false;
         this.m_resultMessage = '';
@@ -81,7 +81,28 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
             {
                 m_contactsToAdd.put(c.Email, c);
             }
-            List<Contact> existingContacts = [SELECT Id, Email, npsp__Primary_Affiliation__c, Undergrad_University__c  FROM Contact Where Email in :m_contactsToAdd.keySet()];
+            
+            // An existing contact will not be added.  Existing contacts
+            // are those not in an active recruitment campaign.
+            List<CampaignMember> campaignMembersToSkip = 
+                [SELECT ContactId FROM CampaignMember 
+                 WHERE CampaignId in 
+                     (SELECT Id FROM Campaign 
+                      WHERE IsActive = true AND 
+                      (
+                          Type = 'Leadership Coaches' OR 
+                          Type = 'Program Participants' OR 
+                          Type = 'Volunteer')
+                     )
+                ];
+            Set<Id> contactIdsOfCampaignMembersToSkip = new Set<Id>();
+            for (CampaignMember cm : campaignMembersToSkip){
+                contactIdsOfCampaignMembersToSkip.add(cm.ContactId);
+            }
+            List<Contact> existingContacts = [SELECT Id, Email, npsp__Primary_Affiliation__c, Undergrad_University__c  
+                                              FROM Contact 
+                                              WHERE Email in :m_contactsToAdd.keySet() AND
+                                              Id in :contactIdsOfCampaignMembersToSkip];
             if (existingContacts.size() > 0)
             {
                 for (Contact c : existingContacts)
