@@ -21,14 +21,20 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
     // change our minds.
     //List<CampaignMember> campaignMembersToCreateRegistrationCodeTasksFor = new List<CampaignMember>();
     
+    List<Task> tasksToUpdate = new List<Task>();
+    List<Contact> contactsToUpdate = new List<Contact>();
+    
     for (CampaignMember cm : Trigger.new)
     {
         if (Trigger.oldMap.get(cm.Id).Candidate_Status__c != cm.Candidate_Status__c)
         {
-            List<Task> tasksToUpdate = new List<Task>();
-            List<Contact> contactsToUpdate = new List<Contact>();
-            
             boolean closeReviewAppTask = false;
+            Campaign campaign = campaignMap.get(cm.CampaignId);
+            Contact contact = contactMap.get(cm.ContactId);
+
+            // Have the contact reflect the most recent candidate status change for reporting purposes.
+            contact.Candidate_Status__c = cm.Candidate_Status__c;
+            contactsToUpdate.add(contact);
             
             // If the candidate status is changed to Interview Requested, 
             // queue up a task with the Email Template To Send set to notify 
@@ -42,8 +48,6 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
             else if(cm.Candidate_Status__c == 'Accepted')
             {   
                 closeReviewAppTask = true;
-                
-                Campaign campaign = campaignMap.get(cm.CampaignId);
                 //System.debug('BZ_CandidateStatusChanged: campaign='+campaign);
         
                 /*if (campaign.Type == 'Program Participants'&& campaign.Request_Student_Id__c == true){
@@ -59,36 +63,27 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
                 closeReviewAppTask = true;
             }
             else if (cm.Candidate_Status__c == 'Confirmed') {
-                Campaign campaign = campaignMap.get(cm.CampaignId);
                 //System.debug('BZ_CandidateStatusChanged: campaign='+campaign);
-                Contact contact = contactMap.get(cm.ContactId);
                 //System.debug('BZ_CandidateStatusChanged: contact='+contact); 
         
                 if (campaign.Type == 'Leadership Coaches') {
                     contact.Volunteer_Information__c = 'Current LC';
-                    contactsToUpdate.add(contact);
                 } else if (campaign.Type == 'Program Participants'){
                     contact.Participant_Information__c = 'Participant';
-                    contactsToUpdate.add(contact);
                 } else if (campaign.Type == 'Volunteer'){
                     contact.Volunteer_Information__c = 'Temp Volunteer';
-                    contactsToUpdate.add(contact);
                 }
             }
             else if (cm.Candidate_Status__c == 'Opted Out') {
-                Campaign campaign = campaignMap.get(cm.CampaignId);
                 //System.debug('BZ_CandidateStatusChanged: campaign='+campaign);
-                Contact contact = contactMap.get(cm.ContactId);
                 //System.debug('BZ_CandidateStatusChanged: contact='+contact); 
         
                 // They may have been Confirmed, but later Opted Out (e.g. Dropped)
                 // So we set them back to being in the pipeline
                 if (campaign.Type == 'Leadership Coaches') {
                     contact.Volunteer_Information__c = 'LC Pipeline';
-                    contactsToUpdate.add(contact);
                 } else if (campaign.Type == 'Program Participants'){
                     contact.Participant_Information__c = 'Participant Pipeline';
-                    contactsToUpdate.add(contact);
                 }
             } 
             
@@ -108,10 +103,15 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
                     tasksToUpdate.add(reviewAppTask);
                 }
             }
-            
-            update contactsToUpdate;
-            update tasksToUpdate;
         }
+    }
+    
+    if (contactsToUpdate.size() > 0){
+        update contactsToUpdate;        
+    }
+
+    if (tasksToUpdate.size() > 0){
+        update tasksToUpdate;
     }
     
     if (campaignMembersToCreateInterviewTasksFor.size() > 0)

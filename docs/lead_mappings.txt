@@ -1,0 +1,19 @@
+# If you go to Setup -> Customize -> Leads -> Fields and scroll down to
+# "Map Lead Fields" then you can choose what lead fields get
+#  automatically propogated to the Contact when converted.
+
+# Here is what we've mapped:
+Anticipated Graduation
+Anticipated Graduation Semester
+BZ Region
+BZ User Id
+Came From to Visit Site
+Interested In
+Interested in opening BZ
+Keep Informed
+Preferred Email
+Preferred Phone
+Signup Date
+Started College
+University Name
+User Type

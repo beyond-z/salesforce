@@ -36,3 +36,10 @@ Tasks
 #####
 CAMPAIGN
     Check the Intro Email Template
+
+#####
+Process Builder
+#####
+MC Unsubscribe - Sets the Contact's Email Opt Out field when MC_Subscriber__c.MemberStatus is set to Unsubscribed.
+MC Bounce - Sets the Contact's Email Bounced Reason and Date when MC_Subscriber__c.MemberStatus is set to Cleaned (aka Bounced)
+BZ Copy Contact Info To Campaign Member - self explanatory

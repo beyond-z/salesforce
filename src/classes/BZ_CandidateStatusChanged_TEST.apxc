@@ -78,8 +78,9 @@ private class BZ_CandidateStatusChanged_TEST {
         cm.Candidate_Status__c = 'Confirmed';
         update cm;
     
-        Contact updatedContact = [SELECT Id, Volunteer_Information__c FROM Contact WHERE Id=:cm.ContactId];
+        Contact updatedContact = [SELECT Id, Volunteer_Information__c, Candidate_Status__c FROM Contact WHERE Id=:cm.ContactId];
         System.assert(updatedContact.Volunteer_Information__c == 'Current LC', 'When a Contact is Confirmed, their Volunteer Information should be set.');
+        System.assert(updatedContact.Candidate_Status__c == 'Confirmed', 'When a Contact is Confirmed, their Candidate Status should be set.');
     }
     
     static testMethod void validateAccepted() {
@@ -109,8 +110,9 @@ private class BZ_CandidateStatusChanged_TEST {
                                           Subject LIKE '%Map cohort%'];
         System.assert(resultingTasks.size()==1, 'Expected Task to be created to Map the cohort'); */
         
-        Contact updatedContact = [SELECT Id, Volunteer_Information__c FROM Contact WHERE Id=:cm.ContactId];
+        Contact updatedContact = [SELECT Id, Volunteer_Information__c, Candidate_Status__c FROM Contact WHERE Id=:cm.ContactId];
         System.assert(updatedContact.Volunteer_Information__c == 'LC Pipeline', 'When a Contact is Accepted, their Volunteer Information should not be changed.');
+        System.assert(updatedContact.Candidate_Status__c == 'Accepted', 'When a Contact is Accepted, their Candidate Status should be set.');
     }
     
     static testMethod void validateOptedOut() {
@@ -131,11 +133,12 @@ private class BZ_CandidateStatusChanged_TEST {
         
         // This fires the trigger we're testing.
         cm.Candidate_Status__c = 'Opted Out';
-        cm.Opted_Out_Reason__c = 'Dropped';
+        cm.Opted_Out_Reason__c = 'Dropped - During Program';
         update cm;
     
-        Contact updatedContact = [SELECT Id, Volunteer_Information__c FROM Contact WHERE Id=:cm.ContactId];
+        Contact updatedContact = [SELECT Id, Volunteer_Information__c, Candidate_Status__c FROM Contact WHERE Id=:cm.ContactId];
         System.assert(updatedContact.Volunteer_Information__c == 'LC Pipeline', 'When a Contact is Opted Out, their Volunteer Information should be set back to be in the pipeline.');
+        System.assert(updatedContact.Candidate_Status__c == 'Opted Out', 'When a Contact is Opted Out, their Candidate Status should be set.');
     }
     
     static testMethod void validateReviewAppTaskClosed() {
