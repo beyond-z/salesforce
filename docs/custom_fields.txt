@@ -66,6 +66,7 @@
 		Section Name In LMS # this is the one for the fellows. coaches are TAs in here, fellows are Students
 		Started College
 		Anticipated Graduation
+    Anticipated Graduation Semester
 		Eligible
 		GPA Circumstances
 		Other Commitments
@@ -109,11 +110,13 @@
 	CONTACT
 		Middle Name
 		Accepts Text 
+    Candidate Status
 		Undergrad University 
 		Grad University
 		Graduate Year
 		Grad Degree
 		Anticipated Graduation 
+    Anticipated Graduation Semester
 		BZ Region
 		BZ User Id 
 		Came From to Visit Site
@@ -154,6 +157,7 @@
 		User Type
 		University Name
 		Anticipated Graduation
+    Anticipated Graduation Semester
 		Started College
 		Interested in opening BZ
 		BZ Region

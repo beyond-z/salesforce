@@ -32,7 +32,7 @@ private class BZ_CloseRecruitmentController_TEST {
         cmOptedOutDropped.CampaignId=campaign.Id;
         cmOptedOutDropped.ContactId=contactOptedOutDropped.Id;
         cmOptedOutDropped.Candidate_Status__c = 'Opted Out';
-        cmOptedOutDropped.Opted_Out_Reason__c = 'Dropped';
+        cmOptedOutDropped.Opted_Out_Reason__c = 'Dropped - During Program';
         cmOptedOutDropped.Application_Status__c = 'Submitted';
         campaignMembersToInsert.add(cmOptedOutDropped);
         

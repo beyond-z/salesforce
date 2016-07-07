@@ -1,0 +1,8 @@
+# These are picklist values that can be shared by multiple picklist
+# fields.  Note: at the time of writing the only way to change an 
+# existing picklist field to use a global picklist for it's values is
+# to delete it and recreate it.  Too much trouble for now, so we still
+# have some shared lists duplicated in each field.
+
+Seasons - Used for Anticipated Graduation Semester (or other things in the future)
+Candidate Status - 
