@@ -84,6 +84,8 @@ private class BZ_BulkInviteController_TEST {
         Test.stopTest();
         
         System.assert(controller.getTextMessagesSent(), 'Text messages not sent!');
+        List<Contact> duplicateExsitingContacts = [SELECT Id FROM Contact WHERE Email = :existingEmail1];
+        System.assert(duplicateExsitingContacts.size() == 1, 'Expected 1 contact with email: ' + existingEmail1 + '.  Found: ' + duplicateExsitingContacts.size());
         Set<Id> contactIdsWithInitialConnectionSet = new Set<Id>();
         List<CampaignMember> campaignMembers = [SELECT Id, Name, FirstName, LastName, Email, Phone, ContactId, Undergrad_University__c FROM CampaignMember WHERE CampaignId = :campaignToInviteTo.Id];
         System.Assert(campaignMembers.size() == 5, 'Expected 5 CampaignMembers. Found '+campaignMembers.size());

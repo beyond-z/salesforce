@@ -44,6 +44,9 @@
     <apex:pageBlock rendered="{!contactsLoaded==true && textMessagesSent==false}">
         <strong>The following contacts have been added to the Campaign and have an INVITE email queued up.</strong>
         <br/>
+        <div style="padding-left: 20px;">
+           <em>* Note: Contacts already in Active recruitment campaigns were skipped.</em>
+        </div>
         <apex:pageBlockSection columns="1">
             <apex:pageBlockSectionItem >
                 <apex:outputText id="previewContactsToInvite" value="{!contactsToInviteDisplay}" escape="false">
