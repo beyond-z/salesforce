@@ -4,12 +4,12 @@ public abstract class BZ_ChangeCampaignMemberBase {
     protected ApexPages.StandardController m_controller {get; set;}
     protected CampaignMember m_campaignMember {get;set;}
     abstract String getDebugPrefix();
-    abstract Boolean shouldResetState(); // If reset, the CampaignMember will be as though they just signed up and have a partially completed app
     abstract Boolean cloneActivityHistory();
     abstract void startRun();
     abstract void finishRun();
     abstract void cleanupRun();
     abstract void validateNewCampaign(Campaign oldCampaign, Campaign newCampaign);
+    abstract void notifyBZServerOfChange(List<Id> contactIds, Id oldCampaignId, Id newCampaignId);
     abstract void adjustClone(CampaignMember clone);
     
     // Field to allow the user to lookup the new Campaign to copy the CampaignMember to
@@ -62,14 +62,9 @@ public abstract class BZ_ChangeCampaignMemberBase {
              validateNewCampaign(oldCampaign, newCampaign);
              
              clonedCm.CampaignId = newCampaignId;
-
-             // Call back into the bz.org database to 
-             // setup the user in a state where they have to resubmit the application
-             // for this new campaign and re-confirm their commitment.  
-             // e.g. clear the confirmed timeslot, open up the application again, set the campaign ID
-             // to this new campaign, etc
-             BZ_Notifications.changeCampaigns(new List<Id>{clonedCM.ContactId}, clonedCm.CampaignId, shouldResetState());
              
+             notifyBZServerOfChange(new List<Id>{clonedCM.ContactId}, oldCampaign.Id, newCampaignId);
+        
              System.Debug(getDebugPrefix() +'.run(): insert clonedCm = ' + clonedCm);
              insert clonedCm;
              

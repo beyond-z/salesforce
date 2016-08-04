@@ -10,10 +10,6 @@ public class BZ_CopyCampaignMemberController extends BZ_ChangeCampaignMemberBase
     private String getDebugPrefix(){
         return 'BZ_CopyCampaignMemberController';
     }
-    
-    private Boolean shouldResetState(){
-        return true;
-    }
 
     private void startRun(){
         IsCopyCampaignMemberRunning = true;
@@ -43,6 +39,11 @@ public class BZ_CopyCampaignMemberController extends BZ_ChangeCampaignMemberBase
                      'make the current campaign Inactive before running Copy');
         }
 
+    }
+    
+    private void notifyBZServerOfChange(List<Id> contactIds, Id oldCampaignId, Id newCampaignId){
+        // NOOP since we handle being in multiple campaigns.  The BZ server will pull the state from the
+        // Campaign itself.
     }
     
     private void adjustClone(CampaignMember clone){

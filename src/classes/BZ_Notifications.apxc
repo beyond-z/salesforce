@@ -68,7 +68,7 @@ global class BZ_Notifications {
      * valid values for operation: "move", "copy"
      */
     @future (callout=true) 
-    public static void changeCampaigns(List<Id> contactIds, Id newCampaignId, Boolean reset) {
+    public static void changeCampaigns(List<Id> contactIds, Id oldCampaignId, Id newCampaignId) {
         BZ_Settings__c settings = BZ_Settings__c.getInstance('bz'); 
         if(Test.isRunningTest()) return;
         if (contactIds.isEmpty()){
@@ -86,7 +86,7 @@ global class BZ_Notifications {
         }
         contactIdsString = contactIdsString.substring(1);
         System.Debug('BZ_Notifications.changeCampaigns(): calling change_campaigns with contactIds = ' + contactIdsString);
-        request.setEndpoint(base_url + '/salesforce/change_campaigns?magic_token='+magic_token+'&contactIds=' + contactIdsString +'&campaignId=' + newCampaignId + '&reset=' + reset); 
+        request.setEndpoint(base_url + '/salesforce/change_campaigns?magic_token='+magic_token+'&contactIds=' + contactIdsString +'&oldCampaignId=' + oldCampaignId + '&newCampaignId=' + newCampaignId); 
         request.setMethod('GET'); 
         HttpResponse response = http.send(request); 
         String responseBody = response.getBody();
