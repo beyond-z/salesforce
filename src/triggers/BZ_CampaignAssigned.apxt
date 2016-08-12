@@ -50,30 +50,39 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
         
         boolean isApplicableCampaign = false;
         boolean hasSignedUpOnWebsite = (contact.BZ_User_Id__c != null && contact.Signup_Date__c != null);
-        boolean isCampaignSnapshot = (campaign.IsActive == false && campaign.Status == 'Completed');
-        System.debug('BZ_CampaignAssigned: isCampaignSnapshot = '+isCampaignSnapshot +', campaign.IsActive='+campaign.IsActive+', campaign.Status='+campaign.Status);
+        boolean hasCourseCompleted = (campaign.IsActive == false && campaign.Status == 'Completed');
+        System.debug('BZ_CampaignAssigned: hasCourseCompleted = '+hasCourseCompleted +', campaign.IsActive='+campaign.IsActive+', campaign.Status='+campaign.Status);
         System.debug('BZ_CampaignAssigned: cm.Candidate_Status__c = '+cm.Candidate_Status__c +', cm='+cm);
         if (campaign.Type == 'Leadership Coaches') {
             // Note: this is also set in a Workflow when the Lead is converted, 
             // but they may signup as one type but then we determine that they are really 
             // a different type so we still want to run this.
-            if (isCampaignSnapshot && cm.Candidate_Status__c == 'Confirmed'){
+            if (hasCourseCompleted && cm.Candidate_Status__c == 'Confirmed'){
                 contact.Volunteer_Information__c = 'Former LC';
             } else {
                 contact.Volunteer_Information__c = 'LC Pipeline';
             }
+            if (campaign.IsActive){ // If InActive, they may in other Active campaigns, so NOOP
+                contact.Is_In_Active_Recruitment_Campaign__c = true;
+            }
             isApplicableCampaign = true;
         } else if (campaign.Type == 'Program Participants'){
             // Ditto on above comment
-            if (isCampaignSnapshot && cm.Candidate_Status__c == 'Confirmed'){
+            if (hasCourseCompleted && cm.Candidate_Status__c == 'Confirmed'){
                 contact.Participant_Information__c = 'Program Alum';
             } else {
                 contact.Participant_Information__c = 'Participant Pipeline';
+            }
+            if (campaign.IsActive){ // If InActive, they may in other Active campaigns, so NOOP
+                contact.Is_In_Active_Recruitment_Campaign__c = campaign.IsActive;
             }
             isApplicableCampaign = true;
         } else if (campaign.Type == 'Volunteer'){
             // Ditto on above comment
             contact.Volunteer_Information__c = 'Temp Volunteer';
+            if (campaign.IsActive){ // If InActive, they may in other Active campaigns, so NOOP
+                contact.Is_In_Active_Recruitment_Campaign__c = true;
+            }
             isApplicableCampaign = true;
         } else if (campaign.Type == 'Partners')
         {

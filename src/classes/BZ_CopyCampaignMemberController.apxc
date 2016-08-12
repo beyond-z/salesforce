@@ -1,4 +1,4 @@
-public class BZ_CopyCampaignMemberController extends BZ_ChangeCampaignMemberBase {
+c class BZ_CopyCampaignMemberController extends BZ_ChangeCampaignMemberBase {
     
     // This is true when the Copy Campaign Member logic is running
     public static Boolean IsCopyCampaignMemberRunning {get; set;}

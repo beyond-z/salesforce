@@ -1,0 +1,159 @@
+// Here is how I get a list of duplicate contacts:
+List<AggregateResult> dupeContactResults = [SELECT Email, count(Id) 
+ FROM Contact GROUP BY Email 
+ HAVING count(Id)>1];
+System.debug('Found ' + dupeContactResults.size() + ' duplicate emails');
+Set<String> emails = new Set<String>();
+for(AggregateResult aggres : dupeContactResults)
+{
+ System.debug(aggres);
+ emails.add((String)aggres.get('Email'));
+}
+String emailDisplay = '';
+for (String email : emails){
+ emailDisplay += (email + '\n');
+}
+System.debug(emailDisplay);
+
+// #######################################
+//Here is the code I'm using to merge them.  It's very specific to the actual scenario.  E.g. it copies Contact fields blindly
+// from secondary to primary contact b/c that was the situation with the duplicate SJSU people.  Revist that before doing this
+// blindly for a new campaign
+// #######################################
+
+// TODO: set these to the IDs of the duplicate contacts and the primary campaign we want
+// to merge them into
+Set<Id> contactIdsToDedupe = new Set<Id>{'todoId1', 'todoId2'};    
+Id primaryCampaignId = Id.valueOf('todoSetToPrimaryCampaignId');
+String contactOwnerId = 'todoSetToContactOwner';
+
+// IMPORTANT NOTE: all the code below assumes that only the primary contact is
+// in the campaignId used to determined the primary contacts.  if two duplicate contacts
+// are both in the primary campaign, this will fail.
+
+Map<Id, CampaignMember> primaryCampaignMembers = new Map<Id, CampaignMember>([SELECT Id, ContactId, CampaignId, Contact.FirstName, Contact.LastName, Contact.Email
+                                                 FROM CampaignMember WHERE CampaignId = :primaryCampaignId AND ContactId in :contactIdsToDedupe]);
+Map<Id, CampaignMember> secondaryCampaignMembers = new Map<Id, CampaignMember>([SELECT Id, ContactId, CampaignId, Contact.FirstName, Contact.LastName, Contact.Email
+                                                    FROM CampaignMember WHERE CampaignId != :primaryCampaignId AND ContactId in :contactIdsToDedupe]);
+Map<Id, Contact> contactsToDedupe = new Map<Id, Contact>([SELECT Id, OwnerId, FirstName, LastName, Email, Phone, BZ_Region__c, BZ_Geographical_Region__c, Initial_Connection__c, Anticipated_Graduation__c, npsp__Primary_Affiliation__c 
+                                     FROM Contact WHERE Id in :contactIdsToDedupe]);
+Map<String, Contact> emailToPrimaryContact = new Map<String, Contact>();
+for (CampaignMember cm : primaryCampaignMembers.values()){
+    emailToPrimaryContact.put(cm.Contact.Email, contactsToDedupe.get(cm.ContactId));
+}
+Map<String, Contact> emailToSecondaryContact = new Map<String, Contact>();
+for (CampaignMember cm : secondaryCampaignMembers.values()){
+    emailToSecondaryContact.put(cm.Contact.Email, contactsToDedupe.get(cm.ContactId));
+}
+
+List<Task> tasksToDedupe = [SELECT Id, WhoId, WhatId
+                            FROM Task WHERE WhoId in :contactIdsToDedupe];
+System.debug('populating contactIdToTasks');
+Map<Id, List<Task>> contactIdToTasks = new Map<Id, List<Task>>();
+for (Task t : tasksToDedupe){
+    List<Task> tasksForContactId = contactIdToTasks.get(t.WhoId);
+    if (tasksForContactId == null){
+        contactIdToTasks.put(t.WhoId, new List<Task>{t});
+    }
+    else {
+        tasksForContactId.add(t);
+    }
+}
+System.debug('DONE populating contactIdToTasks');
+
+System.debug('populating emailToContacts');
+Map<String, List<Contact>> emailToContacts = new Map<String, List<Contact>>();
+for (Contact c : contactsToDedupe.values()){
+    List<Contact> contactsForEmail = emailToContacts.get(c.Email);
+    if (contactsForEmail == null)
+    {
+        emailToContacts.put(c.Email, new List<Contact>{c});
+    }
+    else
+    {
+        contactsForEmail.add(c); 
+    }
+}
+System.debug('DONE populating emailToContacts');
+
+List<CampaignMember> campaignMembersToInsert = new List<CampaignMember>();
+for (CampaignMember cm : secondaryCampaignMembers.values()){
+    System.debug('Processing CampaignMember: ' + cm);
+    Contact primaryContact = emailToPrimaryContact.get(cm.Contact.Email);
+    Contact secondaryContact = emailToSecondaryContact.get(cm.Contact.Email);
+    
+    if (primaryContact !=null && secondaryContact != null){
+        System.debug('Found primaryContact: ' + primaryContact + ' for secondary CampaignMember: ' + cm);
+        System.debug('Found secondaryContact: ' + secondaryContact + ' for secondary CampaignMember: ' + cm);
+        System.debug('Cloning CampaignMember');
+        BZ_ClonePlusController cloneController = new BZ_ClonePlusController(cm.Id, new Set<String>{});
+        CampaignMember clonedCm = (CampaignMember)cloneController.getParentClone();
+        System.debug('Changing CampaignMember.ContactId from ' + clonedCm.ContactId + ' to ' + primaryContact.Id);
+        clonedCm.ContactId = primaryContact.Id;
+        campaignMembersToInsert.add(clonedCm);
+    }
+    else {
+        if (primaryContact == null){
+            System.debug('SKIPPING ' + cm + ' because primaryContact = null');
+        }
+        if (secondaryContact == null){
+            System.debug('SKIPPING ' + cm + ' because secondaryContact = null');
+        }
+    }
+}
+    
+List<Contact> contactsToDelete = new List<Contact>();
+List<Contact> contactsToUpdate = new List<Contact>();
+List<Task> tasksToUpdate = new List<Task>();
+
+for (CampaignMember cm : primaryCampaignMembers.values()){
+    Contact primaryContact = emailToPrimaryContact.get(cm.Contact.Email);
+    Contact secondaryContact = emailToSecondaryContact.get(cm.Contact.Email);
+    
+    if (primaryContact !=null && secondaryContact != null){
+        System.debug('Copying Contact fields');
+        primaryContact.OwnerId = contactOwnerId;
+        primaryContact.BZ_Region__c = secondaryContact.BZ_Region__c;
+        primaryContact.BZ_Geographical_Region__c = secondaryContact.BZ_Geographical_Region__c;
+        // Fro RUN set this, for SJSU don't
+        primaryContact.npsp__Primary_Affiliation__c = secondaryContact.npsp__Primary_Affiliation__c;
+        // For SJSU, copy this.  For RUN, don't
+        //primaryContact.Initial_Connection__c = secondaryContact.Initial_Connection__c;
+        primaryContact.Anticipated_Graduation__c = secondaryContact.Anticipated_Graduation__c;
+        contactsToUpdate.add(primaryContact);
+        System.debug('Copied contact fields into primaryContact: ' + primaryContact);
+                                    
+        List<Task> tasksToReparent = contactIdToTasks.get(secondaryContact.Id);
+        if (tasksToReparent != null){
+            System.debug('Reparenting tasks');
+            for (Task t : tasksToReparent){
+                System.debug('Processing task: ' + t);
+                t.WhoId = primaryContact.Id;
+                tasksToUpdate.add(t);
+                System.debug('Reparented task: ' + t);
+            }    
+        }
+        else {
+            System.debug('SKIPPING: no tasks to reparent for ' + secondaryContact);
+        }
+        contactsToDelete.add(secondaryContact);
+    }
+    else {
+        if (primaryContact == null){
+            System.debug('SKIPPING ' + cm + ' because primaryContact = null');
+        }
+        if (secondaryContact == null){
+            System.debug('SKIPPING ' + cm + ' because secondaryContact = null');
+        }
+    }
+}
+
+System.debug('tasksToUpdate = ' + tasksToUpdate);
+System.debug('campaignMembersToInsert = ' + campaignMembersToInsert);
+System.debug('contactsToUpdate = ' + contactsToUpdate);
+System.debug('contactsToDelete = ' + contactsToDelete);
+
+update tasksToUpdate;
+update contactsToUpdate;
+insert campaignMembersToInsert;
+delete contactsToDelete;
