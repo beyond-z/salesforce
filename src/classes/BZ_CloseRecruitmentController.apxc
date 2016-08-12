@@ -62,7 +62,12 @@ public class BZ_CloseRecruitmentController {
             System.Debug('BZ_CloseRecruitmentController.run(): getParentClone()');
             m_campaignSnapshot = (Campaign)cloneController.getParentClone(); 
             m_campaignSnapshot.IsActive = false;
-            m_campaignSnapshot.Status = 'Completed'; // This allows the Campaign Assigned trigger to update the alumni status
+            // Completed means that the course has completed.  Inactive means recruitment is not active.
+            // The code below is commented out because the snapshot is now manually marked
+            // Completed when a course finishes in order to mark them as Alumni so that 
+            // the multiple campaign/application code can rely on Completed to mean that they
+            // can't access the Portal anymore.
+            //m_campaignSnapshot.Status = 'Completed'; // This allows the Campaign Assigned trigger to update the alumni status
             System.Debug('BZ_CloseRecruitmentController.run(): insert m_campaignSnapshot = '+m_campaignSnapshot);
             insert m_campaignSnapshot; // Need to do this before inserting children so that it gets an ID
             System.Debug('BZ_CloseRecruitmentController.run(): done inserting m_campaignSnapshot = '+m_campaignSnapshot);
