@@ -125,18 +125,6 @@ private class BZ_CloseRecruitmentController_TEST {
         System.Assert(foundWaitlistReinviteTask, 'Task to reinvite Waitlisted member to apply not found in campaign');
         System.Assert(foundNoTimeReinviteTask, 'Task to reinvite Opted Out No Time member to apply not found in campaign');
         
-        Contact updatedConfirmedContact = [SELECT Id, Volunteer_Information__c FROM Contact WHERE Id = :contactConfirmed.Id];
-        System.Assert(updatedConfirmedContact.Volunteer_Information__c == 'Former LC', 'When Close Recruitment runs, Confirmed members should become alumni');
-        
-        Contact updatedWaitlistedContact = [SELECT Id, Volunteer_Information__c FROM Contact WHERE Id = :contactWaitlist.Id];
-        System.Assert(updatedWaitlistedContact.Volunteer_Information__c == 'LC Pipeline', 'When Close Recruitment runs, non-Confirmed members should still be in the pipeline.');
-        
-        Contact updatedDroppedContact = [SELECT Id, Volunteer_Information__c FROM Contact WHERE Id = :contactOptedOutDropped.Id];
-        System.Assert(updatedDroppedContact.Volunteer_Information__c == 'LC Pipeline', 'When Close Recruitment runs, non-Confirmed members should still be in the pipeline.');
-
-        Contact updatedNoTimeContact = [SELECT Id, Volunteer_Information__c FROM Contact WHERE Id = :contactOptedOutNoTime.Id];
-        System.Assert(updatedNoTimeContact.Volunteer_Information__c == 'LC Pipeline', 'When Close Recruitment runs, non-Confirmed members should still be in the pipeline.');
-        
         ////////////
         // TODO: validate that a snapshot campaign was taken
         ////////////
