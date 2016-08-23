@@ -29,7 +29,9 @@ public abstract class BZ_CsvBulkInviteUploader extends BZ_CsvContactsUploader {
                     if (!String.isEmpty(rowValues[4].trim()) && !String.isEmpty(rowValues[5].trim())){
                         String interactionType = rowValues[4].trim();
                         String interactionDescription = rowValues[5].trim();
-                        m_emailsToInteractionTypeMap.put(email, new String[]{interactionType, interactionDescription});
+                        // We use toLowerCase b/c Salesforce stores all emails in lowercase and
+                        // we don't want lookups to fail if mixed case emails are in the file
+                        m_emailsToInteractionTypeMap.put(email.toLowerCase(), new String[]{interactionType, interactionDescription});
                         return true;
                     }
                     else {
@@ -52,7 +54,8 @@ public abstract class BZ_CsvBulkInviteUploader extends BZ_CsvContactsUploader {
     }
 
     /*
-     * Returns a map of email addresses to an array of InteractionType and InteractionDescriptions.
+     * Returns a map of email addresses (all values are lowercase) to an array of 
+     * InteractionType and InteractionDescriptions.
      */
     public Map<String, String[]> getInteractionInfoMap(){
         return m_emailsToInteractionTypeMap;
