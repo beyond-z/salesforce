@@ -62,10 +62,13 @@ private class BZ_BulkInviteController_TEST {
         String interactionDescription = 'Description of phone call';
         String noInteractionDescription = 'Added using Bulk Invite with no InteractionType information';
         BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
+        
+        // Note: we do a toUpperCase on the existing email b/c we want to make sure that bulk invite
+        // doesn't create a duplicate contact if the case changes since SF stores emails in all lower.
         String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
             'Brian,xTest1,brian.test1@example.com,5554443333,Phone Call,'+interactionDescription+'\n'+
             'Brian,xTest2,brian.test2@example.com,,Phone Call,'+interactionDescription+'\n'+
-            'Brian,xTestExisting1,'+existingEmail1+',5554443334,Phone Call,'+interactionDescription+'\n'+
+            'Brian,xTestExisting1,'+existingEmail1.toUpperCase()+',5554443334,Phone Call,'+interactionDescription+'\n'+
             'Brian,xTestNoInteractionTypeInfo1,'+noInteractionEmail+',5554443335,,\n'+
             'Brian,xTestExistingInactiveCamapign1,'+existingEmailInactiveCampaign1+',5554443334,Phone Call,'+interactionDescription+'\n'+
             'Brian,xTestExistingActiveCampaign1,'+existingEmailActiveCampaign1+',5554443334,Phone Call,'+interactionDescription+'\n';
@@ -136,8 +139,8 @@ private class BZ_BulkInviteController_TEST {
                 }
                 else
                 {
-                    System.assert(t.Interaction_Type__c == 'Phone Call', 'Task with Interaction_Type__c found not in list of expected tasks: Interaction_Type__c = ' + t.Interaction_Type__c);
-                    System.assert(t.Description == interactionDescription, 'Task with Description found not in list of expected tasks: Description = ' + t.Description);
+                    System.assert(t.Interaction_Type__c == 'Phone Call', 'Task with Interaction_Type__c found not in list of expected tasks: Interaction_Type__c = ' + t.Interaction_Type__c + ' t = ' + t);
+                    System.assert(t.Description == interactionDescription, 'Task with Description found not in list of expected tasks: Description = ' + t.Description + ' t = ' + t);
                 }
             }
             else if (t.Subject.startsWith('Text Message:')){
