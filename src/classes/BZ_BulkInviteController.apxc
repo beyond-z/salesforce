@@ -19,7 +19,7 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
         }
         this.m_controller = controller;
         this.m_contactsToBulkInvite = new List<Contact>();
-        this.m_textMessageBody = '{!Contact.FirstName}, ready to apply to Braven? Go to: https://join.bebraven.org/signup/new or reply STOP to stop receiving text messages.';
+        this.m_textMessageBody = '{!Contact.FirstName}, ready to apply to Braven? Go to: https://bebraven.org/apply-now or reply STOP to stop receiving text messages.';
         this.m_contactsLoaded = false;
         this.m_textMessagesSent = false;
         this.m_resultMessage = '';
