@@ -63,9 +63,9 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
                 closeReviewAppTask = true;
             }
             else if (cm.Candidate_Status__c == 'Confirmed') {
-                //System.debug('BZ_CandidateStatusChanged: campaign='+campaign);
-                //System.debug('BZ_CandidateStatusChanged: contact='+contact); 
-        
+                System.debug('BZ_CandidateStatusChanged: campaign='+campaign);
+                System.debug('BZ_CandidateStatusChanged: contact='+contact); 
+
                 if (campaign.Type == 'Leadership Coaches') {
                     contact.Volunteer_Information__c = 'Current LC';
                 } else if (campaign.Type == 'Program Participants'){
@@ -75,9 +75,9 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
                 }
             }
             else if (cm.Candidate_Status__c == 'Opted Out') {
-                //System.debug('BZ_CandidateStatusChanged: campaign='+campaign);
-                //System.debug('BZ_CandidateStatusChanged: contact='+contact); 
-        
+                System.debug('BZ_CandidateStatusChanged: campaign='+campaign);
+                System.debug('BZ_CandidateStatusChanged: contact='+contact); 
+                closeReviewAppTask = true;
                 // They may have been Confirmed, but later Opted Out (e.g. Dropped)
                 // So we set them back to being in the pipeline
                 if (campaign.Type == 'Leadership Coaches') {
