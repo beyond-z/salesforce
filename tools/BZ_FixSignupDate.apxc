@@ -1,0 +1,43 @@
+// This code finds all people with a Signup Date set on the Contact but not CampaignMember.
+// It then fixes up the Campaign Members to have the correct Signup Date.
+// This happened b/c the Process Builder flow had criteria preventing it from copying the values
+// in certain scenarios.  We fixed that flow to always run and this cleans up those it happened for.
+
+Map<Id, Campaign> campaignIds = new Map<Id, Campaign>([SELECT Id FROM Campaign WHERE Type = 'Program Participants' OR Type = 'Leadership Coaches' OR Type = 'Volunteer']);
+System.debug('campaigns count = ' + campaignIds.size());
+
+List<CampaignMember> campaignMembers = [SELECT Id, ContactId, Name, Email, Candidate_Status__c 
+                                        FROM CampaignMember WHERE
+                                        Signup_Date__c = null AND
+                                        CampaignId in :campaignIds.keySet()];
+System.debug('campaign member count = ' + campaignMembers.size());
+
+Map<Id, CampaignMember> contactToCampaignMember = new Map<Id, CampaignMember>();
+Set<Id> contactIds = new Set<Id>();
+for (CampaignMember cm : campaignMembers){
+    contactIds.add(cm.ContactId);
+    contactToCampaignMember.put(cm.ContactId, cm);
+}
+Map<Id, Contact> contacts = new Map<Id, Contact>([SELECT Id, Name, Email, Signup_Date__c 
+                                                  FROM Contact WHERE Signup_Date__c <> null AND
+                                                                       Id in :contactIds]
+                                                 );
+
+Map<Id, Contact> contactsOk = new Map<Id, Contact>([SELECT Id, Name, Email, Signup_Date__c 
+                                                  FROM Contact WHERE Signup_Date__c = null AND
+                                                                       Id in :contactIds]
+                                                 );
+
+System.debug('contact count = ' + contacts.size());
+System.debug('contacts OK count = ' + contactsOk.size());
+
+List<CampaignMember> campaignMembersToUpdate = new List<CampaignMember>();
+for (Contact c : contacts.values()){
+    System.debug('Fixing Signup Date for: c = ' + c);
+    CampaignMember cm = contactToCampaignMember.get(c.Id);
+    cm.Signup_Date__c = c.Signup_Date__c;
+    campaignMembersToUpdate.add(cm);
+    System.debug('New Signup Date set on cm = ' + cm);
+}
+
+update campaignMembersToUpdate;
