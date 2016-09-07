@@ -1,0 +1,53 @@
+// This scrupt fixes up Contacts whose Contact.Candidate_Status__c doens't match their
+// CampaignMember.Candidate_Status__c.
+// It was run in 2 passes.  First with only the active campaigns
+
+
+// TODO: uncomment this and run for first pass
+// Bay Fall 2016 LCs: 701o0000000AKCJ
+// Newark Fall 2016 LCs: 701o0000000Aau3
+// Newark Fall 2016 Participants: 701o0000000ApU4
+// San Jose Fall 2016 Participants: 701o0000000AK6p
+// Bay Area Spring 2016 non-LC volunteers: 701o0000000NUkw
+// Newark Spring 2016 non-LC volunteers: 701o0000000mg1n
+//Set<Id> activeCampaigns = new Set<Id>{'701o0000000AKCJ', '701o0000000Aau3', '701o0000000ApU4', '701o0000000AK6p', '701o0000000NUkw', '701o0000000mg1n'};
+//Map<Id, Campaign> campaignIds = new Map<Id, Campaign>([SELECT Id FROM Campaign WHERE Id in :activeCampaigns]);
+
+// TODO: uncomment this and run for second pass
+//Map<Id, Campaign> campaignIds = new Map<Id, Campaign>([SELECT Id FROM Campaign WHERE Type = 'Program Participants' OR Type = 'Leadership Coaches' OR Type = 'Volunteer']);
+System.debug('campaigns count = ' + campaignIds.size());
+
+List<CampaignMember> campaignMembers = [SELECT Id, ContactId, Name, Email, Candidate_Status__c 
+                                        FROM CampaignMember WHERE
+                                        Candidate_Status__c <> '' AND
+                                        CampaignId in :campaignIds.keySet()];
+System.debug('campaign member count = ' + campaignMembers.size());
+
+Map<Id, CampaignMember> contactToCampaignMember = new Map<Id, CampaignMember>();
+Set<Id> contactIds = new Set<Id>();
+for (CampaignMember cm : campaignMembers){
+    contactIds.add(cm.ContactId);
+    contactToCampaignMember.put(cm.ContactId, cm);
+}
+Map<Id, Contact> contacts = new Map<Id, Contact>([SELECT Id, Name, Email, Candidate_Status__c 
+                                                  FROM Contact WHERE Candidate_Status__c = '' AND
+                                                                       Id in :contactIds]
+                                                 );
+
+Map<Id, Contact> contactsOk = new Map<Id, Contact>([SELECT Id, Name, Email, Candidate_Status__c 
+                                                  FROM Contact WHERE Candidate_Status__c <> '' AND
+                                                                       Id in :contactIds]
+                                                 );
+
+System.debug('contact count = ' + contacts.size());
+System.debug('contacts OK count = ' + contactsOk.size());
+
+for (Contact c : contacts.values()){
+    System.debug('Fixing Candidate Status for: c = ' + c);
+    c.Candidate_Status__c = contactToCampaignMember.get(c.Id).Candidate_Status__c;
+    System.debug('New Candidate Status = ' + c.Candidate_Status__c);
+}
+
+update contacts.values();
+
+
