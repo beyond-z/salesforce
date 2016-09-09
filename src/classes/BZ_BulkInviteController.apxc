@@ -119,11 +119,11 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
                 for (Contact c : existingContactsInActiveRecruitmentCampaign)
                 {
                     System.debug('BZ_BulkInviteController.finishRead(): removing '+c+' from contactsToAdd.  Already IN active recruitment campaign.');
-                    Contact updatedContact = contactsToAdd.get(c.Email);
+                    Contact updatedContact = contactsToAdd.get(c.Email.toLowerCase());
                     c.FirstName = updatedContact.FirstName;
                     c.LastName = updatedContact.LastName;
                     c.Phone = updatedContact.Phone;
-                    contactsToAdd.remove(c.Email);
+                    contactsToAdd.remove(c.Email.toLowerCase());
                 }
             }
             
@@ -132,11 +132,11 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
                 for (Contact c : existingContactsNotInActiveRecruitmentCampaign)
                 {
                     System.debug('BZ_BulkInviteController.finishRead(): removing '+c+' from contactsToAdd.  NOT in active recruitment campaign.');
-                    Contact updatedContact = contactsToAdd.get(c.Email);
+                    Contact updatedContact = contactsToAdd.get(c.Email.toLowerCase());
                     c.FirstName = updatedContact.FirstName;
                     c.LastName = updatedContact.LastName;
                     c.Phone = updatedContact.Phone;
-                    contactsToAdd.remove(c.Email);
+                    contactsToAdd.remove(c.Email.toLowerCase());
                 }
             }
 
@@ -183,7 +183,7 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
                 List<Task> interactionTasksToAdd = BZ_TaskFactory.createTasks(cms, 'Interaction: How We Met {0}');
                 for (Task t : interactionTasksToAdd){
                     Contact c = contactsToCreateInteractionInfoFor.get(t.WhoId);
-                    String[] interactionInfo = interactionInfoMap.get(c.Email);
+                    String[] interactionInfo = interactionInfoMap.get(c.Email.toLowerCase());
                     if (interactionInfo != null){
                         t.Interaction_Type__c = interactionInfo[0];
                         t.Description = interactionInfo[1];

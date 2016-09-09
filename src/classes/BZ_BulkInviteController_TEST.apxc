@@ -67,7 +67,7 @@ private class BZ_BulkInviteController_TEST {
         // doesn't create a duplicate contact if the case changes since SF stores emails in all lower.
         String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
             'Brian,xTest1,brian.test1@example.com,5554443333,Phone Call,'+interactionDescription+'\n'+
-            'Brian,xTest2,brian.test2@example.com,,Phone Call,'+interactionDescription+'\n'+
+            'Brian,xTest2,Brian.Test2@example.com,,Phone Call,'+interactionDescription+'\n'+
             'Brian,xTestExisting1,'+existingEmail1.toUpperCase()+',5554443334,Phone Call,'+interactionDescription+'\n'+
             'Brian,xTestNoInteractionTypeInfo1,'+noInteractionEmail+',5554443335,,\n'+
             'Brian,xTestExistingInactiveCamapign1,'+existingEmailInactiveCampaign1+',5554443334,Phone Call,'+interactionDescription+'\n'+
