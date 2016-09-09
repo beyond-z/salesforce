@@ -28,18 +28,30 @@ trigger BZ_CampaignCompleted on Campaign (before update) {
                 }
             }
             
-            List<Contact> contactsToUpdate = [SELECT Id, Volunteer_Information__c, Participant_Information__c
+            List<Contact> contactsToUpdate = [SELECT Id, Email, Volunteer_Information__c, Participant_Information__c
                                              FROM Contact WHERE Id in :contactIdsToUpdate];
+            String urlEncodedEmails = '';
             if (currentCampaign.Type == 'Leadership Coaches'){
                 for (Contact c : contactsToUpdate){
                     c.Volunteer_Information__c = 'Former LC';
+                    urlEncodedEmails += System.EncodingUtil.urlEncode(c.Email, 'UTF-8') + ',';
                 }
             } else if (currentCampaign.Type == 'Program Participants'){
                 for (Contact c : contactsToUpdate){
                     c.Participant_Information__c = 'Program Alum';
+                    urlEncodedEmails += System.EncodingUtil.urlEncode(c.Email, 'UTF-8') + ',';
                 }
             }
             update contactsToUpdate;
+            
+            // Now that these people are Alumni, turn of their email notifications on Braven
+            // Help so that they don't mark us as spam when a new semester launches and people
+            // start asking tactical questions about the course
+            if (contactsToUpdate.size() > 0){
+                urlEncodedEmails = urlEncodedEmails.removeEnd(',');
+                System.debug('BZ_CampaignCompleted: disabling email notifications on Braven Help for: ' + urlEncodedEmails);
+                BZ_Notifications.disableOSQAEmailNotifications(urlEncodedEmails);
+            }
         }
     }
 }

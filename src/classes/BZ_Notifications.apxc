@@ -38,6 +38,29 @@ global class BZ_Notifications {
     }
     
     /**
+     * The lists are a comma-separated set of email addresses (URL encoded)
+     * of people who should have their email notifications turned off on Braven Help
+     */
+    @future (callout=true) 
+    public static void disableOSQAEmailNotifications(String urlEncodedEmails) { 
+        System.debug('disableOSQAEmailNotifications: begin.');
+        BZ_Settings__c settings = BZ_Settings__c.getInstance('bz');
+        if(Test.isRunningTest()) {
+            return;
+        } else {
+            String base_url = settings.base_url__c; 
+            String magic_token = settings.magic_token__c; 
+            Http http = new Http(); 
+            HttpRequest request = new HttpRequest();
+            request.setEndpoint(base_url + '/salesforce/disable_osqa_notification_emails?magic_token='+magic_token+'&emails=' + urlEncodedEmails);
+            request.setMethod('GET');
+            System.debug('BZ_Notifications.disableOSQAEmailNotifications: calling ' + request);
+            HttpResponse response = http.send(request);
+            System.debug('BZ_Notifications.disableOSQAEmailNotifications returned: ' + response.getStatusCode() + ': ' + response.getStatus() + '\n' + response.getBody());
+        }
+    } 
+    
+    /**
      * The format of changes is old:new,old:new,etc. 
      */
     @future (callout=true) 
