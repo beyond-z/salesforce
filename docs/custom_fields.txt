@@ -5,6 +5,7 @@
 	ACTIVITY
 		Email Template To Send
     CampaignMember Id
+    Interation Type
 
 	CAMPAIGN
 		Intro Email Template
@@ -148,6 +149,8 @@
 		Participant Information
 		Volunteer Information
     Student Registration Code
+    Last Interaction Date
+    Cultivation Level
 		
 	LEAD
 		Account Activated?

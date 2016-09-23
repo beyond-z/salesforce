@@ -1,6 +1,6 @@
 @isTest
 private class BZ_TaskClosed_TEST {
-    static testMethod void validateHaveMetUpdated() {
+    static testMethod void validateCultivationLevelAndInteractionDate() {
 
         User sender = [SELECT Id FROM User Where Id = :System.UserInfo.getUserId()];
 
@@ -9,17 +9,27 @@ private class BZ_TaskClosed_TEST {
 
         Task t1 = new Task(Subject='Test Interaction Task1', Status='Completed', OwnerId=sender.Id, WhoId=contact.Id);
         insert t1;
-
-        t1.Interaction_Type__c = 'Text dialogue';
-        update t1;
-
-        Contact updatedContact = [SELECT Id, Name, Have_Met__c FROM Contact WHERE Id = :contact.Id];
-        System.assert(updatedContact.Have_Met__c == false, 'Text dialogue interaction doesnt mean weve met them');
-
+        
         t1.Interaction_Type__c = 'Attended BZ Function';
         update t1;
 
-        updatedContact = [SELECT Id, Name, Have_Met__c FROM Contact WHERE Id = :contact.Id];
-        System.assert(updatedContact.Have_Met__c == true, 'Have Met? should have been set to true.');
-    }
+        Contact updatedContact = [SELECT Id, Name, Cultivation_Level__c, Last_Interaction_Date__c FROM Contact WHERE Id = :contact.Id];
+        System.assert(String.isEmpty(updatedContact.Cultivation_Level__c), 'Attended BZ Function interaction means we havent Reached Out or Met them.  Here is the value we found: ' + updatedContact.Cultivation_Level__c);
+        System.assert(updatedContact.Last_Interaction_Date__c > DateTime.now().addMinutes(-20), 'The Last_Interaction_Date__c was not set to a recent time.  It is: '+updatedContact.Last_Interaction_Date__c+' which is less than '+DateTime.now().addMinutes(-20));
+
+        t1.Interaction_Type__c = 'Text Message';
+        update t1;
+
+        updatedContact = [SELECT Id, Name, Cultivation_Level__c, Last_Interaction_Date__c FROM Contact WHERE Id = :contact.Id];
+        System.assert(updatedContact.Cultivation_Level__c == 'Reached Out', 'Text Message interaction means weve Reached Out, not: ' + updatedContact.Cultivation_Level__c);
+        System.assert(updatedContact.Last_Interaction_Date__c > DateTime.now().addMinutes(-20), 'The Last_Interaction_Date__c was not set to a recent time.  It is: '+updatedContact.Last_Interaction_Date__c+' which is less than '+DateTime.now().addMinutes(-20));
+
+        t1.Interaction_Type__c = '1:1 In-Person Meeting';
+        update t1;
+
+        updatedContact = [SELECT Id, Name, Cultivation_Level__c, Last_Interaction_Date__c FROM Contact WHERE Id = :contact.Id];
+        System.assert(updatedContact.Cultivation_Level__c == 'Met', '1:1 In-Person Meeting interaction means weve Met them, not: ' + updatedContact.Cultivation_Level__c);
+        System.assert(updatedContact.Last_Interaction_Date__c > DateTime.now().addMinutes(-20), 'The Last_Interaction_Date__c was not set to a recent time.  It is: '+updatedContact.Last_Interaction_Date__c+' which is less than '+DateTime.now().addMinutes(-20));
+
+    }   
 }

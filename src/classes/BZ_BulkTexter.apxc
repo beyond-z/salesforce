@@ -63,7 +63,8 @@ public class BZ_BulkTexter {
                                                                 'Text Message: Sent text to {0}', 
                                                                 '{0} was sent a text message saying:\n\n"'+effectiveTextMessageBody+'"',
                                                                 'Completed',
-                                                                setReminder
+                                                                setReminder,
+                                                                'Text Message'
                                                                ));
                 }
                 catch(Exception e){
