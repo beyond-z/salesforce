@@ -68,7 +68,9 @@ public class BZ_SetCultivationLevel {
         List<Contact> contactsWeHaveReachedOutTo = new List<Contact>([SELECT Id, Name, Cultivation_Level__c, Last_Interaction_Date__c FROM Contact WHERE Id in :contactIdsWeHaveReachedOutTo]);
         for (Contact c : contactsWeHaveReachedOutTo)
         {
-            c.Cultivation_Level__c = 'Reached Out';
+            if (c.Cultivation_Level__c != 'Met'){ // Met trumps Reached Out.
+                c.Cultivation_Level__c = 'Reached Out';
+            }
             c.Last_Interaction_Date__c = DateTime.now();
         }
         if (!contactsWeHaveReachedOutTo.isEmpty())
