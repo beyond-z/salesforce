@@ -25,13 +25,15 @@
         The value of the InteractionType MUST exactly match the available values for a <a href="https://na17.salesforce.com/00No0000008PVQD?setupid=ActivityFields">Task or Activity</a>.
         At the time of writing, the possible values for InteractionType are following (but that could change):
         <ul>
+            <li>Email</li>
             <li>Phone Call</li>
+            <li>Voicemail</li>
+            <li>Text Message</li>
             <li>Camera to Camera Virtual Meeting</li>
             <li>1:1 In-Person Meeting</li>
             <li>Small Group In-Person Meeting</li>
             <li>Interaction at Larger Function</li>
             <li>Attended BZ Function</li>
-            <li>Text dialogue</li>
         </ul>
         <em>Notes:</em>
         <ul>

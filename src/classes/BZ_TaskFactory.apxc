@@ -70,6 +70,7 @@ public class BZ_TaskFactory {
                 OwnerId = campaignMap.get(cm.CampaignId).OwnerId,         // Assigned To
                 Subject = 'Email: ' + taskSubjectPrefix + ' To ' + contactMap.get(cm.ContactId).Name,
                 Description = description,
+                Interaction_Type__c = 'Email',
                 IsReminderSet = true,
                 ReminderDateTime = System.now(),
                 ActivityDate = Date.today(),      // Due Date
@@ -154,7 +155,7 @@ public class BZ_TaskFactory {
         }
         return tasksToAdd;
     }
-
+    
     /**
      * Creates Tasks for the owner of the Campaign for the specified Contacts.
      * 
@@ -172,6 +173,27 @@ public class BZ_TaskFactory {
      *       don't need the Contact name in there.
      */
     public static List<Task> createTasks(Contact[] contacts, Campaign campaign, String taskSubjectPattern, String descriptionPattern, String status, boolean setReminder) 
+    {
+        return createTasks(contacts, campaign, taskSubjectPattern, descriptionPattern, status, setReminder, null);
+    }
+
+    /**
+     * Creates Tasks for the owner of the Campaign for the specified Contacts.
+     * 
+     * taskSubjectPattern is the Subject of the Task where the name of the Contact
+     * is added in the location that you specify.  You specify the location with a single
+     * replacement token used with String.format(String,List<String>) method.  
+     * e.g. createTask(contacts, 'The person {0} need something to happen', ...)
+     * 
+     * descriptionPattern is the Description of the Task where the name of the Contact
+     * is added in the location that you specify.  You specify the location with a single
+     * replacement token used with String.format(String,List<String>) method.  
+     * e.g. createTask(contacts, ... , 'Click on the name of {0} and then...')
+     * 
+     * Note: in the parameters that take a pattern, you can omit the replacement token if you 
+     *       don't need the Contact name in there.
+     */
+    public static List<Task> createTasks(Contact[] contacts, Campaign campaign, String taskSubjectPattern, String descriptionPattern, String status, boolean setReminder, String interactionType) 
     {
         List<Task> tasksToAdd = new List<Task>();
         for (Contact c : contacts){
@@ -191,6 +213,10 @@ public class BZ_TaskFactory {
             {
                 t.ReminderDateTime = System.now();
             }   
+            
+            if (!String.isEmpty(interactionType)){
+                t.Interaction_Type__c = interactionType;
+            }
 
             tasksToAdd.add(t);
         }

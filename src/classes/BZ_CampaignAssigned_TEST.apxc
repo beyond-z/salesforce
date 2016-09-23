@@ -54,11 +54,12 @@ private class BZ_CampaignAssigned_TEST {
         System.assert(updatedCm.Anticipated_Graduation_Semester__c == anticipatedGraduationSemester, 'When a Contact is added to an LC Campaign, their Anticipated_Graduation_Semester__c should be set.');
         System.assert(updatedCm.Started_College__c == startedCollege, 'When a Contact is added to an LC Campaign, their Started_College__c should be set.');*/
 
-        List<Task> resultingTasks = [SELECT Id, WhoId, WhatId FROM Task
+        List<Task> resultingTasks = [SELECT Id, WhoId, WhatId, Interaction_Type__c FROM Task
                                      WHERE WhoId=:updatedCm.ContactId AND
                                            WhatId=:updatedCm.CampaignId AND
                                            Subject LIKE '%Send Intro Email%'];
         System.assert(resultingTasks.size()==1, 'Expected Task to be created to Send Intro Email to LCs');
+        System.assert(resultingTasks[0].Interaction_Type__c == 'Email','Expected resultingTasks[0].Interaction_Type__c == Email, not ' + resultingTasks[0].Interaction_Type__c);
         // We changed students and volunteers to automatically be converted and added to a campaign.
         /*List<Task> resultingClosedTasks = [SELECT Id, Status FROM Task
                                            WHERE WhoId=:updatedContact.Id AND

@@ -145,6 +145,7 @@ private class BZ_BulkInviteController_TEST {
             }
             else if (t.Subject.startsWith('Text Message:')){
                 System.assert(t.Status == 'Completed', 'Expected Text Message task to be Completed.  t = '+t);
+                System.assert(t.Interaction_Type__c == 'Text Message', 'Expected Text Message task to have Interaction Type set.  t = '+t);
             }
             else
             {
