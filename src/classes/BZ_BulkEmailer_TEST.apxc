@@ -12,29 +12,35 @@ private class BZ_BulkEmailer_TEST {
                                       timezonesidkey='America/Los_Angeles', username='TestEmail.Sender2@bz.org');
         insert anotherSender;
 
+        List<Contact> contactsToInsert = new List<Contact>();
         Contact recipient = new Contact(FirstName='TestEmail', LastName='Recipient', Email='TestEmail.Recipient@bz.org');
-        insert recipient;
+        contactsToInsert.add(recipient);
+        insert contactsToInsert;
+        List<Campaign> campaignsToInsert = new List<Campaign>();
         Campaign campaign = BZ_CampaignFactory_TEST.create();
-        insert campaign;
+        campaignsToInsert.add(campaign);
         Campaign anotherCampaign = BZ_CampaignFactory_TEST.create();
         anotherCampaign.Name = 'Another Campaign';
-        insert anotherCampaign;
+        campaignsToInsert.add(anotherCampaign);
+        insert campaignsToInsert;
 
         String et1DeveloperName='TestEmailTemplateToSend1';
         String et2DeveloperName='TestEmailTemplateToSend2';
 
+        List<Task> tasksToInsert = new List<Task>();
         Task t1 = new Task(Subject='Test Send Email Task1', OwnerId=sender.Id, WhoId=recipient.Id, WhatId=campaign.Id, EmailTemplate__c=et1DeveloperName);
-        insert t1;
+        tasksToInsert.add(t1);
         Task t2 = new Task(Subject='Test Send Email Task2', OwnerId=sender.Id, WhoId=recipient.Id, WhatId=campaign.Id, EmailTemplate__c=et2DeveloperName);
-        insert t2;
+        tasksToInsert.add(t2);
         Task t3_ignored = new Task(Subject='Test Send Email Task3 -- Should be ignored', OwnerId=sender.Id, WhoId=recipient.Id, WhatId=campaign.Id);
-        insert t3_ignored;
+        tasksToInsert.add(t3_ignored);
         Task t4_ignored = new Task(Subject='Test Send Email Task4 -- Should be ignored', OwnerId=sender.Id, WhoId=recipient.Id, WhatId=anotherCampaign.Id, EmailTemplate__c='TestEmailTemplateToSend4');
-        insert t4_ignored;
+        tasksToInsert.add(t4_ignored);
         Task t5_ignored = new Task(Subject='Test Send Email Task5 -- Should be ignored', OwnerId=anotherSender.Id, WhoId=recipient.Id, WhatId=campaign.Id, EmailTemplate__c='TestEmailTemplateToSend5');
-        insert t5_ignored;
+        tasksToInsert.add(t5_ignored);
         Task t6_ignored = new Task(Subject='Test Send Email Task6 -- Should be ignored', OwnerId=sender.Id, WhoId=recipient.Id, WhatId=campaign.Id, EmailTemplate__c=et2DeveloperName, Status='Completed');
-        insert t6_ignored;
+        tasksToInsert.add(t6_ignored);
+        insert tasksToInsert;
 
         Integer emailsSent = 0;
 
@@ -88,6 +94,7 @@ private class BZ_BulkEmailer_TEST {
         String acceptedEmailDeveloperName='TestAcceptedEmailTemplateToSend';
         String notAcceptedEmailDeveloperName='TestNotAcceptedEmailTemplateToSend';
         
+        List<Campaign> campaignsToInsert = new List<Campaign> ();
         Campaign campaign = BZ_CampaignFactory_TEST.create();
         campaign.Name='Test Send Queued App Decisions Campaign1';
         campaign.Type='Program Participants';
@@ -95,14 +102,15 @@ private class BZ_BulkEmailer_TEST {
         campaign.App_Accepted_Email_Template__c=acceptedEmailDeveloperName;
         campaign.App_Not_Accepted_Email_Template__c=notAcceptedEmailDeveloperName;
         campaign.Request_Student_Id__c = true;
-        insert campaign; 
+        campaignsToInsert.add(campaign); 
         
         Campaign anotherCampaign = BZ_CampaignFactory_TEST.create();
         anotherCampaign.Name='Test Send Queued App Decisions Campaign2'; 
         anotherCampaign.App_Waitlisted_Email_Template__c=waitlistedEmailDeveloperName;
         anotherCampaign.App_Accepted_Email_Template__c=acceptedEmailDeveloperName;
         anotherCampaign.App_Not_Accepted_Email_Template__c=notAcceptedEmailDeveloperName;
-        insert anotherCampaign;
+        campaignsToInsert.add(anotherCampaign);
+        insert campaignsToInsert;
         
         List<CampaignMember> testCms = new List<CampaignMember>();
         CampaignMember waitlistedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=waitlistedRecipient.Id, Candidate_Status__c='Waitlisted');
@@ -177,29 +185,34 @@ private class BZ_BulkEmailer_TEST {
         // https://developer.salesforce.com/forums/ForumsMain?id=906F00000008wSQIAY
         User sender = [SELECT Id FROM User Where Id = :System.UserInfo.getUserId()];    
         System.runAs(sender) 
-        {
+        {            
+            // Note: I'm setting the fields on the Contact needed by the BZ Copy Contact Info To Campaign Member
+            // Process Builder flow b/c it was generating: 
+            // System.DmlException: Update failed. First exception on row 0 with id 00v17000003lt45AAA; 
+            // first error: CANNOT_EXECUTE_FLOW_TRIGGER, The record couldn’t be saved because it 
+            // failed to trigger a flow.
             List<Contact> testContacts = new List<Contact>();
-            waitlistedRecipient = new Contact(FirstName='TestWaitlistedEmail', LastName='Recipient', Email='TestWaitlistedEmail.Recipient@bz.org');
+            waitlistedRecipient = new Contact(FirstName='TestWaitlistedEmail', LastName='Recipient', Email='TestWaitlistedEmail.Recipient@bz.org', Anticipated_Graduation_Semester__c='Spring', Anticipated_Graduation__c='2017', Signup_Date__c=Datetime.now(), Started_College__c='2009');
             testContacts.add(waitlistedRecipient);
-            Contact waitlistedRecipient2 = new Contact(FirstName='TestWaitlistedEmail2', LastName='Recipient', Email='TestWaitlistedEmail.Recipient2@bz.org');
+            Contact waitlistedRecipient2 = new Contact(FirstName='TestWaitlistedEmail2', LastName='Recipient', Email='TestWaitlistedEmail.Recipient2@bz.org', Anticipated_Graduation_Semester__c='Spring', Anticipated_Graduation__c='2017', Signup_Date__c=Datetime.now(), Started_College__c='2009');
             testContacts.add(waitlistedRecipient2);
-            Contact waitlistedRecipient3 = new Contact(FirstName='TestWaitlistedEmail3', LastName='Recipient', Email='TestWaitlistedEmail.Recipient3@bz.org');
+            Contact waitlistedRecipient3 = new Contact(FirstName='TestWaitlistedEmail3', LastName='Recipient', Email='TestWaitlistedEmail.Recipient3@bz.org', Anticipated_Graduation_Semester__c='Spring', Anticipated_Graduation__c='2017', Signup_Date__c=Datetime.now(), Started_College__c='2009');
             testContacts.add(waitlistedRecipient3);
-            acceptedRecipient = new Contact(FirstName='TestAcceptedEmail', LastName='Recipient', Email='TestAcceptedEmail.Recipient@bz.org');
+            acceptedRecipient = new Contact(FirstName='TestAcceptedEmail', LastName='Recipient', Email='TestAcceptedEmail.Recipient@bz.org', Anticipated_Graduation_Semester__c='Spring', Anticipated_Graduation__c='2017', Signup_Date__c=Datetime.now(), Started_College__c='2009');
             testContacts.add(acceptedRecipient);
-            Contact acceptedRecipient2 = new Contact(FirstName='TestAcceptedEmail2', LastName='Recipient', Email='TestAcceptedEmail.Recipient2@bz.org');
+            Contact acceptedRecipient2 = new Contact(FirstName='TestAcceptedEmail2', LastName='Recipient', Email='TestAcceptedEmail.Recipient2@bz.org', Anticipated_Graduation_Semester__c='Spring', Anticipated_Graduation__c='2017', Signup_Date__c=Datetime.now(), Started_College__c='2009');
             testContacts.add(acceptedRecipient2);
-            Contact acceptedRecipient3 = new Contact(FirstName='TestAcceptedEmail3', LastName='Recipient', Email='TestAcceptedEmail.Recipient3@bz.org');
+            Contact acceptedRecipient3 = new Contact(FirstName='TestAcceptedEmail3', LastName='Recipient', Email='TestAcceptedEmail.Recipient3@bz.org', Anticipated_Graduation_Semester__c='Spring', Anticipated_Graduation__c='2017', Signup_Date__c=Datetime.now(), Started_College__c='2009');
             testContacts.add(acceptedRecipient3);        
-            Contact acceptedRecipient4 = new Contact(FirstName='TestAcceptedEmail4', LastName='Recipient', Email='TestAcceptedEmail.Recipient4@bz.org');
+            Contact acceptedRecipient4 = new Contact(FirstName='TestAcceptedEmail4', LastName='Recipient', Email='TestAcceptedEmail.Recipient4@bz.org', Anticipated_Graduation_Semester__c='Spring', Anticipated_Graduation__c='2017', Signup_Date__c=Datetime.now(), Started_College__c='2009');
             testContacts.add(acceptedRecipient4);
-            notAcceptedRecipient = new Contact(FirstName='TestnotAcceptedEmail', LastName='Recipient', Email='TestnotAcceptedEmail.Recipient@bz.org');
+            notAcceptedRecipient = new Contact(FirstName='TestnotAcceptedEmail', LastName='Recipient', Email='TestnotAcceptedEmail.Recipient@bz.org', Anticipated_Graduation_Semester__c='Spring', Anticipated_Graduation__c='2017', Signup_Date__c=Datetime.now(), Started_College__c='2009');
             testContacts.add(notAcceptedRecipient);
-            Contact notAcceptedRecipient2 = new Contact(FirstName='TestnotAcceptedEmail2', LastName='Recipient', Email='TestnotAcceptedEmail.Recipient2@bz.org');
+            Contact notAcceptedRecipient2 = new Contact(FirstName='TestnotAcceptedEmail2', LastName='Recipient', Email='TestnotAcceptedEmail.Recipient2@bz.org', Anticipated_Graduation_Semester__c='Spring', Anticipated_Graduation__c='2017', Signup_Date__c=Datetime.now(), Started_College__c='2009');
             testContacts.add(notAcceptedRecipient2);
-            Contact notAcceptedRecipient3 = new Contact(FirstName='TestnotAcceptedEmail3', LastName='Recipient', Email='TestnotAcceptedEmail.Recipient3@bz.org');
+            Contact notAcceptedRecipient3 = new Contact(FirstName='TestnotAcceptedEmail3', LastName='Recipient', Email='TestnotAcceptedEmail.Recipient3@bz.org', Anticipated_Graduation_Semester__c='Spring', Anticipated_Graduation__c='2017', Signup_Date__c=Datetime.now(), Started_College__c='2009');
             testContacts.add(notAcceptedRecipient3);
-            Contact notAcceptedRecipient4 = new Contact(FirstName='TestnotAcceptedEmail4', LastName='Recipient', Email='TestnotAcceptedEmail.Recipient4@bz.org');
+            Contact notAcceptedRecipient4 = new Contact(FirstName='TestnotAcceptedEmail4', LastName='Recipient', Email='TestnotAcceptedEmail.Recipient4@bz.org', Anticipated_Graduation_Semester__c='Spring', Anticipated_Graduation__c='2017', Signup_Date__c=Datetime.now(), Started_College__c='2009');
             testContacts.add(notAcceptedRecipient4);
             
             insert testContacts;
@@ -218,43 +231,40 @@ private class BZ_BulkEmailer_TEST {
             testCms = new List<CampaignMember>();
             waitlistedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=waitlistedRecipient.Id, Candidate_Status__c='Waitlisted');
             testCms.add(waitlistedCm);
-            CampaignMember waitlistedCm2 = new CampaignMember(CampaignId=campaign.Id, ContactId=waitlistedRecipient2.Id, Candidate_Status__c='Waitlisted');
+            CampaignMember waitlistedCm2 = new CampaignMember(CampaignId=campaign.Id, ContactId=waitlistedRecipient2.Id, Candidate_Status__c='Waitlisted', Anticipated_Graduation_Semester__c='Spring', Anticipated_Graduation__c='2017', Signup_Date__c=Datetime.now(), Started_College__c='2009');
             testCms.add(waitlistedCm2);
-            CampaignMember waitlistedCm3 = new CampaignMember(CampaignId=campaign.Id, ContactId=waitlistedRecipient3.Id, Candidate_Status__c='Waitlisted');
+            CampaignMember waitlistedCm3 = new CampaignMember(CampaignId=campaign.Id, ContactId=waitlistedRecipient3.Id, Candidate_Status__c='Waitlisted', Anticipated_Graduation_Semester__c='Spring', Anticipated_Graduation__c='2017', Signup_Date__c=Datetime.now(), Started_College__c='2009');
             testCms.add(waitlistedCm3);
             
-            acceptedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=acceptedRecipient.Id, Candidate_Status__c='Accepted');
+            acceptedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=acceptedRecipient.Id, Candidate_Status__c='Accepted', Anticipated_Graduation_Semester__c='Spring', Anticipated_Graduation__c='2017', Signup_Date__c=Datetime.now(), Started_College__c='2009');
             testCms.add(acceptedCm);
-            CampaignMember acceptedCm2 = new CampaignMember(CampaignId=campaign.Id, ContactId=acceptedRecipient2.Id, Candidate_Status__c='Accepted');
+            CampaignMember acceptedCm2 = new CampaignMember(CampaignId=campaign.Id, ContactId=acceptedRecipient2.Id, Candidate_Status__c='Accepted', Anticipated_Graduation_Semester__c='Spring', Anticipated_Graduation__c='2017', Signup_Date__c=Datetime.now(), Started_College__c='2009');
             testCms.add(acceptedCm2);
-            CampaignMember acceptedCm3 = new CampaignMember(CampaignId=campaign.Id, ContactId=acceptedRecipient3.Id, Candidate_Status__c='Accepted');
+            CampaignMember acceptedCm3 = new CampaignMember(CampaignId=campaign.Id, ContactId=acceptedRecipient3.Id, Candidate_Status__c='Accepted', Anticipated_Graduation_Semester__c='Spring', Anticipated_Graduation__c='2017', Signup_Date__c=Datetime.now(), Started_College__c='2009');
             testCms.add(acceptedCm3);
             CampaignMember acceptedCm4 = new CampaignMember(CampaignId=campaign.Id, ContactId=acceptedRecipient4.Id, Candidate_Status__c='Accepted');
             testCms.add(acceptedCm4);
             
-            notAcceptedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=notAcceptedRecipient.Id, Candidate_Status__c='Not Accepted');
+            notAcceptedCm = new CampaignMember(CampaignId=campaign.Id, ContactId=notAcceptedRecipient.Id, Candidate_Status__c='Not Accepted', Anticipated_Graduation_Semester__c='Spring', Anticipated_Graduation__c='2017', Signup_Date__c=Datetime.now(), Started_College__c='2009');
             testCms.add(notAcceptedCm);
-            CampaignMember notAcceptedCm2 = new CampaignMember(CampaignId=campaign.Id, ContactId=notAcceptedRecipient2.Id, Candidate_Status__c='Not Accepted');
+            CampaignMember notAcceptedCm2 = new CampaignMember(CampaignId=campaign.Id, ContactId=notAcceptedRecipient2.Id, Candidate_Status__c='Not Accepted', Anticipated_Graduation_Semester__c='Spring', Anticipated_Graduation__c='2017', Signup_Date__c=Datetime.now(), Started_College__c='2009');
             testCms.add(notAcceptedCm2);
-            CampaignMember notAcceptedCm3 = new CampaignMember(CampaignId=campaign.Id, ContactId=notAcceptedRecipient3.Id, Candidate_Status__c='Not Accepted');
+            CampaignMember notAcceptedCm3 = new CampaignMember(CampaignId=campaign.Id, ContactId=notAcceptedRecipient3.Id, Candidate_Status__c='Not Accepted', Anticipated_Graduation_Semester__c='Spring', Anticipated_Graduation__c='2017', Signup_Date__c=Datetime.now(), Started_College__c='2009');
             testCms.add(notAcceptedCm3);
-            CampaignMember notAcceptedCm4 = new CampaignMember(CampaignId=campaign.Id, ContactId=notAcceptedRecipient4.Id, Candidate_Status__c='Not Accepted');
+            CampaignMember notAcceptedCm4 = new CampaignMember(CampaignId=campaign.Id, ContactId=notAcceptedRecipient4.Id, Candidate_Status__c='Not Accepted', Anticipated_Graduation_Semester__c='Spring', Anticipated_Graduation__c='2017', Signup_Date__c=Datetime.now(), Started_College__c='2009');
             testCms.add(notAcceptedCm4);
             
             insert testCms;
-        
-            Test.startTest();
-            // Note, this Util method is to avoid a MIXED_DML_OPERATION error described here: 
-            // http://www.tgerm.com/2012/04/mixeddmloperation-dml-operation-on.html        
-            BZ_SendTemplatedEmail.insertEmailTemplate('Test Waitlisted Email Template', waitlistedEmailDeveloperName, 'text', sender.Id);
-            BZ_SendTemplatedEmail.insertEmailTemplate('Test Accepted Email Template', acceptedEmailDeveloperName, 'text', sender.Id);
-            BZ_SendTemplatedEmail.insertEmailTemplate('Test Not Accepted Email Template', notAcceptedEmailDeveloperName, 'text', sender.Id);
 
-            Test.stopTest();
-            
+            insert new EmailTemplate(Name='Test Waitlisted Email Template', DeveloperName=waitlistedEmailDeveloperName, TemplateType='text', FolderId=sender.Id, IsActive=TRUE);
+            insert new EmailTemplate(Name='Test Accepted Email Template', DeveloperName=acceptedEmailDeveloperName, TemplateType='text', FolderId=sender.Id, IsActive=TRUE);
+            insert new EmailTemplate(Name='Test Not Accepted Email Template', DeveloperName=notAcceptedEmailDeveloperName, TemplateType='text', FolderId=sender.Id, IsActive=TRUE);
+                
             // Run the test
-            System.Debug('BZ_BulkEmailer_TEST: BZ_BulkEmailer.sendQueuedApplicationDecisions(BZ_BulkEmailer.getQueuedApplicationDecisions(campaign='+campaign+'))');        
+            System.Debug('BZ_BulkEmailer_TEST: BZ_BulkEmailer.sendQueuedApplicationDecisions(BZ_BulkEmailer.getQueuedApplicationDecisions(campaign='+campaign+'))');
+            Test.startTest();
             emailsSent = BZ_BulkEmailer.sendQueuedApplicationDecisions(BZ_BulkEmailer.getQueuedApplicationDecisions(campaign));
+            Test.stopTest();
         }
 
         System.assert(testCms.size() > 10, 'Test should have more than 10 Campaign Members');
