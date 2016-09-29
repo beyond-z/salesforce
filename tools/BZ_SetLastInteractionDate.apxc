@@ -1,0 +1,33 @@
+// When we added Last Interaction Date, I ran this in batches 
+// to set it for exsiting contacts.  Note: I chose last_week to filter 
+// on since a bunch of interaction dates were set when i updated all the 
+// Email and Text Message interaction types that day.
+
+List<Task> tasks = 
+    new List<Task>([SELECT Id, WhoId, Interaction_Type__c, ActivityDate FROM Task 
+                    WHERE WhoId <> null AND Status = 'Completed' AND Interaction_Type__c <> null
+                    ORDER BY WhoId
+                    ]);
+
+System.debug('NOTE: considering ' + tasks.size() + ' interaction tasks to find the Last Interation Date');
+
+Set<Id> contactIdsWithInteractions = new Set<Id>();
+for (Task t : tasks){
+    contactIdsWithInteractions.add(t.WhoId);
+}
+
+List<Contact> contacts = new List<Contact>([
+    SELECT Id, Last_Interaction_Date__c, (SELECT ActivityDate FROM Tasks WHERE Interaction_Type__c <> null ORDER BY CreatedDate DESC LIMIT 1)
+    FROM Contact WHERE Id in :contactIdsWithInteractions AND 
+    (Last_Interaction_Date__c = null OR Last_Interaction_Date__c > last_week)
+    LIMIT 800]);
+
+System.debug('NOTE: processing ' + contacts.size() + ' contacts');
+for (Contact c : contacts){
+    if (c.Tasks[0].ActivityDate != null){
+        c.Last_Interaction_Date__c = c.Tasks[0].ActivityDate;   
+        System.debug('Updating Last_Interaction_Date__c for ' + c);
+    }
+}
+
+update contacts;

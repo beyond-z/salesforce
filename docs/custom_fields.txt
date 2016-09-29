@@ -107,6 +107,8 @@
 		Reference 2 How Long Known
 		Reference 2 Phone
 		Reference 2 Email
+    Cultivation Level
+    Last Interaction Date
 
 	CONTACT
 		Middle Name
