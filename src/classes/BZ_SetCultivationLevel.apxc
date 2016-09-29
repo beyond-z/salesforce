@@ -14,6 +14,8 @@ public class BZ_SetCultivationLevel {
         Set<Id> contactIdsWeHaveMet = new Set<Id>();
         Set<Id> contactIdsWeHaveReachedOutTo = new Set<Id>();
         Set<Id> otherContactIdsWeHaveInteractedWith = new Set<Id>();
+        Set<Id> allContactIdsWeveInteractedWith = new Set<Id>();
+        Map<Id, Contact> contactIdToContactMap = new Map<Id, Contact>();
         for(Task task : m_tasksToProcess){
             
             if (task.Status == 'Completed')
@@ -29,9 +31,12 @@ public class BZ_SetCultivationLevel {
     
                 // All other Interaction_Type__c values other than Text correspond to those
                 // that we have met in some way.
-                if (!String.isEmpty(task.Interaction_Type__c) &&
+                if (task.WhoId != null &&
+                    !String.isEmpty(task.Interaction_Type__c) &&
                     task.Interaction_Type__c != '--None--')
                 {
+                    allContactIdsWeveInteractedWith.add(task.WhoId);
+                    
                     //System.Debug('BZ_TaskClosed: adding Contact Id '+ task.WhoId + ' to contactIdsWeHaveMet');
                     if (task.Interaction_Type__c == 'Email' || task.Interaction_Type__c == 'Voicemail' || 
                         task.Interaction_Type__c == 'Text Message'){
@@ -59,6 +64,7 @@ public class BZ_SetCultivationLevel {
         {
             c.Cultivation_Level__c = 'Met';
             c.Last_Interaction_Date__c = DateTime.now();
+            contactIdToContactMap.put(c.Id, c);
         }
         if (!contactsWeHaveMet.isEmpty())
         {
@@ -72,20 +78,35 @@ public class BZ_SetCultivationLevel {
                 c.Cultivation_Level__c = 'Reached Out';
             }
             c.Last_Interaction_Date__c = DateTime.now();
+            contactIdToContactMap.put(c.Id, c);
         }
         if (!contactsWeHaveReachedOutTo.isEmpty())
         {
             update contactsWeHaveReachedOutTo;
         }
         
-        List<Contact> otherContactsWeHaveInteractedWith = new List<Contact>([SELECT Id, Name, Last_Interaction_Date__c FROM Contact WHERE Id in :otherContactIdsWeHaveInteractedWith]);
+        List<Contact> otherContactsWeHaveInteractedWith = new List<Contact>([SELECT Id, Name, Cultivation_Level__c, Last_Interaction_Date__c FROM Contact WHERE Id in :otherContactIdsWeHaveInteractedWith]);
         for (Contact c : otherContactsWeHaveInteractedWith)
         {
             c.Last_Interaction_Date__c = DateTime.now();
+            contactIdToContactMap.put(c.Id, c);
         }
         if (!otherContactsWeHaveInteractedWith.isEmpty())
         {
             update otherContactsWeHaveInteractedWith;
+        }
+        
+        List<CampaignMember> campaignMembersToUpdate = new List<CampaignMember>(
+            [SELECT Id, ContactId, Last_Interaction_Date__c, Cultivation_Level__c 
+             FROM CampaignMember WHERE ContactId in :allContactIdsWeveInteractedWith]);
+
+        if (!campaignMembersToUpdate.isEmpty()){
+            for (CampaignMember cm : campaignMembersToUpdate){
+                Contact c = contactIdToContactMap.get(cm.ContactId);
+                cm.Last_Interaction_Date__c = c.Last_Interaction_Date__c;
+                cm.Cultivation_Level__c = c.Cultivation_Level__c;
+            }
+            update campaignMembersToUpdate;
         }
     }
 }

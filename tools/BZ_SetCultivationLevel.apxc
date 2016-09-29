@@ -1,0 +1,58 @@
+// When we introduced Cultivation Level and
+// here is what I ran to set them for exsiting contacts.  Note: I had to do it in batches:
+
+List<Task> tasks = 
+    new List<Task>([SELECT Id, WhoId, Interaction_Type__c, ActivityDate FROM Task 
+                    WHERE WhoId <> null AND Status = 'Completed' AND Interaction_Type__c <> null
+                    ORDER BY WhoId
+                    ]);
+
+System.debug('tasks.size() = ' + tasks.size());
+  
+Set<Id> contactIdsWeHaveMet = new Set<Id>();
+Set<Id> contactIdsWeHaveReachedOutTo = new Set<Id>();
+Set<Id> otherContactIdsWeHaveInteractedWith = new Set<Id>();
+
+for (Task t : tasks){
+    
+    if (t.Interaction_Type__c == 'Email' || t.Interaction_Type__c == 'Voicemail' || 
+        t.Interaction_Type__c == 'Text Message'){
+            contactIdsWeHaveReachedOutTo.add(t.WhoId);
+        }
+    else if (t.Interaction_Type__c == 'Phone Call' || t.Interaction_Type__c == 'Camera to Camera Virtual Meeting' || 
+             t.Interaction_Type__c == '1:1 In-Person Meeting' || t.Interaction_Type__c == 'Small Group In-Person Meeting') {
+                 contactIdsWeHaveMet.add(t.WhoId);
+             }
+    else {
+        // Note: "Interaction at Larger Function" and "Attended BZ Function" are left
+        // blank b/c "Met" means we had a conversation we set up to talk about a specific thing and
+        // "Reached Out" means we contacted them to make a specific ask.  However, these two are more
+        // analogous to someone coming to our website and hearing about us 
+        // (e.g. a passing conversation at a larger function) but we haven't actively started 
+        // cultivating them yet.
+        otherContactIdsWeHaveInteractedWith.add(t.WhoId);
+    }
+}
+
+List<Contact> contactsWeHaveReachedOutTo = new List<Contact>([SELECT Id, Name, Cultivation_Level__c, Last_Interaction_Date__c FROM Contact 
+                                                              WHERE Id in :contactIdsWeHaveReachedOutTo AND Cultivation_Level__c = null
+                                                             ]);
+System.debug('NOTE: setting Cultivation_Level__c to Reached Out for ' + contactsWeHaveReachedOutTo.size() + ' contacts');
+for (Contact c : contactsWeHaveReachedOutTo)
+{
+    System.debug('NOTE: processing contact = ' + c);
+    c.Cultivation_Level__c = 'Reached Out';
+}
+update contactsWeHaveReachedOutTo;
+
+List<Contact> contactsWeHaveMet = new List<Contact>([SELECT Id, Name, Cultivation_Level__c, Last_Interaction_Date__c FROM Contact
+                                                     WHERE Id in :contactIdsWeHaveMet AND 
+                                                     (Cultivation_Level__c = null OR Cultivation_Level__c = 'Reached Out')
+                                                    ]);
+System.debug('NOTE: setting Cultivation_Level__c to Met for ' + contactsWeHaveMet.size() + ' contacts');
+for (Contact c : contactsWeHaveMet)
+{
+    System.debug('NOTE: processing contact = ' + c);
+    c.Cultivation_Level__c = 'Met';
+}
+update contactsWeHaveMet;
