@@ -195,12 +195,22 @@ public class BZ_BulkEmailer {
         
         for (String emailTemplate : emailTemplateToRecipients.keySet())
         {
+            // Grab the template ID once for the list to avoid SOQL limits.
+            Id templateId;  
+            try {
+                templateId = [select id from EmailTemplate where DeveloperName = :emailTemplate].id;
+            }
+            catch (Exception e) {
+              throw new BZ_EmailException ('BZ_BulkEmailer.sendQueuedApplicationDecisions(): '+
+                                   'Unable to locate EmailTemplate using name: ' + emailTemplate + 
+                                   ' refer to Setup | Communications Templates | ' + emailTemplate);
+            }
             List<CampaignMember> cms = emailTemplateToRecipients.get(emailTemplate);
             for (CampaignMember cm : cms)
             {
                 String[] recipients = new String[]{cm.Contact.Email};
                 BZ_SendTemplatedEmail.sendTemplatedEmail(
-                    recipients, null, emailTemplate, 
+                    recipients, null, templateId, 
                     cm.ContactId, cm.CampaignId, null, TRUE, null); 
                 emailsSent++;
                 cm.Application_Decision_Sent__c = TRUE;

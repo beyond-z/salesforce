@@ -15,7 +15,6 @@ public class BZ_SetCultivationLevel {
         Set<Id> contactIdsWeHaveReachedOutTo = new Set<Id>();
         Set<Id> otherContactIdsWeHaveInteractedWith = new Set<Id>();
         Set<Id> allContactIdsWeveInteractedWith = new Set<Id>();
-        Map<Id, Contact> contactIdToContactMap = new Map<Id, Contact>();
         for(Task task : m_tasksToProcess){
             
             if (task.Status == 'Completed')
@@ -58,46 +57,40 @@ public class BZ_SetCultivationLevel {
                 }
             }
         }
-    
-        List<Contact> contactsWeHaveMet = new List<Contact>([SELECT Id, Name, Cultivation_Level__c, Last_Interaction_Date__c FROM Contact WHERE Id in :contactIdsWeHaveMet]);
-        for (Contact c : contactsWeHaveMet)
-        {
-            c.Cultivation_Level__c = 'Met';
-            c.Last_Interaction_Date__c = DateTime.now();
-            contactIdToContactMap.put(c.Id, c);
-        }
-        if (!contactsWeHaveMet.isEmpty())
-        {
-            update contactsWeHaveMet;
-        }
         
-        List<Contact> contactsWeHaveReachedOutTo = new List<Contact>([SELECT Id, Name, Cultivation_Level__c, Last_Interaction_Date__c FROM Contact WHERE Id in :contactIdsWeHaveReachedOutTo]);
-        for (Contact c : contactsWeHaveReachedOutTo)
+        if (allContactIdsWeveInteractedWith.size() <= 0)
         {
-            if (c.Cultivation_Level__c != 'Met'){ // Met trumps Reached Out.
-                c.Cultivation_Level__c = 'Reached Out';
+            System.debug('BZ_SetCultivationLevel: exiting because no tasks with Interaction Types found');
+            return;
+        }
+
+        Map<Id, Contact> contactIdToContactMap = new Map<Id, Contact>([SELECT Id, Name, Cultivation_Level__c, Last_Interaction_Date__c FROM Contact 
+                                                                       WHERE Id in :allContactIdsWeveInteractedWith]);
+        for (Contact c : contactIdToContactMap.values()){
+            if (contactIdsWeHaveMet.contains(c.Id)){
+                 c.Cultivation_Level__c = 'Met';
+                 c.Last_Interaction_Date__c = DateTime.now();
+            } 
+            else if (contactIdsWeHaveReachedOutTo.contains(c.Id)){
+                if (c.Cultivation_Level__c != 'Met'){ // Met trumps Reached Out.
+                    c.Cultivation_Level__c = 'Reached Out';
+                }
+                c.Last_Interaction_Date__c = DateTime.now();
+            } else if (otherContactIdsWeHaveInteractedWith.contains(c.Id)){
+                c.Last_Interaction_Date__c = DateTime.now();
             }
-            c.Last_Interaction_Date__c = DateTime.now();
-            contactIdToContactMap.put(c.Id, c);
-        }
-        if (!contactsWeHaveReachedOutTo.isEmpty())
-        {
-            update contactsWeHaveReachedOutTo;
         }
         
-        List<Contact> otherContactsWeHaveInteractedWith = new List<Contact>([SELECT Id, Name, Cultivation_Level__c, Last_Interaction_Date__c FROM Contact WHERE Id in :otherContactIdsWeHaveInteractedWith]);
-        for (Contact c : otherContactsWeHaveInteractedWith)
-        {
-            c.Last_Interaction_Date__c = DateTime.now();
-            contactIdToContactMap.put(c.Id, c);
-        }
-        if (!otherContactsWeHaveInteractedWith.isEmpty())
-        {
-            update otherContactsWeHaveInteractedWith;
-        }
-        
+        update contactIdToContactMap.values();
+
+        // Note: we also have to grab the fields used by the BZ Copy Contact Info To Campaign Member
+        // Process Builder flow b/c it was generating the following during unit tests: 
+        // System.DmlException: Update failed. First exception on row 0 with id 00v17000003lt45AAA; 
+        // first error: CANNOT_EXECUTE_FLOW_TRIGGER, The record couldn’t be saved because it 
+        // failed to trigger a flow.
         List<CampaignMember> campaignMembersToUpdate = new List<CampaignMember>(
-            [SELECT Id, ContactId, Last_Interaction_Date__c, Cultivation_Level__c 
+            [SELECT Id, ContactId, Last_Interaction_Date__c, Cultivation_Level__c,
+             Anticipated_Graduation_Semester__c, Anticipated_Graduation__c, Signup_Date__c, Started_College__c
              FROM CampaignMember WHERE ContactId in :allContactIdsWeveInteractedWith]);
 
         if (!campaignMembersToUpdate.isEmpty()){
