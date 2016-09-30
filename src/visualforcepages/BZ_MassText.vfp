@@ -37,7 +37,7 @@
                 <apex:pageBlockSectionItem >
                 <apex:outputText >
                     <div style="padding-left: 20px;">
-                    <em>* Note: only the {&#33;Contact.FirstName} merge field is supported.</em>
+                    <em>* Note: only the {&#33;Contact.FirstName} and {&#33;Contact.Mass_Text_Merge_Field__c} merge fields are supported.</em>
                     </div>
                 </apex:outputText>
                 </apex:pageBlockSectionItem>

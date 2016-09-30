@@ -1,0 +1,30 @@
+// This code is used to set the Cultivation Level and Last Interaction Date on the Campaign Members using
+// the values on the Contact.  It was run when we first released those fields on the Campaign Members.
+//
+// Note: I ran the following in batches until there were none left.  Then I commented out the check on the Cultivation Level and ran it again.
+// The second pass is to catch people we've interacted with, at say a Larger BZ Function, but do not have a cultivation level set.
+
+
+Map<Id, Contact> contacts = new Map<Id, Contact>(
+    [SELECT Id, Name, Last_Interaction_Date__c, Cultivation_Level__c, Anticipated_Graduation_Semester__c, Anticipated_Graduation__c, Signup_Date__c, Started_College__c FROM Contact
+     WHERE Last_Interaction_Date__c <> null OR Cultivation_Level__c <> '']);
+
+System.debug('Processing '+contacts.size()+' contants');
+
+List<CampaignMember> campaignMembersToUpdate = new List<CampaignMember>(
+            [SELECT Id, ContactId, Last_Interaction_Date__c, Cultivation_Level__c, Anticipated_Graduation_Semester__c, Anticipated_Graduation__c, Signup_Date__c, Started_College__c
+             FROM CampaignMember 
+             WHERE Last_Interaction_Date__c = null AND 
+                 Cultivation_Level__c = '' AND
+                 ContactId in :contacts.keySet()
+            LIMIT 800]);
+
+System.debug('Processing '+campaignMembersToUpdate.size()+' campaign members');
+
+for (CampaignMember cm : campaignMembersToUpdate){
+    Contact c = contacts.get(cm.ContactId);
+    cm.Last_Interaction_Date__c = c.Last_Interaction_Date__c;
+    cm.Cultivation_Level__c = c.Cultivation_Level__c;
+    System.debug('Processing Campaign Member: ' + cm);
+}
+update campaignMembersToUpdate;

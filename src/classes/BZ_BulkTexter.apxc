@@ -39,6 +39,14 @@ public class BZ_BulkTexter {
             if (!String.isEmpty(c.Phone))
             {
                 String effectiveTextMessageBody = m_textMessageBody.replace('{!Contact.FirstName}', c.FirstName);
+                if (m_textMessageBody.contains('{!Contact.Mass_Text_Merge_Field__c}')){
+                    if (String.isEmpty(c.Mass_Text_Merge_Field__c)){
+                        throw new TextMessageSendException('Your using the {!Contact.Mass_Text_Merge_Field__c} but that field is not set for: ' + c);
+                    }
+                    else {
+                        effectiveTextMessageBody = m_textMessageBody.replace('{!Contact.Mass_Text_Merge_Field__c}', c.Mass_Text_Merge_Field__c);
+                    }
+                }
                 Map<String,String> smsParams = new Map<String,String>{
                     'To'   => c.Phone,
                     'From' => m_settings.BZ_Twilio_From_Phone__c,
