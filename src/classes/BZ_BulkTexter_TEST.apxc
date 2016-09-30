@@ -1,0 +1,65 @@
+@isTest 
+private class BZ_BulkTexter_TEST {
+    // Note: some of the BZ_BulkTexter is tested through the BZ_BulkInviteController_TEST class.
+    
+    static testMethod void validateMassTextMergeField() {
+        System.debug('BZ_BulkTexter_TEST.validateMassTextMergeField() - begin');
+        List<Contact> contactsToInsert = new List<Contact>();
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(campaignOwner);
+        String mergedText = 'Some Text Merged Into Message';
+        Contact contact1 = new Contact(FirstName='Brian', LastName='xTest1', Phone='5554445555', Email='test@email.com', Mass_Text_Merge_Field__c=mergedText, OwnerId=userInfo.getUserId());
+        contactsToInsert.add(contact1);
+        insert contactsToInsert;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        List<Campaign> campaignsToInsert = new List<Campaign>();
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
+        campaignsToInsert.add(campaign);
+        insert campaignsToInsert;
+        
+        BZ_SettingsFactory_TEST.setSettings();
+        System.assert(BZ_Settings__c.getInstance('bz') != null, 'BZ_Settings__c is null');
+        BZ_BulkTexter texter = new BZ_BulkTexter(new List<Contact>{contact1}, 'Heyo, here is the merged text {!Contact.Mass_Text_Merge_Field__c}.  Cool, huh?', campaign);
+        Test.startTest();
+        texter.sendTextMessages();
+        Test.stopTest();
+        
+        List<Task> tasks = [SELECT Id, Subject, WhoId, WhatId, Status, Description, Interaction_Type__c FROM Task 
+                            WHERE WhoId = :contact1.Id AND WhatId = :campaign.Id AND Subject like 'Text Message:%'];
+        System.assertEquals(1, tasks.size());
+        System.assertEquals('Completed', tasks[0].Status);
+        System.assertEquals('Text Message', tasks[0].Interaction_Type__c);
+        System.assert(tasks[0].Description.contains(mergedText), 'Expected the Mass Text Merge Field to be merged.  The message was actually: ' + tasks[0].Description);
+    }
+    
+     static testMethod void validateMassTextMergeFieldException() {
+        System.debug('BZ_BulkTexter_TEST.validateMassTextMergeFieldException() - begin');
+        List<Contact> contactsToInsert = new List<Contact>();
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(campaignOwner);
+        String mergedText = 'Some Text Merged Into Message';
+        Contact contact1 = new Contact(FirstName='Brian', LastName='xTest2', Phone='5554445556', Email='test2@email.com', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(contact1);
+        insert contactsToInsert;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        List<Campaign> campaignsToInsert = new List<Campaign>();
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
+        campaignsToInsert.add(campaign);
+        insert campaignsToInsert;
+        
+        BZ_SettingsFactory_TEST.setSettings();
+        System.assert(BZ_Settings__c.getInstance('bz') != null, 'BZ_Settings__c is null');
+        BZ_BulkTexter texter = new BZ_BulkTexter(new List<Contact>{contact1}, 'Heyo, here is the merged text {!Contact.Mass_Text_Merge_Field__c}.  Cool, huh?', campaign);
+        Test.startTest();
+        boolean exceptionCaught = false;
+        try {
+            texter.sendTextMessages();             
+        } catch (BZ_BulkTexter.TextMessageSendException ex){
+            exceptionCaught = true;
+        }
+        System.assert(exceptionCaught, 'Expected a BZ_BulkTexter.TextMessageSendException to be thrown when the {!Contact.Mass_Text_Merge_Field__c} merge field is used but a contact doesnt have it set');
+        Test.stopTest();
+    }
+}

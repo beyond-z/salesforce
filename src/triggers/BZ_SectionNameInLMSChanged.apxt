@@ -1,0 +1,26 @@
+trigger BZ_SectionNameInLMSChanged on CampaignMember (before update) {
+
+    System.Debug('BZ_SectionNameInLMSChanged: begin trigger');
+    
+    Set<Id> contactIds = new Set<Id>();
+    Map<Id, CampaignMember> campaignMemberMap = new Map<Id, CampaignMember>();
+    for (CampaignMember cm : Trigger.new)
+    {
+        if (Trigger.oldMap.get(cm.Id).Section_Name_In_LMS__c  != cm.Section_Name_In_LMS__c)
+        {
+            contactIds.add(cm.ContactId);
+            campaignMemberMap.put(cm.ContactId, cm);
+        }
+    }
+    
+    if (contactIds.size() <= 0){
+        System.debug('BZ_SectionNameInLMSChanged: exiting because no contacts with changed Section_Name_In_LMS__c found');
+        return;
+    }
+    
+    Map<Id, Contact> contactMap = new Map<Id, Contact>([SELECT Id, Section_Name_In_LMS__c  FROM Contact WHERE Id in :contactIds]);
+    for (Contact c : contactMap.values()){
+        c.Section_Name_In_LMS__c = campaignMemberMap.get(c.Id).Section_Name_In_LMS__c;
+    }
+    update contactMap.values();
+}
