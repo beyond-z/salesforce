@@ -12,7 +12,7 @@ public with sharing class BZ_MassTextController {
 
         if (!Test.isRunningTest()){
             // Avoid error: "SObject row was retrieved via SOQL without querying the requested field"
-            controller.addFields(new List<String>{'Phone', 'Name', 'Email'});
+            controller.addFields(new List<String>{'Phone', 'Name', 'Email', 'Mass_Text_Merge_Field__c'});
         }
 
         // This is a dummy object that the Visualforce page will populate
