@@ -209,6 +209,9 @@ public class BZ_ClonePlusController {
                 clonedObjects.addAll(clones);
             }
         }
+        System.debug('BZ_ClonePlusController.getSelectedObjectsClones(): returning sorted clonedObjects.size() = ' + clonedObjects.size());
+        clonedObjects.sort(); // Avoid the following error with a very large list of objects: 
+                              // "Cannot have more than 10 chunks in a single operation. Please rearrange the data to reduce chunking.""
         return clonedObjects;
     }
     
@@ -219,9 +222,6 @@ public class BZ_ClonePlusController {
         List<sObject> clonedObjects = getSelectedObjectsClones();
         if (!clonedObjects.isEmpty())
         {
-            System.debug('BZ_ClonePlusController.cloneSelectedObjects(): about to insert clonedObjects.  clonedObjects.size() = ' + clonedObjects.size());
-            clonedObjects.sort(); // Avoid this error with a very large list of objects: "Cannot have more than 10 chunks in a single operation. Please rearrange the data to reduce chunking.""
-
             insert clonedObjects;
         }
     }
