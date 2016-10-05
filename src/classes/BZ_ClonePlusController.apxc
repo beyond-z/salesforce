@@ -203,7 +203,7 @@ public class BZ_ClonePlusController {
                 System.Debug('BZ_ClonePlusController.getSelectedObjectsClones(): clonedObjects = '+clonedObjects);
                 for (sObject clone : clones)
                 {
-                    System.Debug('BZ_ClonePlusController.getSelectedObjectsClones(): clone = '+clone + ', relatdObject = '+relatedObject + ', headClone = '+headClone);
+                    System.Debug('BZ_ClonePlusController.getSelectedObjectsClones(): clone = '+clone + ', relatedObject = '+relatedObject + ', headClone = '+headClone);
                     clone.put(relatedObject.relatedFieldName, headClone.Id);  
                 }
                 clonedObjects.addAll(clones);
@@ -219,6 +219,9 @@ public class BZ_ClonePlusController {
         List<sObject> clonedObjects = getSelectedObjectsClones();
         if (!clonedObjects.isEmpty())
         {
+            System.debug('BZ_ClonePlusController.cloneSelectedObjects(): about to insert clonedObjects.  clonedObjects.size() = ' + clonedObjects.size());
+            clonedObjects.sort(); // Avoid this error with a very large list of objects: "Cannot have more than 10 chunks in a single operation. Please rearrange the data to reduce chunking.""
+
             insert clonedObjects;
         }
     }
@@ -303,9 +306,11 @@ to retrieve the field values of all the objects.*/
                 // and add to the collection of cloned objects
                 for (SObject sObjectFromDatabase : Database.query(allSObjectFieldsQuery))
                 {
-                    System.Debug('BZ_ClonePlusController.cloneObjects(): about to clone sObjectFromDatabase = '+sObjectFromDatabase);
+                    // Commented out debug log b/c it was reaching max log size when cloning a campaign
+                    // with a large number of CampaignMember, Tasks, etc.
+                    //System.Debug('BZ_ClonePlusController.cloneObjects(): about to clone sObjectFromDatabase = '+sObjectFromDatabase);
                     sObject clonedObject = sObjectFromDatabase.clone(false,true);
-                    System.Debug('BZ_ClonePlusController.cloneObjects(): clonedObject = '+clonedObject);
+                    //System.Debug('BZ_ClonePlusController.cloneObjects(): clonedObject = '+clonedObject);
                     clonedSObjects.add(clonedObject);  
                 }
                 
