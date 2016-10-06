@@ -1,6 +1,14 @@
 trigger BZ_SectionNameInLMSChanged on CampaignMember (before update) {
-
     System.Debug('BZ_SectionNameInLMSChanged: begin trigger');
+    
+    if (BZ_CloseRecruitmentController.IsCloseRecruitmentRunning)
+    {
+        // NOOP: we're snapshotting the campaign and don't need to update the Section_Name_In_LMS__c
+        // since it's cloned.  When we close large campaigns, all the trigger logic causes
+        // Apex CPU time limit exceptions.
+        System.Debug('BZ_SectionNameInLMSChanged: NOOP because were running BZ_CloseRecruitmentController.IsCloseRecruitmentRunning');
+        return;
+    }
     
     Set<Id> contactIds = new Set<Id>();
     Map<Id, CampaignMember> campaignMemberMap = new Map<Id, CampaignMember>();

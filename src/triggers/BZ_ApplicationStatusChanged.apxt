@@ -1,5 +1,14 @@
 trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
     System.Debug('BZ_ApplicationStatusChanged: begin trigger');
+    
+    if (BZ_CloseRecruitmentController.IsCloseRecruitmentRunning)
+    {
+        // NOOP: we're snapshotting the campaign and don't need to worry about the 
+        // Application_Status__c changing since it's cloned.  When we close large campaigns, 
+        // all the trigger logic causes Apex CPU time limit exceptions.
+        System.Debug('BZ_ApplicationStatusChanged: NOOP because were running BZ_CloseRecruitmentController.IsCloseRecruitmentRunning');
+        return;
+    }
 
     List<CampaignMember> campaignMembersToCreateTasksFor = new List<CampaignMember>();
     for (CampaignMember cm : Trigger.new)
@@ -75,7 +84,7 @@ trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
                 contact.Identify_As_Low_Income__c = cm.Identify_As_Low_Income__c;
                 contact.Identify_As_Person_Of_Color__c = cm.Identify_As_Person_Of_Color__c;
                 contact.Pell_Grant_Recipient__c = cm.Pell_Grant_Recipient__c;
-
+                
                 contactsToUpdate.add(contact);
             }
             update contactsToUpdate;
@@ -88,5 +97,9 @@ trigger BZ_ApplicationStatusChanged on CampaignMember (before update) {
         insert BZ_TaskFactory.createTasks(campaignMembersToCreateTasksFor, 
                                           'Review submitted application for {0}',
                                           'Review the application for \"{0}\" by clicking the \"Campaign Member\" link below in the \"Sign Up And Application Info\" section.  Then change their Candidate Status to Accepted, Interview Requested, Waitlisted, or Not Accepted.');
+    }
+    else
+    {
+        System.Debug('BZ_ApplicationStatusChanged: NOT creating any new tasks.  None needed it.');
     }
 }

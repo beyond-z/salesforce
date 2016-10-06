@@ -1,5 +1,14 @@
 trigger BZ_StudentRegistrationCodeChanged on CampaignMember (before update) {
     System.Debug('BZ_StudentRegistrationCodeChanged: begin trigger');
+    
+    if (BZ_CloseRecruitmentController.IsCloseRecruitmentRunning)
+    {
+        // NOOP: we're snapshotting the campaign and don't need to update the Student_Registration_Code__c
+        // since it's cloned.  When we close large campaigns, all the trigger logic causes
+        // Apex CPU time limit exceptions.
+        System.Debug('BZ_StudentRegistrationCodeChanged: NOOP because were running BZ_CloseRecruitmentController.IsCloseRecruitmentRunning');
+        return;
+    }
 
     List<Contact> contactsToUpdate = new List<Contact>();
     List<Task> tasksToUpdate = new List<Task>();
@@ -29,17 +38,18 @@ trigger BZ_StudentRegistrationCodeChanged on CampaignMember (before update) {
                     tasksToUpdate.add(setStudentRegCodeTask);
                 }
             }
-
         }
     }
     
     if (!contactsToUpdate.isEmpty())
     {
+        System.Debug('BZ_StudentRegistrationCodeChanged: updating '+contactsToUpdate.size() + ' contacts.');
         update contactsToUpdate;
     }
     
     if (!tasksToUpdate.isEmpty())
     {
+        System.Debug('BZ_StudentRegistrationCodeChanged: updating '+tasksToUpdate.size() + ' tasks.');
         update tasksToUpdate;
     }
 }

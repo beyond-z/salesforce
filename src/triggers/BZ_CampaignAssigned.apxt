@@ -4,6 +4,16 @@
  */
 trigger BZ_CampaignAssigned on CampaignMember (before insert) {
     System.Debug('BZ_CampaignAssigned: begin trigger');
+    
+    if (BZ_CloseRecruitmentController.IsCloseRecruitmentRunning)
+    {
+        // NOOP: we're snapshotting the campaign but we don't want to actively 
+        // queue up tasks to take action, adjust the Participant or Volunteer Info, or set
+        // their Is In Active Recruitment Campaign flag (which the CampaignActive trigger will take care of).
+        // When we close large campaigns, all the trigger logic causes Apex CPU time limit exceptions.
+        System.Debug('BZ_CampaignAssigned: NOOP because were running BZ_CloseRecruitmentController.IsCloseRecruitmentRunning');
+        return;
+    }
         
     List<Task> tasksToAdd = new List<Task>(); 
     List<Task> tasksToUpdate = new List<Task>(); 
@@ -118,12 +128,6 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
                 // NOOP: we just want to continue where we left off with the old campaign.
                 System.Debug('BZ_CampaignAssigned: skipping email Task b/c Move To Campaign is running for CampaignMember = '+ cm);
             } 
-            else if (BZ_CloseRecruitmentController.IsCloseRecruitmentRunning)
-            {
-                // NOOP: we're snapshotting the campaign but we don't want to actively 
-                // queue up tasks to take action.
-                System.Debug('BZ_CampaignAssigned: skipping email Task b/c Close Recruitment is running for CampaignMember = '+ cm);
-            }
             else
             {
                 if (hasSignedUpOnWebsite)

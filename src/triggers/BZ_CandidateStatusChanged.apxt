@@ -1,6 +1,15 @@
 trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
     System.Debug('BZ_CandidateStatusChanged: begin trigger');
     
+    if (BZ_CloseRecruitmentController.IsCloseRecruitmentRunning)
+    {
+        // NOOP: we're snapshotting the campaign and don't need to worry about the 
+        // Candidate_Status__c changing since it's cloned.  When we close large campaigns, 
+        // all the trigger logic causes Apex CPU time limit exceptions.
+        System.Debug('BZ_CandidateStatusChanged: NOOP because were running BZ_CloseRecruitmentController.IsCloseRecruitmentRunning');
+        return;
+    }
+    
     Set<Id> contactIds = new Set<Id>();
     Set<Id> campaignIds = new Set<Id>();
     for (CampaignMember cm : Trigger.new)
