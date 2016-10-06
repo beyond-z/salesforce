@@ -98,7 +98,7 @@ public abstract class BZ_ChangeCampaignMemberBase {
              if (tasksToClone != null && !tasksToClone.isEmpty())
              {
                  System.Debug(getDebugPrefix() +'.run(): tasksToClone = ' + tasksToClone);
-                 List<SObject> clonedTasks = BZ_ClonePlusController.cloneObjects(tasksToClone);
+                 BZ_SObjectList clonedTasks = BZ_ClonePlusController.cloneObjects(tasksToClone);
                  System.Debug(getDebugPrefix() +'.run(): clonedTasks = ' + clonedTasks);
                  
                  Map<String, String> oldEmailTemplateToNewTemplateMap = new Map<String, String>();
@@ -113,7 +113,7 @@ public abstract class BZ_ChangeCampaignMemberBase {
                  
                  // Update the OwnerId, WhatId (aka Related Id) and EmailTemplateToSend fields
                  // to match the new Campaign's values.
-                 for (SObject tObj : clonedTasks)
+                 for (SObject tObj : clonedTasks.objectList)
                  {
                      Task t = (Task)tObj;
                      //System.Debug(getDebugPrefix() +'.run(): changing WhatId of task = ' + t);
@@ -131,7 +131,7 @@ public abstract class BZ_ChangeCampaignMemberBase {
                          t.EmailTemplate__c = (String)newCampaignObj.get(newEmailTemplateField);
                      }
                  }
-                 insert clonedTasks;
+                 clonedTasks.insertObjects();
                  // If we're bringing across a task, we want to prevent it from being
                  // run in the oldCampaign, so delete them.  For Copy, we bring them across so that we can
                  // snapshot campaigns and not worry about cleaning up the open tasks but just continue

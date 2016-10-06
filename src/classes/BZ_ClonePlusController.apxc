@@ -141,7 +141,7 @@ public class BZ_ClonePlusController {
     // Then redirect the user to the new object page.
     public PageReference doClone()
     {
-        headClone = cloneObjects(new List<sObject>{headSObject}).get(0);
+        headClone = cloneObjects(new List<sObject>{headSObject}).objectList.get(0);
         insert headClone;
         cloneSelectedObjects();
         return new PageReference('/' + headClone.Id);
@@ -149,38 +149,35 @@ public class BZ_ClonePlusController {
     
     // Perform the cloning process by first cloning the parent, then all of the child objects. 
     // Return the list of cloned objects that haven't been inserted into the database yet.
-    public List<sObject> getClones()
+    public BZ_SObjectList getClones()
     {
-        List<sObject> clones = new List<sObject>();
-        headClone = cloneObjects(new List<sObject>{headSObject}).get(0);
-        clones.add(headClone);
-        clones.addAll(getSelectedObjectsClones());
-        return clones;
+        sObject headClone = cloneObjects(new List<sObject>{headSObject}).objectList.get(0);
+        BZ_SObjectList clonedObjects = getSelectedObjectsClones();
+        clonedObjects.objectList.add(0, headClone);
+        return clonedObjects;
     }
     
     // Return a clone of the main parent object that hasn't been insert into the database yet.
     public sObject getParentClone(){
         List<sObject> clones = new List<sObject>();
         // it's important to set the headClone variable if you're going to access child clones after.
-        headClone = cloneObjects(new List<sObject>{headSObject}).get(0);
+        headClone = cloneObjects(new List<sObject>{headSObject}).objectList.get(0);
         return headClone;
     }
     
     // Return a the child clones of the main parent object that haven't been insert into the database yet.
     // Note: the getParentClone() method must be called before this will work.
-    public List<sObject> getChildrenClones(){
+    public BZ_SObjectList getChildrenClones(){
         if (headClone == null){
             throw new BZ_ClonePlusControllerException('BZ_ClonePlusController.getChildrenClones(): please call getParentClone() first');
         }
-        List<sObject> clones = new List<sObject>();
-        clones.addAll(getSelectedObjectsClones());
-        return clones;
+        return getSelectedObjectsClones();
     }
 
     
     // Clone the selected child objects but don't insert them into the database.
     // Associate the cloned objects with the new cloned parent object.
-    public List<sObject> getSelectedObjectsClones()
+    public BZ_SObjectList getSelectedObjectsClones()
     {
         List<sObject> clonedObjects = new List<sObject>{};
         List<sObject> selectedRelatedObjects;
@@ -199,31 +196,26 @@ public class BZ_ClonePlusController {
             
             if (!selectedRelatedObjects.isEmpty())
             {
-                List<sObject> clones = cloneObjects(selectedRelatedObjects); 
+                BZ_SObjectList clones = cloneObjects(selectedRelatedObjects); 
                 System.Debug('BZ_ClonePlusController.getSelectedObjectsClones(): clonedObjects = '+clonedObjects);
-                for (sObject clone : clones)
+                for (sObject clone : clones.objectList)
                 {
                     System.Debug('BZ_ClonePlusController.getSelectedObjectsClones(): clone = '+clone + ', relatedObject = '+relatedObject + ', headClone = '+headClone);
                     clone.put(relatedObject.relatedFieldName, headClone.Id);  
                 }
-                clonedObjects.addAll(clones);
+                clonedObjects.addAll(clones.objectList);
             }
         }
         System.debug('BZ_ClonePlusController.getSelectedObjectsClones(): returning sorted clonedObjects.size() = ' + clonedObjects.size());
-        clonedObjects.sort(); // Avoid the following error with a very large list of objects: 
-                              // "Cannot have more than 10 chunks in a single operation. Please rearrange the data to reduce chunking.""
-        return clonedObjects;
+        return new BZ_SObjectList(clonedObjects);
     }
     
     // Clone the selected child objects.
     // Associate the cloned objects with the new cloned parent object.
     public void cloneSelectedObjects()
     {
-        List<sObject> clonedObjects = getSelectedObjectsClones();
-        if (!clonedObjects.isEmpty())
-        {
-            insert clonedObjects;
-        }
+        BZ_SObjectList clonedObjects = getSelectedObjectsClones();
+        clonedObjects.insertObjects();
     }
     
     // Clone a list of objects to a particular object type
@@ -232,7 +224,7 @@ public class BZ_ClonePlusController {
     // The sObjects you pass in must include the ID field, 
     // and the object must exist already in the database, 
     // otherwise the method will not work.
-    public static List<sObject> cloneObjects(List<sObject> sObjects){
+    public static BZ_SObjectList cloneObjects(List<sObject> sObjects){
         
         Schema.SObjectType objectType = sObjects.get(0).getSObjectType();
         
@@ -319,7 +311,7 @@ to retrieve the field values of all the objects.*/
             }
                 
         }
-        return clonedSObjects; 
+        return new BZ_SObjectList(clonedSObjects);
     }
     
     // Related objects data construct - 

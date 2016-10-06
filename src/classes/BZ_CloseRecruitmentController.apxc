@@ -73,9 +73,9 @@ public class BZ_CloseRecruitmentController {
             System.Debug('BZ_CloseRecruitmentController.run(): done inserting m_campaignSnapshot = '+m_campaignSnapshot);
             
             System.Debug('BZ_CloseRecruitmentController.run(): getChildrenClones()');
-            List<sObject> childrenClones = cloneController.getChildrenClones();
+            BZ_SObjectList childrenClones = cloneController.getChildrenClones();
             System.Debug('BZ_CloseRecruitmentController.run(): insert childrenClones = '+childrenClones);
-            insert childrenClones;
+            childrenClones.insertObjects();
             System.Debug('BZ_CloseRecruitmentController.run(): inserted childrenClones = '+childrenClones);
             
             m_campaign.Name = newCampaignName;

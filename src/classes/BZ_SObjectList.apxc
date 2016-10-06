@@ -1,0 +1,42 @@
+/*
+ * This is a container for a list of sObjects that abstracts away a Salesforce
+ * bug where you can't insert more than 2000 records if there is more than 
+ * 1 sObject Type in the list.  The error you'll see in this case without this helper class is:
+ * Cannot have more than 10 chunks in a single operation. Please rearrange the data to reduce chunking.
+ */
+public class BZ_SObjectList {
+    private List<sObject> m_objects;
+    private Map<String, List<sObject>> m_objectsMap = new Map<String, List<sObject>>();
+    
+    public BZ_SObjectList(List<sObject> objects){
+        m_objects = objects;
+    }
+    
+    /*
+     * Inserts the sObjects into the database in a safe way to avoid the following error:
+     * Cannot have more than 10 chunks in a single operation. Please rearrange the data to reduce chunking.
+     */
+    public void insertObjects(){
+        if (m_objects != null && !m_objects.isEmpty())
+        {
+            for (sObject obj : m_objects){
+                String name = obj.getSObjectType().getDescribe().getName();
+                List<sObject> objectsForThisType = m_objectsMap.get(name);
+                if (objectsForThisType != null){
+                    objectsForThisType.add(obj);
+                }
+                else {
+                    m_objectsMap.put(name, new List<sObject>{obj});
+                }
+            }
+            
+            for (List<sObject> objectList : m_objectsMap.values()){
+                insert objectList;
+            }
+        }
+    }
+    
+    public List<sObject> objectList {
+        get { return m_objects; }
+    }
+}
