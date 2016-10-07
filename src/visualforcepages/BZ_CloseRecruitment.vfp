@@ -2,7 +2,7 @@
      extensions="BZ_CloseRecruitmentController">
      <apex:pageMessages />
     <apex:form >
-        <apex:pageBlock mode="edit">
+        <apex:pageBlock mode="edit" rendered="{!hasStarted==false}">
             <style type="text/css">
           .noWrap { white-space: nowrap; }
       </style>
@@ -81,6 +81,12 @@
                     <apex:commandButton action="{!run}" value="Run"/>
                 </apex:pageBlockSectionItem>
             </apex:pageBlockSection>
+        </apex:pageBlock>
+
+        <apex:pageBlock id="processStatus" rendered="{!hasStarted}">
+            <apex:outputText value="Close Recruitment is running.  It may take a minute or two.  The status will be shown when it finishes.<br/><br/>" escape="false" rendered="{!hasStarted&&hasCompleted==false}"/>
+            <apex:outputText value="{!progressString}" id="progress" escape="false"/>
+            <apex:actionPoller enabled="{!hasStarted&&hasCompleted==false}" action="{!checkComplete}" interval="5" reRender="processStatus,progress"/>
         </apex:pageBlock>
     </apex:form>
 </apex:page>

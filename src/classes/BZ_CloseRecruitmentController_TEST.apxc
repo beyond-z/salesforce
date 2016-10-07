@@ -16,6 +16,8 @@ private class BZ_CloseRecruitmentController_TEST {
         
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
         Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        String campaignBeingClosedName = 'campaignBeingClosed';
+        campaign.name=campaignBeingClosedName;
         String reinviteEmailTemplateName = 'reinviteEmailTemplate';
         campaign.Previous_Candidate_New_Invite__c = reinviteEmailTemplateName;
         insert campaign;
@@ -79,10 +81,14 @@ private class BZ_CloseRecruitmentController_TEST {
         PageReference result = controller.run();
         Test.stopTest();
         
-        System.Assert(result != null, 'controller.run() returned null');
+        System.AssertEquals(false, BZ_Notifications.disableNotifyApplyNow);
+        System.AssertEquals(false, BZ_CloseRecruitmentController.IsCloseRecruitmentRunning);
         System.assert(controller.newCampaignName == newCampaignName, 'The BZ_CloseRecruitmentController should have newCampaignName = '+newCampaignName +' . Not newCampaignName ='+controller.newCampaignName);
         System.assert(controller.newAvailableMeetingTimes == newAvailableMeetingTimes, 'The BZ_CloseRecruitmentController should have newAvailableMeetingTimes = '+newAvailableMeetingTimes +' . Not newAvailableMeetingTimes ='+controller.newAvailableMeetingTimes);
-        System.assert(controller.m_campaign.ParentId == controller.m_campaignSnapshot.Id, 'The Campaign Snapshot should be set to the parent of the Active campaign.  controller.m_campaign.ParentId = '+controller.m_campaign.ParentId +' . Not controller.m_campaignSnapshot.Id ='+controller.m_campaignSnapshot.Id);
+        Campaign updatedCampaign = [Select ParentId FROM Campaign WHERE Id = :campaign.Id];
+        Campaign campaignSnapshot = [SELECT Id FROM Campaign WHERE Name = :campaignBeingClosedName];
+        System.assert(campaignSnapshot != null, 'Didnt find a campaign snapshot named ' + campaignBeingClosedName);
+        System.assert(updatedCampaign.ParentId == campaignSnapshot.Id, 'The Campaign Snapshot should be set to the parent of the Active campaign.  updatedCampaign.ParentId = '+updatedCampaign.ParentId +' . Not campaignSnapshot.Id ='+campaignSnapshot.Id);
         System.Assert(controller.getEmailTemplates() != null, 'controller.getEmailTemplates() is null');
         List<CampaignMember> campaignMembersNotPurged = [SELECT Id, Name, Status, CampaignId, ContactId, Candidate_Status__c FROM CampaignMember WHERE CampaignId = :campaign.Id];
         System.Assert(campaignMembersNotPurged.size() == 2, 'Expected 2 CampaignMember to not be purged. Found '+campaignMembersNotPurged.size());
@@ -124,10 +130,6 @@ private class BZ_CloseRecruitmentController_TEST {
         System.Assert(foundNoTimeTask, 'tOptedOutNoTime not found in campaign');
         System.Assert(foundWaitlistReinviteTask, 'Task to reinvite Waitlisted member to apply not found in campaign');
         System.Assert(foundNoTimeReinviteTask, 'Task to reinvite Opted Out No Time member to apply not found in campaign');
-        
-        ////////////
-        // TODO: validate that a snapshot campaign was taken
-        ////////////
     }
     
     static testMethod void validateFailedRun() {
@@ -146,9 +148,19 @@ private class BZ_CloseRecruitmentController_TEST {
         
       BZ_CloseRecruitmentController controller = new BZ_CloseRecruitmentController(sc);
         
+        Boolean exceptionCaught = false;
+        Test.startTest();
         // Don't set the newCampaign name, which causes it to fail.
-        PageReference result = controller.run();
+        try {
+            PageReference result = controller.run();
+        } catch(BZ_CloseRecruitmentController.BZ_CloseRecruitmentException e){
+            exceptionCaught = true;
+        }
+        Test.stopTest();
         
-        System.Assert(result == null, 'controller.run() should have returned null');
+        System.AssertEquals(true, exceptionCaught);
+        System.AssertEquals(false, BZ_Notifications.disableNotifyApplyNow);
+        System.AssertEquals(false, BZ_CloseRecruitmentController.IsCloseRecruitmentRunning);
+        
     }
 }
