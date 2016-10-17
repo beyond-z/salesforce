@@ -105,6 +105,7 @@ public class BZ_CloseRecruitmentController {
         private String m_newCampaignName;
         private String m_newAvailableMeetingTimes;
         private String m_prevCandidateEmailTemplate;
+        private ID m_jobId;
         
         public BZ_CloseRecruitmentControllerQueueable(Campaign campaign, Date oldStartDate, Date oldEndDate, 
                                                       String newCampaignName, String newAvailableMeetingTimes, 
@@ -157,19 +158,56 @@ public class BZ_CloseRecruitmentController {
                 m_campaign.Status = 'In Progress';
                 m_campaign.ParentId = m_campaignSnapshot.Id;
                 update m_campaign;
-                
+                                    
+                // Enqueue up the database changes in a new job to avoid a Too many rows - DML limit 1001 error. 
+                if (Test.isRunningTest()){ // When running tests, can't chain queueable jobs.
+                    new BZ_CloseRecruitmentDatabaseChangesQueueable(m_campaign, m_campaignSnapshot).execute(null);
+                } else {
+                    m_jobId = System.enqueueJob(new BZ_CloseRecruitmentDatabaseChangesQueueable(m_campaign, m_campaignSnapshot));
+                }
+            } catch (Exception e){
+                // roll everything back in case of error
+                Database.rollback(sp);
+                throw e;
+            } finally {
+                BZ_Notifications.disableNotifyApplyNow = false; // Just make sure it get's set back in case of an exception.
+                IsCloseRecruitmentRunning = false;
+            }
+            
+            System.Debug('BZ_CloseRecruitmentControllerQueueable.execute(): end');
+        }
+    }
+    
+    private class BZ_CloseRecruitmentDatabaseChangesQueueable implements Queueable {
+        
+        Campaign m_campaign;
+        Campaign m_campaignSnapshot;
+            
+        public BZ_CloseRecruitmentDatabaseChangesQueueable(Campaign campaign, Campaign campaignShapshot){
+            System.Debug('BZ_CloseRecruitmentDatabaseChangesQueueable(): begin');
+            m_campaign = campaign;
+            m_campaignSnapshot = campaignShapshot;
+        }
+        
+        public void execute(QueueableContext context)
+        {
+            System.Debug('BZ_CloseRecruitmentDatabaseChangesQueueable.execute(): begin');
+            Savepoint sp = Database.setSavepoint();
+            IsCloseRecruitmentRunning = true;
+            BZ_Notifications.disableNotifyApplyNow = true;
+            try {
                 List<CampaignMember> membersToPurge = [SELECT Id, ContactId, CampaignId, Candidate_Status__c, Opted_Out_Reason__c FROM CampaignMember 
                                                        WHERE CampaignId = :m_campaign.Id AND
                                                        Candidate_Status__c <> 'Waitlisted' AND
                                                        (
                                                            Candidate_Status__c <> 'Opted Out' OR
                                                            (Candidate_Status__c = 'Opted Out' AND 
-                                                               (
-                                                                   Opted_Out_Reason__c <> 'No Time' AND
-                                                                   Opted_Out_Reason__c <> 'No Available Units' AND
-                                                                   Opted_Out_Reason__c <> 'No Interest Right Now'
-                                                               )
+                                                            (
+                                                                Opted_Out_Reason__c <> 'No Time' AND
+                                                                Opted_Out_Reason__c <> 'No Available Units' AND
+                                                                Opted_Out_Reason__c <> 'No Interest Right Now'
                                                             )
+                                                           )
                                                        )];
                 System.Debug('BZ_CloseRecruitmentControllerQueueable.execute(): membersToPurge = ' + membersToPurge);
                 
@@ -184,8 +222,8 @@ public class BZ_CloseRecruitmentController {
                     }
                     
                     BZ_Notifications.changeCampaigns(memberContactIdsToPurge, m_campaign.Id, m_campaignSnapshot.Id);
-                    System.Debug('BZ_CloseRecruitmentControllerQueueable.execute(): deleting membersToPurge = ' + membersToPurge);
-                    delete membersToPurge;
+                        System.Debug('BZ_CloseRecruitmentControllerQueueable.execute(): deleting membersToPurge = ' + membersToPurge);
+                        delete membersToPurge;
                 }
                 
                 /* 
@@ -273,13 +311,12 @@ public class BZ_CloseRecruitmentController {
             } catch (Exception e){
                 // roll everything back in case of error
                 Database.rollback(sp);
-                throw e;
+                throw e; // BTODO: if this failes, figure out a way to rollback the campaign snapshot as well.
             } finally {
                 BZ_Notifications.disableNotifyApplyNow = false; // Just make sure it get's set back in case of an exception.
                 IsCloseRecruitmentRunning = false;
             }
-            
-            System.Debug('BZ_CloseRecruitmentControllerQueueable.execute(): end');
+            System.Debug('BZ_CloseRecruitmentDatabaseChangesQueueable.execute(): end');
         }
     }
     
