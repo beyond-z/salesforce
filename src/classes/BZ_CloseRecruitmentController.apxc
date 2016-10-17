@@ -7,6 +7,7 @@ public class BZ_CloseRecruitmentController {
     public Campaign m_campaignSnapshot {get;set;} // Cloned Snapshot campaign
     private Date m_oldStartDate {get; set;}
     private Date m_oldEndDate {get; set;}
+    private ID m_jobId;
     
     // This is true when the Close Recruitment logic is running
     public static Boolean IsCloseRecruitmentRunning {get; set;}
@@ -23,6 +24,21 @@ public class BZ_CloseRecruitmentController {
     public string prevCandidateEmailTemplate {
         get; set;
     }
+
+    /*
+     * Starts off false and set to true when the operation is complete.
+     */    
+    public Boolean hasCompleted { get; set; }
+    
+    /*
+     * Starts off false and set to true when the operation is queued up.
+     */    
+    public Boolean hasStarted { get; set; }
+    
+    /*
+     * Displays progress as we poll the status of the job.
+     */
+    public String progressString { get; set; }
 
     /**
      * Returns the list of all Beyond Z email templates, determined if they are prefixed
@@ -41,173 +57,266 @@ public class BZ_CloseRecruitmentController {
         prevCandidateEmailTemplate = m_campaign.Previous_Candidate_New_Invite__c;
         m_oldStartDate = m_campaign.StartDate;
         m_oldEndDate = m_campaign.EndDate;
+        hasCompleted = false;
+        hasStarted = false;
+        progressString = '. . .';
     }
 
     // method called from the VF's action attribute to close recruitment for this campaign
     public PageReference run() {
-        Savepoint sp = Database.setSavepoint();
-        IsCloseRecruitmentRunning = true;
-        BZ_Notifications.disableNotifyApplyNow = true;
-        try {
-            if (newCampaignName == NEW_CAMPAIGN_NAME_PROMPT){
-                throw new BZ_CloseRecruitmentException('Please enter a \'New Campaign Name\'');
-            }
-            
-            // Note that the cloneController requires the things below to be done in a 
-            // certain order.  I adapted the ClonePlus code from the internet and
-            // didn't take the time to cleanup the class so that you don't need to know the 
-            // internals to use these methods.  I'm so sorry for this.
-            System.Debug('BZ_CloseRecruitmentController.run(): about to clone m_campaign = ' + m_campaign);
-            BZ_ClonePlusController cloneController = new BZ_ClonePlusController(m_campaign.Id, new Set<String>{'CampaignMember', 'Task'});
-            System.Debug('BZ_CloseRecruitmentController.run(): getParentClone()');
-            m_campaignSnapshot = (Campaign)cloneController.getParentClone(); 
-            m_campaignSnapshot.IsActive = false;
-            // Completed means that the course has completed.  Inactive means recruitment is not active.
-            // The code below is commented out because the snapshot is now manually marked
-            // Completed when a course finishes in order to mark them as Alumni so that 
-            // the multiple campaign/application code can rely on Completed to mean that they
-            // can't access the Portal anymore.
-            //m_campaignSnapshot.Status = 'Completed'; // This allows the Campaign Assigned trigger to update the alumni status
-            System.Debug('BZ_CloseRecruitmentController.run(): insert m_campaignSnapshot = '+m_campaignSnapshot);
-            insert m_campaignSnapshot; // Need to do this before inserting children so that it gets an ID
-            System.Debug('BZ_CloseRecruitmentController.run(): done inserting m_campaignSnapshot = '+m_campaignSnapshot);
-            
-            System.Debug('BZ_CloseRecruitmentController.run(): getChildrenClones()');
-            List<sObject> childrenClones = cloneController.getChildrenClones();
-            System.Debug('BZ_CloseRecruitmentController.run(): insert childrenClones = '+childrenClones);
-            insert childrenClones;
-            System.Debug('BZ_CloseRecruitmentController.run(): inserted childrenClones = '+childrenClones);
-            
-            m_campaign.Name = newCampaignName;
-            m_campaign.Meeting_Times__c = newAvailableMeetingTimes;
-            m_campaign.Previous_Candidate_New_Invite__c = prevCandidateEmailTemplate;
-            m_campaign.Status = 'In Progress';
-            m_campaign.ParentId = m_campaignSnapshot.Id;
-            update m_campaign;
-            
-            List<CampaignMember> membersToPurge = [SELECT Id, ContactId, CampaignId, Candidate_Status__c, Opted_Out_Reason__c FROM CampaignMember 
-                                                   WHERE CampaignId = :m_campaign.Id AND
-                                                   Candidate_Status__c <> 'Waitlisted' AND
-                                                   (
-                                                       Candidate_Status__c <> 'Opted Out' OR
-                                                       (Candidate_Status__c = 'Opted Out' AND 
-                                                           (
-                                                               Opted_Out_Reason__c <> 'No Time' AND
-                                                               Opted_Out_Reason__c <> 'No Available Units' AND
-                                                               Opted_Out_Reason__c <> 'No Interest Right Now'
-                                                           )
-                                                        )
-                                                   )];
-            System.Debug('BZ_CloseRecruitmentController.run(): membersToPurge = ' + membersToPurge);
-            
-            Set<Id> confirmedMemberIds = new Set<Id>();
-            if (membersToPurge != null && !membersToPurge.isEmpty()){
-                List<Id> memberContactIdsToPurge = new List<Id>();
-                for (CampaignMember c : membersToPurge){
-                    memberContactIdsToPurge.add(c.ContactId);
-                    if (c.Candidate_Status__c == 'Confirmed'){
-                        confirmedMemberIds.add(c.ContactId);
-                    }
-                }
-                
-                BZ_Notifications.changeCampaigns(memberContactIdsToPurge, m_campaign.Id, m_campaignSnapshot.Id);
-                System.Debug('BZ_CloseRecruitmentController.run(): deleting membersToPurge = ' + membersToPurge);
-                delete membersToPurge;
-            }
-            
-            /* 
-             * Note: this was moved to the Campaign Assigned trigger instead since the members
-             * are already having their Participant and Volunteer Information set
-             */
-            /*
-            if (!confirmedMemberIds.isEmpty())
+        if (newCampaignName == NEW_CAMPAIGN_NAME_PROMPT){
+            throw new BZ_CloseRecruitmentException('Please enter a \'New Campaign Name\'');
+        }
+        
+        
+        m_jobId = System.enqueueJob(new BZ_CloseRecruitmentControllerQueueable(m_campaign, m_oldStartDate, m_oldEndDate, 
+                                                                                newCampaignName, newAvailableMeetingTimes, prevCandidateEmailTemplate));
+        hasStarted = true;
+        return null;
+    }
+    
+    public PageReference checkComplete(){
+        AsyncApexJob job = [SELECT Status, NumberOfErrors, ExtendedStatus FROM AsyncApexJob WHERE Id=:m_jobId];
+        System.debug('BZ_CloseRecruitmentController.checkComplete(): job status = '+job);
+        if (job.Status == 'Completed'){
+            hasCompleted = true;
+            PageReference pr = new PageReference('/' + m_campaign.Id);
+            progressString = 'Success! <a href="' + pr.getUrl() + '">Click here to go to the new campaign</a>';
+            // Note this link doesn't actually work when in development mode.
+        } else if (job.Status == 'Failed'){
+            progressString = 'Uh oh, something went wrong!  Here is the error: <br/><br/>' + job.ExtendedStatus;
+            hasCompleted = true;
+            ApexPages.Message errormsg = new ApexPages.Message(ApexPages.severity.ERROR,'The Close Recruitment operation failed.  Please contact your system administrator.');
+            ApexPages.addMessage(errormsg);
+        }
+        else {
+            progressString += ' .';
+            hasCompleted = false;
+        }
+        return null;
+    }
+    
+    private class BZ_CloseRecruitmentControllerQueueable implements Queueable, Database.AllowsCallouts {
+    
+        private Campaign m_campaign; // Active campaign
+        private Campaign m_campaignSnapshot; // Cloned Snapshot campaign
+        private Date m_oldStartDate;
+        private Date m_oldEndDate;
+        private String m_newCampaignName;
+        private String m_newAvailableMeetingTimes;
+        private String m_prevCandidateEmailTemplate;
+        private ID m_jobId;
+        
+        public BZ_CloseRecruitmentControllerQueueable(Campaign campaign, Date oldStartDate, Date oldEndDate, 
+                                                      String newCampaignName, String newAvailableMeetingTimes, 
+                                                      String prevCandidateEmailTemplate)
+        {
+            m_campaign = campaign;
+            m_oldStartDate = oldStartDate;
+            m_oldEndDate = oldEndDate;
+            m_newCampaignName = newCampaignName;
+            m_newAvailableMeetingTimes = newAvailableMeetingTimes;
+            m_prevCandidateEmailTemplate = prevCandidateEmailTemplate;
+        }
+        
+        public void execute(QueueableContext context)
+        {
+            System.Debug('BZ_CloseRecruitmentControllerQueueable.execute(): begin');
+            Savepoint sp = Database.setSavepoint();
+            IsCloseRecruitmentRunning = true;
+            BZ_Notifications.disableNotifyApplyNow = true;
+            try 
             {
-                // When we close recruitment, all Confirmed members become Alumni
-                Map<Id, Contact> confirmedContactMap = new Map<Id, Contact>([SELECT Id, Volunteer_Information__c, Participant_Information__c, User_Type__c FROM Contact WHERE Id in :confirmedMemberIds]);
-                List<Contact> contactsToUpdate = new List<Contact>();
-                for (Id i : confirmedMemberIds)
+                // Note that the cloneController requires the things below to be done in a 
+                // certain order.  I adapted the ClonePlus code from the internet and
+                // didn't take the time to cleanup the class so that you don't need to know the 
+                // internals to use these methods.  I'm so sorry for this.
+                System.Debug('BZ_CloseRecruitmentControllerQueueable.execute(): about to clone m_campaign = ' + m_campaign);
+                BZ_ClonePlusController cloneController = new BZ_ClonePlusController(m_campaign.Id, new Set<String>{'CampaignMember', 'Task'});
+                System.Debug('BZ_CloseRecruitmentControllerQueueable.execute(): getParentClone()');
+                m_campaignSnapshot = (Campaign)cloneController.getParentClone(); 
+                m_campaignSnapshot.IsActive = false;
+                // Completed means that the course has completed.  Inactive means recruitment is not active.
+                // The code below is commented out because the snapshot is now manually marked
+                // Completed when a course finishes in order to mark them as Alumni so that 
+                // the multiple campaign/application code can rely on Completed to mean that they
+                // can't access the Portal anymore.
+                //m_campaignSnapshot.Status = 'Completed'; // This allows the Campaign Assigned trigger to update the alumni status
+                System.Debug('BZ_CloseRecruitmentControllerQueueable.execute(): insert m_campaignSnapshot = '+m_campaignSnapshot);
+                insert m_campaignSnapshot; // Need to do this before inserting children so that it gets an ID
+                System.Debug('BZ_CloseRecruitmentControllerQueueable.execute(): done inserting m_campaignSnapshot = '+m_campaignSnapshot);
+                
+                System.Debug('BZ_CloseRecruitmentControllerQueueable.execute(): getChildrenClones()');
+                BZ_SObjectList childrenClones = cloneController.getChildrenClones();
+                System.Debug('BZ_CloseRecruitmentControllerQueueable.execute(): insert childrenClones = '+childrenClones);
+                childrenClones.insertObjects();
+                System.Debug('BZ_CloseRecruitmentControllerQueueable.execute(): inserted childrenClones = '+childrenClones);
+                
+                m_campaign.Name = m_newCampaignName;
+                m_campaign.Meeting_Times__c = m_newAvailableMeetingTimes;
+                m_campaign.Previous_Candidate_New_Invite__c = m_prevCandidateEmailTemplate;
+                m_campaign.Status = 'In Progress';
+                m_campaign.ParentId = m_campaignSnapshot.Id;
+                update m_campaign;
+                                    
+                // Enqueue up the database changes in a new job to avoid a Too many rows - DML limit 1001 error. 
+                if (Test.isRunningTest()){ // When running tests, can't chain queueable jobs.
+                    new BZ_CloseRecruitmentDatabaseChangesQueueable(m_campaign, m_campaignSnapshot).execute(null);
+                } else {
+                    m_jobId = System.enqueueJob(new BZ_CloseRecruitmentDatabaseChangesQueueable(m_campaign, m_campaignSnapshot));
+                }
+            } catch (Exception e){
+                // roll everything back in case of error
+                Database.rollback(sp);
+                throw e;
+            } finally {
+                BZ_Notifications.disableNotifyApplyNow = false; // Just make sure it get's set back in case of an exception.
+                IsCloseRecruitmentRunning = false;
+            }
+            
+            System.Debug('BZ_CloseRecruitmentControllerQueueable.execute(): end');
+        }
+    }
+    
+    private class BZ_CloseRecruitmentDatabaseChangesQueueable implements Queueable {
+        
+        Campaign m_campaign;
+        Campaign m_campaignSnapshot;
+            
+        public BZ_CloseRecruitmentDatabaseChangesQueueable(Campaign campaign, Campaign campaignShapshot){
+            System.Debug('BZ_CloseRecruitmentDatabaseChangesQueueable(): begin');
+            m_campaign = campaign;
+            m_campaignSnapshot = campaignShapshot;
+        }
+        
+        public void execute(QueueableContext context)
+        {
+            System.Debug('BZ_CloseRecruitmentDatabaseChangesQueueable.execute(): begin');
+            Savepoint sp = Database.setSavepoint();
+            IsCloseRecruitmentRunning = true;
+            BZ_Notifications.disableNotifyApplyNow = true;
+            try {
+                List<CampaignMember> membersToPurge = [SELECT Id, ContactId, CampaignId, Candidate_Status__c, Opted_Out_Reason__c FROM CampaignMember 
+                                                       WHERE CampaignId = :m_campaign.Id AND
+                                                       Candidate_Status__c <> 'Waitlisted' AND
+                                                       (
+                                                           Candidate_Status__c <> 'Opted Out' OR
+                                                           (Candidate_Status__c = 'Opted Out' AND 
+                                                            (
+                                                                Opted_Out_Reason__c <> 'No Time' AND
+                                                                Opted_Out_Reason__c <> 'No Available Units' AND
+                                                                Opted_Out_Reason__c <> 'No Interest Right Now'
+                                                            )
+                                                           )
+                                                       )];
+                System.Debug('BZ_CloseRecruitmentControllerQueueable.execute(): membersToPurge = ' + membersToPurge);
+                
+                Set<Id> confirmedMemberIds = new Set<Id>();
+                if (membersToPurge != null && !membersToPurge.isEmpty()){
+                    List<Id> memberContactIdsToPurge = new List<Id>();
+                    for (CampaignMember c : membersToPurge){
+                        memberContactIdsToPurge.add(c.ContactId);
+                        if (c.Candidate_Status__c == 'Confirmed'){
+                            confirmedMemberIds.add(c.ContactId);
+                        }
+                    }
+                    
+                    BZ_Notifications.changeCampaigns(memberContactIdsToPurge, m_campaign.Id, m_campaignSnapshot.Id);
+                        System.Debug('BZ_CloseRecruitmentControllerQueueable.execute(): deleting membersToPurge = ' + membersToPurge);
+                        delete membersToPurge;
+                }
+                
+                /* 
+                 * Note: this was moved to the Campaign Assigned trigger instead since the members
+                 * are already having their Participant and Volunteer Information set
+                 */
+                /*
+                if (!confirmedMemberIds.isEmpty())
                 {
-                    Contact contact = confirmedContactMap.get(i);
-                    if (m_campaign.Type == 'Leadership Coaches') {
-                        contact.Volunteer_Information__c = 'Former LC';
-                        contactsToUpdate.add(contact);
-                    } else if (m_campaign.Type == 'Program Participants'){
-                        contact.Participant_Information__c = 'Program Alum';
-                        contactsToUpdate.add(contact);
+                    // When we close recruitment, all Confirmed members become Alumni
+                    Map<Id, Contact> confirmedContactMap = new Map<Id, Contact>([SELECT Id, Volunteer_Information__c, Participant_Information__c, User_Type__c FROM Contact WHERE Id in :confirmedMemberIds]);
+                    List<Contact> contactsToUpdate = new List<Contact>();
+                    for (Id i : confirmedMemberIds)
+                    {
+                        Contact contact = confirmedContactMap.get(i);
+                        if (m_campaign.Type == 'Leadership Coaches') {
+                            contact.Volunteer_Information__c = 'Former LC';
+                            contactsToUpdate.add(contact);
+                        } else if (m_campaign.Type == 'Program Participants'){
+                            contact.Participant_Information__c = 'Program Alum';
+                            contactsToUpdate.add(contact);
+                        }
                     }
-                }
-                update contactsToUpdate;
-            } */
-            
-            List<CampaignMember> membersNotPurged = [SELECT Id, CampaignId, ContactId, Application_Decision_Sent__c,
-                                                     Apply_Button_Enabled__c, Section_Name_In_LMS__c, Selected_Timeslot__c,
-                                                     Application_Status__c, Candidate_Status__c FROM CampaignMember 
-                                                     WHERE CampaignId = :m_campaign.Id];
-            Set<Id> memberContactIdsNotPurged = new Set<Id>();
-            for (CampaignMember cm : membersNotPurged){
-                memberContactIdsNotPurged.add(cm.ContactId);
-            }
-
-            List<Task> tasksToPurge = [SELECT Id FROM Task 
-                                       WHERE WhoId not in :memberContactIdsNotPurged AND // Name 
-                                       WhatId = :m_campaign.Id];
-            System.Debug('BZ_CloseRecruitmentController.run(): tasksToPurge = ' + tasksToPurge);
-            if (tasksToPurge != null && !tasksToPurge.isEmpty()){
-                System.Debug('BZ_CloseRecruitmentController.run(): deleting tasksToPurge = ' + tasksToPurge);
-                delete tasksToPurge;
-            }
-             
-            if (membersNotPurged != null && !membersNotPurged.isEmpty()){
-                List<Id> memberContactIdsToRengage = new List<Id>();
+                    update contactsToUpdate;
+                } */
+                
+                List<CampaignMember> membersNotPurged = [SELECT Id, CampaignId, ContactId, Application_Decision_Sent__c,
+                                                         Apply_Button_Enabled__c, Section_Name_In_LMS__c, Selected_Timeslot__c,
+                                                         Application_Status__c, Candidate_Status__c FROM CampaignMember 
+                                                         WHERE CampaignId = :m_campaign.Id];
+                Set<Id> memberContactIdsNotPurged = new Set<Id>();
                 for (CampaignMember cm : membersNotPurged){
-                    cm.Application_Decision_Sent__c = false;
-                    if (cm.Application_Status__c == 'Submitted'){
-                        System.Debug('BZ_CloseRecruitmentController.run(): setting Application_Status__c = Started for ' + cm);
-                        cm.Application_Status__c = 'Started';            
-                    }
-                    cm.Apply_Button_Enabled__c = true;
-                    cm.Section_Name_In_LMS__c = null;
-                    cm.Selected_Timeslot__c = null;
-                    cm.Candidate_Status__c = null;
-                    memberContactIdsToRengage.add(cm.ContactId);
+                    memberContactIdsNotPurged.add(cm.ContactId);
                 }
-                
-                List<Task> tasksToAdd = 
-                    BZ_TaskFactory.createEmailTasks(membersNotPurged, 
-                                                    'Reinvite For New Program', 
-                                                    'Previous_Candidate_New_Invite__c');
-                System.Debug('BZ_CloseRecruitmentController.run(): inserting tasksToAdd = ' + tasksToAdd);
-                insert tasksToAdd;
-                
-                // Do this last so that the notifyApplyNow callout happens after any other
-                // places it may be triggered during the clone operation.  This can leave the
-                // Apply Now Enabled option in the wrong state since we can have a Contact in at least
-                // two campaigns with different states of Apply Now Enabled.  We want the Active 
-                // campaign's state to take precedence.
-                // 
-                // TODO: this is a hack just to get the most common use case working.  
-                // It causes the members that are snapshotted to an Inactive campaign but who are not
-                // left in the Active Campaign to maybe still have access to the application.  
-                // The issue is that there is a race condition with the notifyApplyNow call 
-                // and even if we run the code in the right order, the call's aren't gauranteed to be 
-                // executed in that order since they are "future" calls.  So we can't deterministically
-                // choose the final state of the Apply Now button if a Contact is in 2 campaigns with different
-                // states.
-                BZ_Notifications.disableNotifyApplyNow = false;
-                System.Debug('BZ_CloseRecruitmentController.run(): updating membersNotPurged = ' + membersNotPurged);
-                update membersNotPurged;
+    
+                List<Task> tasksToPurge = [SELECT Id FROM Task 
+                                           WHERE WhoId not in :memberContactIdsNotPurged AND // Name 
+                                           WhatId = :m_campaign.Id];
+                System.Debug('BZ_CloseRecruitmentControllerQueueable.execute(): tasksToPurge = ' + tasksToPurge);
+                if (tasksToPurge != null && !tasksToPurge.isEmpty()){
+                    System.Debug('BZ_CloseRecruitmentControllerQueueable.execute(): deleting tasksToPurge = ' + tasksToPurge);
+                    delete tasksToPurge;
+                }
+                 
+                if (membersNotPurged != null && !membersNotPurged.isEmpty()){
+                    List<Id> memberContactIdsToRengage = new List<Id>();
+                    for (CampaignMember cm : membersNotPurged){
+                        cm.Application_Decision_Sent__c = false;
+                        if (cm.Application_Status__c == 'Submitted'){
+                            System.Debug('BZ_CloseRecruitmentControllerQueueable.execute(): setting Application_Status__c = Started for ' + cm);
+                            cm.Application_Status__c = 'Started';            
+                        }
+                        cm.Apply_Button_Enabled__c = true;
+                        cm.Section_Name_In_LMS__c = null;
+                        cm.Selected_Timeslot__c = null;
+                        cm.Candidate_Status__c = null;
+                        memberContactIdsToRengage.add(cm.ContactId);
+                    }
+                    
+                    List<Task> tasksToAdd = 
+                        BZ_TaskFactory.createEmailTasks(membersNotPurged, 
+                                                        'Reinvite For New Program', 
+                                                        'Previous_Candidate_New_Invite__c');
+                    System.Debug('BZ_CloseRecruitmentControllerQueueable.execute(): inserting tasksToAdd = ' + tasksToAdd);
+                    insert tasksToAdd;
+                    
+                    // Do this last so that the notifyApplyNow callout happens after any other
+                    // places it may be triggered during the clone operation.  This can leave the
+                    // Apply Now Enabled option in the wrong state since we can have a Contact in at least
+                    // two campaigns with different states of Apply Now Enabled.  We want the Active 
+                    // campaign's state to take precedence.
+                    // 
+                    // TODO: this is a hack just to get the most common use case working.  
+                    // It causes the members that are snapshotted to an Inactive campaign but who are not
+                    // left in the Active Campaign to maybe still have access to the application.  
+                    // The issue is that there is a race condition with the notifyApplyNow call 
+                    // and even if we run the code in the right order, the call's aren't gauranteed to be 
+                    // executed in that order since they are "future" calls.  So we can't deterministically
+                    // choose the final state of the Apply Now button if a Contact is in 2 campaigns with different
+                    // states.
+                    BZ_Notifications.disableNotifyApplyNow = false;
+                    System.Debug('BZ_CloseRecruitmentControllerQueueable.execute(): updating membersNotPurged = ' + membersNotPurged);
+                    update membersNotPurged;
+                }
+            } catch (Exception e){
+                // roll everything back in case of error
+                Database.rollback(sp);
+                throw e; // BTODO: if this failes, figure out a way to rollback the campaign snapshot as well.
+            } finally {
+                BZ_Notifications.disableNotifyApplyNow = false; // Just make sure it get's set back in case of an exception.
+                IsCloseRecruitmentRunning = false;
             }
-            
-            return new PageReference('/' + m_campaign.Id);
-            
-        } catch (Exception e){
-            // roll everything back in case of error
-            Database.rollback(sp);
-            ApexPages.addMessages(e);
-            return null;
-        } finally {
-            BZ_Notifications.disableNotifyApplyNow = false; // Just make sure it get's set back in case of an exception.
-            IsCloseRecruitmentRunning = false;
+            System.Debug('BZ_CloseRecruitmentDatabaseChangesQueueable.execute(): end');
         }
     }
     

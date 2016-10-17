@@ -11,6 +11,16 @@ public class BZ_SetCultivationLevel {
     }
     
     public void Run(){
+        
+        if (BZ_CloseRecruitmentController.IsCloseRecruitmentRunning)
+        {
+            // NOOP: we're snapshotting the campaign and don't need to update the Cultivation_Level__c
+            // since it's cloned.  When we close large campaigns, all the trigger logic causes
+            // Apex CPU time limit exceptions.
+            System.Debug('BZ_SetCultivationLevel: NOOP because were running BZ_CloseRecruitmentController.IsCloseRecruitmentRunning');
+            return;
+        }
+            
         Set<Id> contactIdsWeHaveMet = new Set<Id>();
         Set<Id> contactIdsWeHaveReachedOutTo = new Set<Id>();
         Set<Id> otherContactIdsWeHaveInteractedWith = new Set<Id>();
