@@ -14,6 +14,7 @@ Keep Informed
 Preferred Email
 Preferred Phone
 Signup Date
-Started College
+College Enrollment Year
+College Enrollment Semester
 University Name
 User Type
