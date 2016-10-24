@@ -10,6 +10,13 @@ public class BZ_CampaignEmailTemplates {
     private final List<SelectOption> m_options;
     
     /**
+     * The selected Invite Email Template.
+     */
+    public string inviteEmailTemplate {
+        get; set;
+    }
+
+    /**
      * The selected Intro Email Template.
      */
     public string introEmailTemplate {
@@ -66,7 +73,7 @@ public class BZ_CampaignEmailTemplates {
     }
   
     public BZ_CampaignEmailTemplates(ApexPages.StandardController controller) {
-        m_campaign = [select Id, Intro_Email_Template__c, App_Submit_Reminder_Template__c,
+        m_campaign = [select Id, Invite_Email_Template__c, Intro_Email_Template__c, App_Submit_Reminder_Template__c,
                         App_Accepted_Email_Template__c, App_Open_Email_Template__c, App_Interview_Requested_Email_Template__c,
                         App_Not_Accepted_Email_Template__c, App_Waitlisted_Email_Template__c, Previous_Candidate_New_Invite__c
                       from Campaign where id = :ApexPages.currentPage().getParameters().get('id')];
@@ -75,6 +82,7 @@ public class BZ_CampaignEmailTemplates {
         
         m_options = BZ_EmailTemplateProvider.getEmailTemplates();
         
+        inviteEmailTemplate = m_campaign.Invite_Email_Template__c;
     introEmailTemplate = m_campaign.Intro_Email_Template__c;
     appOpenEmailTemplate = m_campaign.App_Open_Email_Template__c;
         //submitAppReminderEmailTemplate = m_campaign.App_Submit_Reminder_Template__c;
@@ -89,6 +97,7 @@ public class BZ_CampaignEmailTemplates {
      * Save the current values back to the Campaign object in the database.
      */
     public PageReference save() {
+        m_campaign.Invite_Email_Template__c = inviteEmailTemplate;
         m_campaign.Intro_Email_Template__c = introEmailTemplate;
         m_campaign.App_Accepted_Email_Template__c = appAcceptedEmailTemplate;
         m_campaign.App_Open_Email_Template__c = appOpenEmailTemplate;

@@ -5,6 +5,7 @@
 	ACTIVITY
 		Email Template To Send
     CampaignMember Id
+    Interation Type
 
 	CAMPAIGN
 		Intro Email Template
@@ -12,6 +13,7 @@
 		Coach Course ID # for the coach playbook
 		Section Name in LMS Coach Course # this is for the coach only - the class where Coaches are students. Set on the campaign because it is always the same for individuals within it.
 		Section Name Site Prefix # prefix for automatically making section names in this site. e.g. "NYC" or "SJSU" when we do "NYC Abby Mon 5"
+    Invite Email Template
 		App Open Email Template
 		App Submit Reminder Template
 		App Waitlisted Email Template
@@ -27,6 +29,7 @@
 		Request Student Id
 		Interview Scheduler
 		Sourcing Info Options
+    Volunteer Opportunities
 
 	CAMPAIGN MEMBER
 		Date App Submitted
@@ -65,6 +68,7 @@
 		Section Name In LMS # this is the one for the fellows. coaches are TAs in here, fellows are Students
 		Started College
 		Anticipated Graduation
+    Anticipated Graduation Semester
 		Eligible
 		GPA Circumstances
 		Other Commitments
@@ -104,15 +108,19 @@
 		Reference 2 How Long Known
 		Reference 2 Phone
 		Reference 2 Email
+    Cultivation Level
+    Last Interaction Date
 
 	CONTACT
 		Middle Name
 		Accepts Text 
+    Candidate Status
 		Undergrad University 
 		Grad University
 		Graduate Year
 		Grad Degree
 		Anticipated Graduation 
+    Anticipated Graduation Semester
 		BZ Region
 		BZ User Id 
 		Came From to Visit Site
@@ -144,6 +152,8 @@
 		Participant Information
 		Volunteer Information
     Student Registration Code
+    Last Interaction Date
+    Cultivation Level
 		
 	LEAD
 		Account Activated?
@@ -153,6 +163,7 @@
 		User Type
 		University Name
 		Anticipated Graduation
+    Anticipated Graduation Semester
 		Started College
 		Interested in opening BZ
 		BZ Region

@@ -1,36 +1,71 @@
 @isTest 
 private class BZ_CloseRecruitmentController_TEST {
     static testMethod void validateRun() {
+        List<Contact> contactsToInsert = new List<Contact>();
         Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
-        insert campaignOwner;
-        Contact contactWaitlist = new Contact(FirstName='Test', LastName='UserWaitlisted');
-        insert contactWaitlist;
-        Contact contactConfirmed = new Contact(FirstName='Test', LastName='UserConfirmed');
-        insert contactConfirmed;
+        contactsToInsert.add(campaignOwner);
+        Contact contactWaitlist = new Contact(FirstName='Test', LastName='UserWaitlisted', Volunteer_Information__c='LC Pipeline');
+        contactsToInsert.add(contactWaitlist);
+        Contact contactOptedOutDropped = new Contact(FirstName='Test', LastName='UserOptedOutDropped', Volunteer_Information__c='LC Pipeline');
+        contactsToInsert.add(contactOptedOutDropped);
+        Contact contactOptedOutNoTime = new Contact(FirstName='Test', LastName='UserOptedOutNoTime', Volunteer_Information__c='LC Pipeline');
+        contactsToInsert.add(contactOptedOutNoTime);
+        Contact contactConfirmed = new Contact(FirstName='Test', LastName='UserConfirmed', Volunteer_Information__c='Current LC');
+        contactsToInsert.add(contactConfirmed);
+        insert contactsToInsert;
         
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
-        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Blah');
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        String campaignBeingClosedName = 'campaignBeingClosed';
+        campaign.name=campaignBeingClosedName;
         String reinviteEmailTemplateName = 'reinviteEmailTemplate';
         campaign.Previous_Candidate_New_Invite__c = reinviteEmailTemplateName;
         insert campaign;
         
+        List<CampaignMember> campaignMembersToInsert = new List<CampaignMember>();
         CampaignMember cmWaitlist = new CampaignMember();
         cmWaitlist.CampaignId=campaign.Id;
         cmWaitlist.ContactId=contactWaitlist.Id;
         cmWaitlist.Candidate_Status__c = 'Waitlisted';
         cmWaitlist.Application_Status__c = 'Submitted';
-        insert cmWaitlist;
+        campaignMembersToInsert.add(cmWaitlist);
+        
+        CampaignMember cmOptedOutDropped = new CampaignMember();
+        cmOptedOutDropped.CampaignId=campaign.Id;
+        cmOptedOutDropped.ContactId=contactOptedOutDropped.Id;
+        cmOptedOutDropped.Candidate_Status__c = 'Opted Out';
+        cmOptedOutDropped.Opted_Out_Reason__c = 'Dropped - During Program';
+        cmOptedOutDropped.Application_Status__c = 'Submitted';
+        campaignMembersToInsert.add(cmOptedOutDropped);
+        
+        CampaignMember cmOptedOutNoTime = new CampaignMember();
+        cmOptedOutNoTime.CampaignId=campaign.Id;
+        cmOptedOutNoTime.ContactId=contactOptedOutNoTime.Id;
+        cmOptedOutNoTime.Candidate_Status__c = 'Opted Out';
+        cmOptedOutNoTime.Opted_Out_Reason__c = 'No Time';
+        cmOptedOutNoTime.Application_Status__c = 'Submitted';
+        campaignMembersToInsert.add(cmOptedOutNoTime);
         
         CampaignMember cmConfirmed = new CampaignMember();
         cmConfirmed.CampaignId=campaign.Id;
         cmConfirmed.ContactId=contactConfirmed.Id;
         cmConfirmed.Candidate_Status__c = 'Confirmed';
-        insert cmConfirmed;
+        cmConfirmed.Application_Status__c = 'Submitted';
+        campaignMembersToInsert.add(cmConfirmed);
         
+        insert campaignMembersToInsert;
+        
+        List<Task> tasksToInsert = new List<Task>();
         Task tWaitlist = new Task(Subject='Test CampaignWaitlist', CampaignMemberId__c=cmWaitlist.Id, WhoId=contactWaitlist.Id, WhatId=campaign.Id);
-        insert tWaitlist;
+        tasksToInsert.add(tWaitlist);
+        Task tOptedOutDropped = new Task(Subject='Test CampaignOptedOutDropped', CampaignMemberId__c=cmOptedOutDropped.Id, WhoId=contactOptedOutDropped.Id, WhatId=campaign.Id);
+        tasksToInsert.add(tOptedOutDropped);
+        Task tOptedOutNoTime = new Task(Subject='Test CampaignOptedOutNoTime', CampaignMemberId__c=cmOptedOutNoTime.Id, WhoId=contactOptedOutNoTime.Id, WhatId=campaign.Id);
+        tasksToInsert.add(tOptedOutNoTime);
         Task tConfirm = new Task(Subject='Test CampaignConfirm', CampaignMemberId__c=cmConfirmed.Id, WhoId=contactConfirmed.Id, WhatId=campaign.Id);
-        insert tConfirm;
+        tasksToInsert.add(tConfirm);
+        
+        insert tasksToInsert;
         
       ApexPages.StandardController sc = new ApexPages.standardController(campaign);
             
@@ -42,34 +77,59 @@ private class BZ_CloseRecruitmentController_TEST {
         String newAvailableMeetingTimes = 'Wednesday:5';
         controller.newCampaignName = newCampaignName;
         controller.newAvailableMeetingTimes = newAvailableMeetingTimes;
+        Test.startTest();
         PageReference result = controller.run();
+        Test.stopTest();
         
-        System.Assert(result != null, 'controller.run() returned null');
+        System.AssertEquals(false, BZ_Notifications.disableNotifyApplyNow);
+        System.AssertEquals(false, BZ_CloseRecruitmentController.IsCloseRecruitmentRunning);
         System.assert(controller.newCampaignName == newCampaignName, 'The BZ_CloseRecruitmentController should have newCampaignName = '+newCampaignName +' . Not newCampaignName ='+controller.newCampaignName);
         System.assert(controller.newAvailableMeetingTimes == newAvailableMeetingTimes, 'The BZ_CloseRecruitmentController should have newAvailableMeetingTimes = '+newAvailableMeetingTimes +' . Not newAvailableMeetingTimes ='+controller.newAvailableMeetingTimes);
+        Campaign updatedCampaign = [Select ParentId FROM Campaign WHERE Id = :campaign.Id];
+        Campaign campaignSnapshot = [SELECT Id FROM Campaign WHERE Name = :campaignBeingClosedName];
+        System.assert(campaignSnapshot != null, 'Didnt find a campaign snapshot named ' + campaignBeingClosedName);
+        System.assert(updatedCampaign.ParentId == campaignSnapshot.Id, 'The Campaign Snapshot should be set to the parent of the Active campaign.  updatedCampaign.ParentId = '+updatedCampaign.ParentId +' . Not campaignSnapshot.Id ='+campaignSnapshot.Id);
         System.Assert(controller.getEmailTemplates() != null, 'controller.getEmailTemplates() is null');
         List<CampaignMember> campaignMembersNotPurged = [SELECT Id, Name, Status, CampaignId, ContactId, Candidate_Status__c FROM CampaignMember WHERE CampaignId = :campaign.Id];
-        System.Assert(campaignMembersNotPurged.size() == 1, 'Expected 1 CampaignMember to not be purged. Found '+campaignMembersNotPurged.size());
-        System.Assert(campaignMembersNotPurged.get(0).Id == cmWaitlist.Id, 'cmWaitlist not found in campaign');
+        System.Assert(campaignMembersNotPurged.size() == 2, 'Expected 2 CampaignMember to not be purged. Found '+campaignMembersNotPurged.size());
+        for (CampaignMember cm : campaignMembersNotPurged)
+        {
+            if (cm.Id != cmWaitlist.Id && cm.Id != cmOptedOutNoTime.Id)
+            {
+                System.assert(false, 'Found Campaign Member that should not have been kept in active campaign: cm = ' + cm);
+            }
+        }
         List<Task> tasksNotPurged = [SELECT Id, WhoId, EmailTemplate__c FROM Task WHERE WhatId = :campaign.Id];
         Boolean foundWaitlistTask = false;
-        Boolean foundReinviteTask = false;
+        Boolean foundNoTimeTask = false;
+        Boolean foundWaitlistReinviteTask = false;
+        Boolean foundNoTimeReinviteTask = false;
         for (Task t : tasksNotPurged)
         {
-            System.Assert(t.WhoId == contactWaitlist.Id, 'Only tasks for contactWaitlist should be left on campaign.  Found task = '+t);
+            if (t.WhoId != contactWaitlist.Id && t.WhoId != contactOptedOutNoTime.Id)
+            {
+                System.Assert(false, 'Only tasks for contactWaitlist and contactOptedOutNoTime should be left on campaign.  Found task = '+t);    
+            }
+            
             if (t.Id == tWaitlist.Id) {
                 foundWaitlistTask = true;
             }
-            if (t.EmailTemplate__c != null && t.EmailTemplate__c == reinviteEmailTemplateName){
-                foundReinviteTask = true;
+            
+            if (t.WhoId == contactWaitlist.Id && t.EmailTemplate__c != null && t.EmailTemplate__c == reinviteEmailTemplateName){
+                foundWaitlistReinviteTask = true;
+            }
+            if (t.Id == tOptedOutNoTime.Id) {
+                foundNoTimeTask = true;
+            }
+            
+            if (t.WhoId == contactOptedOutNoTime.Id && t.EmailTemplate__c != null && t.EmailTemplate__c == reinviteEmailTemplateName){
+                foundNoTimeReinviteTask = true;
             }
         }
         System.Assert(foundWaitlistTask, 'tWaitlist not found in campaign');
-        System.Assert(foundReinviteTask, 'Task to reinvite member to apply not found in campaign');
-        
-        ////////////
-        // TODO: validate that a snapshot campaign was taken
-        ////////////
+        System.Assert(foundNoTimeTask, 'tOptedOutNoTime not found in campaign');
+        System.Assert(foundWaitlistReinviteTask, 'Task to reinvite Waitlisted member to apply not found in campaign');
+        System.Assert(foundNoTimeReinviteTask, 'Task to reinvite Opted Out No Time member to apply not found in campaign');
     }
     
     static testMethod void validateFailedRun() {
@@ -88,9 +148,19 @@ private class BZ_CloseRecruitmentController_TEST {
         
       BZ_CloseRecruitmentController controller = new BZ_CloseRecruitmentController(sc);
         
+        Boolean exceptionCaught = false;
+        Test.startTest();
         // Don't set the newCampaign name, which causes it to fail.
-        PageReference result = controller.run();
+        try {
+            PageReference result = controller.run();
+        } catch(BZ_CloseRecruitmentController.BZ_CloseRecruitmentException e){
+            exceptionCaught = true;
+        }
+        Test.stopTest();
         
-        System.Assert(result == null, 'controller.run() should have returned null');
+        System.AssertEquals(true, exceptionCaught);
+        System.AssertEquals(false, BZ_Notifications.disableNotifyApplyNow);
+        System.AssertEquals(false, BZ_CloseRecruitmentController.IsCloseRecruitmentRunning);
+        
     }
 }

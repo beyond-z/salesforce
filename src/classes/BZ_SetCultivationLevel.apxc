@@ -1,0 +1,115 @@
+/*
+ * Helper to set the Cultivation Level and Last Interaction Date based on the Task's
+ * Interaction Type
+ */
+public class BZ_SetCultivationLevel {
+    private List<Task> m_tasksToProcess;
+    
+    public BZ_SetCultivationLevel(List<Task> tasksToProcess){
+        System.assertNotEquals(null, tasksToProcess);
+        m_tasksToProcess =  tasksToProcess;   
+    }
+    
+    public void Run(){
+        
+        if (BZ_CloseRecruitmentController.IsCloseRecruitmentRunning)
+        {
+            // NOOP: we're snapshotting the campaign and don't need to update the Cultivation_Level__c
+            // since it's cloned.  When we close large campaigns, all the trigger logic causes
+            // Apex CPU time limit exceptions.
+            System.Debug('BZ_SetCultivationLevel: NOOP because were running BZ_CloseRecruitmentController.IsCloseRecruitmentRunning');
+            return;
+        }
+            
+        Set<Id> contactIdsWeHaveMet = new Set<Id>();
+        Set<Id> contactIdsWeHaveReachedOutTo = new Set<Id>();
+        Set<Id> otherContactIdsWeHaveInteractedWith = new Set<Id>();
+        Set<Id> allContactIdsWeveInteractedWith = new Set<Id>();
+        for(Task task : m_tasksToProcess){
+            
+            if (task.Status == 'Completed')
+            {
+                System.Debug('BZ_SetCultivationLevel: processing Completed task: ' + task);
+                
+                // When we send queued emails, the built in Salesforce email sending mechanism
+                // inserts a new completed task (and our code deletes the queued task that had
+                // the Interaction Type set).  This adjusts the interaction type for these.
+                if (task.Subject.startsWith('Email:')){
+                    task.Interaction_Type__c = 'Email';
+                }
+    
+                // All other Interaction_Type__c values other than Text correspond to those
+                // that we have met in some way.
+                if (task.WhoId != null &&
+                    !String.isEmpty(task.Interaction_Type__c) &&
+                    task.Interaction_Type__c != '--None--')
+                {
+                    allContactIdsWeveInteractedWith.add(task.WhoId);
+                    
+                    //System.Debug('BZ_TaskClosed: adding Contact Id '+ task.WhoId + ' to contactIdsWeHaveMet');
+                    if (task.Interaction_Type__c == 'Email' || task.Interaction_Type__c == 'Voicemail' || 
+                        task.Interaction_Type__c == 'Text Message'){
+                        contactIdsWeHaveReachedOutTo.add(task.WhoId);
+                    }
+                    else if (task.Interaction_Type__c == 'Phone Call' || task.Interaction_Type__c == 'Camera to Camera Virtual Meeting' || 
+                             task.Interaction_Type__c == '1:1 In-Person Meeting' || task.Interaction_Type__c == 'Small Group In-Person Meeting') {
+                        contactIdsWeHaveMet.add(task.WhoId);
+                    }
+                    else {
+                        // Note: "Interaction at Larger Function" and "Attended BZ Function" are left
+                        // blank b/c "Met" means we had a conversation we set up to talk about a specific thing and
+                        // "Reached Out" means we contacted them to make a specific ask.  However, these two are more
+                        // analogous to someone coming to our website and hearing about us 
+                        // (e.g. a passing conversation at a larger function) but we haven't actively started 
+                        // cultivating them yet.
+                        otherContactIdsWeHaveInteractedWith.add(task.WhoId);
+                    }
+                }
+            }
+        }
+        
+        if (allContactIdsWeveInteractedWith.size() <= 0)
+        {
+            System.debug('BZ_SetCultivationLevel: exiting because no tasks with Interaction Types found');
+            return;
+        }
+
+        Map<Id, Contact> contactIdToContactMap = new Map<Id, Contact>([SELECT Id, Name, Cultivation_Level__c, Last_Interaction_Date__c FROM Contact 
+                                                                       WHERE Id in :allContactIdsWeveInteractedWith]);
+        for (Contact c : contactIdToContactMap.values()){
+            if (contactIdsWeHaveMet.contains(c.Id)){
+                 c.Cultivation_Level__c = 'Met';
+                 c.Last_Interaction_Date__c = DateTime.now();
+            } 
+            else if (contactIdsWeHaveReachedOutTo.contains(c.Id)){
+                if (c.Cultivation_Level__c != 'Met'){ // Met trumps Reached Out.
+                    c.Cultivation_Level__c = 'Reached Out';
+                }
+                c.Last_Interaction_Date__c = DateTime.now();
+            } else if (otherContactIdsWeHaveInteractedWith.contains(c.Id)){
+                c.Last_Interaction_Date__c = DateTime.now();
+            }
+        }
+        
+        update contactIdToContactMap.values();
+
+        // Note: we also have to grab the fields used by the BZ Copy Contact Info To Campaign Member
+        // Process Builder flow b/c it was generating the following during unit tests: 
+        // System.DmlException: Update failed. First exception on row 0 with id 00v17000003lt45AAA; 
+        // first error: CANNOT_EXECUTE_FLOW_TRIGGER, The record couldn’t be saved because it 
+        // failed to trigger a flow.
+        List<CampaignMember> campaignMembersToUpdate = new List<CampaignMember>(
+            [SELECT Id, ContactId, Last_Interaction_Date__c, Cultivation_Level__c,
+             Anticipated_Graduation_Semester__c, Anticipated_Graduation__c, Signup_Date__c, Started_College__c
+             FROM CampaignMember WHERE ContactId in :allContactIdsWeveInteractedWith]);
+
+        if (!campaignMembersToUpdate.isEmpty()){
+            for (CampaignMember cm : campaignMembersToUpdate){
+                Contact c = contactIdToContactMap.get(cm.ContactId);
+                cm.Last_Interaction_Date__c = c.Last_Interaction_Date__c;
+                cm.Cultivation_Level__c = c.Cultivation_Level__c;
+            }
+            update campaignMembersToUpdate;
+        }
+    }
+}

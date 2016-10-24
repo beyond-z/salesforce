@@ -2,7 +2,7 @@
      extensions="BZ_CloseRecruitmentController">
      <apex:pageMessages />
     <apex:form >
-        <apex:pageBlock mode="edit">
+        <apex:pageBlock mode="edit" rendered="{!hasStarted==false}">
             <style type="text/css">
           .noWrap { white-space: nowrap; }
       </style>
@@ -24,7 +24,7 @@
                         'Waitlisted' - means that we wanted to accept them, but there were no more spots.<br/>
                     </apex:outputLabel>
                     <apex:outputLabel style="padding-left:5em">
-                        'Opted Out' - means that during the interview they indicated that they couldn’t commit to the program at that time.<br/>
+                        'Opted Out' - with an 'Opted Out Reason' of 'No Time', 'No Available Units', or 'No Interest Right Now' means that during the interview they indicated that they couldn’t commit to the program at that time but may be interested in the future.<br/>
                     </apex:outputLabel>
                     <apex:outputLabel >
                         <br/>
@@ -81,6 +81,13 @@
                     <apex:commandButton action="{!run}" value="Run"/>
                 </apex:pageBlockSectionItem>
             </apex:pageBlockSection>
+        </apex:pageBlock>
+
+        <apex:pageBlock id="processStatus" rendered="{!hasStarted}">
+            <apex:outputText value="Close Recruitment is running.  It may take a minute or two.  The status will be shown when it finishes.<br/><br/>" escape="false" rendered="{!hasStarted&&hasCompleted==false}"/>
+            <apex:outputText value="{!progressString}" id="progress" escape="false"/>
+            <apex:outputText value="<br/><br/>Important note: if it completes successfully, it still may take up to a minute for the changes to show up.  So just wait a bit after it's done :)." escape="false"/>
+            <apex:actionPoller enabled="{!hasStarted&&hasCompleted==false}" action="{!checkComplete}" interval="5" reRender="processStatus,progress"/>
         </apex:pageBlock>
     </apex:form>
 </apex:page>

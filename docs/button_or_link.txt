@@ -2,3 +2,8 @@ CAMPAIGN
   Send_My_Queued_Emails
   Send_Queued_Application_Decisions
   Sync_Contacts_to_LMS
+  Close Recruitment
+  Bulk Invite
+
+CONTACT LIST VIEW
+  Mass Text

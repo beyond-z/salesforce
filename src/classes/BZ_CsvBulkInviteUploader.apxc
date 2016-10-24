@@ -1,0 +1,63 @@
+/**
+ * Reads a CSV file of Contacts in the format: 
+ * FirstName, LastName, Email, Phone, InteractionType, InteractionDescription
+ * Phone is the only optional value.
+ */
+public abstract class BZ_CsvBulkInviteUploader extends BZ_CsvContactsUploader {
+
+    abstract void finishRead();
+
+    private Map<String, String[]> m_emailsToInteractionTypeMap;
+
+    public BZ_CsvBulkInviteUploader(){
+        m_emailsToInteractionTypeMap = new Map<String, String[]>();
+    }
+
+    /**
+     * Called for each row in the uploaded CSV so subclasses can process them.
+     */
+    protected override boolean ProcessRow(String[] rowValues){
+        try
+        {
+            super.ProcessRow(rowValues);
+            if (rowValues.size() >= 6)
+            {
+                System.debug('BZ_CsvBulkInviteUploader.ProcessRow(rowValues=['+rowValues+'])');
+                if (!String.isEmpty(rowValues[2].trim())){
+
+                    String email = rowValues[2].trim();
+                    if (!String.isEmpty(rowValues[4].trim()) && !String.isEmpty(rowValues[5].trim())){
+                        String interactionType = rowValues[4].trim();
+                        String interactionDescription = rowValues[5].trim();
+                        // We use toLowerCase b/c Salesforce stores all emails in lowercase and
+                        // we don't want lookups to fail if mixed case emails are in the file
+                        m_emailsToInteractionTypeMap.put(email.toLowerCase(), new String[]{interactionType, interactionDescription});
+                        return true;
+                    }
+                    else {
+                        System.debug('BZ_CsvBulkInviteUploader.ProcessRow(rowValues=['+rowValues+']) -- SKIPPING because InteractionType and InteractionDescription is not set.');
+                    }
+                } else {
+                    System.debug('BZ_CsvBulkInviteUploader.ProcessRow(rowValues=['+rowValues+']) -- SKIPPING because Email is not set.');
+                }
+            }
+            else
+            {
+                System.debug('BZ_CsvBulkInviteUploader.ProcessRow(rowValues=['+rowValues+']) -- SKIPPING because there are not 6 columns');
+            }
+            return false;
+        } catch (Exception e){
+            ApexPages.Message errormsg = new ApexPages.Message(ApexPages.severity.ERROR,'An error has occured reading the CSV file.  Format expected is FirstName, LastName, Email, Phone, InteractionType, Interaction Description where phone is the only optional value: '+e.getMessage());
+            ApexPages.addMessage(errormsg);
+            return false;
+        }
+    }
+
+    /*
+     * Returns a map of email addresses (all values are lowercase) to an array of 
+     * InteractionType and InteractionDescriptions.
+     */
+    public Map<String, String[]> getInteractionInfoMap(){
+        return m_emailsToInteractionTypeMap;
+    }
+}

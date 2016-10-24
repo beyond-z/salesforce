@@ -1,0 +1,202 @@
+@isTest 
+private class BZ_MassTextController_TEST {
+    static testMethod void validateSuccess() {
+        System.debug('BZ_MassTextController_TEST.validateNoContactsWithPhone(): begin');
+        List<Contact> contactsToInsert = new List<Contact>();
+        List<Contact> contactsToText = new List<Contact>();
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(campaignOwner);
+        Contact contactToTextWithPhone1 = new Contact(FirstName='Brian', LastName='xTestMassTextWithPhone1', Phone='5555555555', Email='masstext1@email.com', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(contactToTextWithPhone1);
+        contactsToText.add(contactToTextWithPhone1);
+        Contact contactToTextNoPhone1 = new Contact(FirstName='Brian', LastName='xTestMassTextNoPhone1', Email='masstext2@email.com', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(contactToTextNoPhone1);
+        contactsToText.add(contactToTextNoPhone1);
+        insert contactsToInsert;
+
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
+        campaign.Invite_Email_Template__c = 'BZ INVITE: test template';
+        insert campaign;
+
+        List<CampaignMember> campaignMembersToInsert = new List<CampaignMember>();
+        CampaignMember cmToTextWithPhone1 = new CampaignMember();
+        cmToTextWithPhone1.CampaignId=campaign.Id;
+        cmToTextWithPhone1.ContactId=contactToTextWithPhone1.Id;
+        campaignMembersToInsert.add(cmToTextWithPhone1);
+        CampaignMember cmToTextNoPhone1 = new CampaignMember();
+        cmToTextNoPhone1.CampaignId=campaign.Id;
+        cmToTextNoPhone1.ContactId=contactToTextNoPhone1.Id;
+        campaignMembersToInsert.add(cmToTextNoPhone1);
+        insert campaignMembersToInsert;
+
+        BZ_SettingsFactory_TEST.setSettings();
+        System.assert(BZ_Settings__c.getInstance('bz') != null, 'BZ_Settings__c is null');
+
+        ApexPages.StandardSetController ssc = new ApexPages.StandardSetController(contactsToText);
+        ssc.setSelected(contactsToText);
+        PageReference pageRef = Page.BZ_MassText;
+        Test.setCurrentPage(pageRef);
+        String textMessageBody = 'Hi {!Contact.FirstName}, test text message!';
+        Test.startTest();
+        BZ_MassTextController controller = new BZ_MassTextController(ssc);
+        controller.textMessageBody = textMessageBody;
+        controller.campaignLookup.CampaignId = campaign.Id;
+        PageReference result = controller.sendTextMessages();
+        Test.stopTest();
+
+        System.assert(controller.textMessagesSent, 'Text messages not sent!');
+        System.assert(controller.hasTextMessageBody, 'Expected text message body to be set. It wasnt');
+        System.assert(controller.selectedContactsWithPhone.size() == 1, 'Expected 1 contact with a Phone number to be texted, found '+controller.selectedContactsWithPhone.size()+'. controller.selectedContactsWithPhone = ' + controller.selectedContactsWithPhone);
+        List<Task> tasks = [SELECT Id, Subject, WhoId, WhatId, Status, Interaction_Type__c, Description, EmailTemplate__c FROM Task 
+                            WHERE WhatId = :campaign.Id AND Subject LIKE '%Text Message%'];
+        System.Assert(tasks.size() == 1, 'Expected 1 Text Message task. Found '+tasks.size()+' tasks');
+        for (Task t : tasks)
+        {
+            if (t.Subject.startsWith('Text Message:')){
+                System.assert(t.Status == 'Completed', 'Expected Text Message task to be Completed.  t = '+t);
+                System.assert(t.WhoId == contactToTextWithPhone1.Id, 'Expected CampaignMember texted to be ' + contactToTextWithPhone1 + '.  Found a CampaignMember texted with ContactId = ' + t.WhoId);
+            }
+        }
+    }
+
+    static testMethod void validateNoContactsWithPhone() {
+        System.debug('BZ_MassTextController_TEST.validateNoContactsWithPhone(): begin');
+        List<Contact> contactsToInsert = new List<Contact>();
+        List<Contact> contactsToText = new List<Contact>();
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(campaignOwner);
+        Contact contactToTextNoPhone1 = new Contact(FirstName='Brian', LastName='xTestMassTextNoPhone1', Email='masstext1@email.com', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(contactToTextNoPhone1);
+        contactsToText.add(contactToTextNoPhone1);
+        Contact contactToTextNoPhone2 = new Contact(FirstName='Brian', LastName='xTestMassTextNoPhone2', Email='masstext2@email.com', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(contactToTextNoPhone2);
+        contactsToText.add(contactToTextNoPhone2);
+        insert contactsToInsert;
+
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
+        campaign.Invite_Email_Template__c = 'BZ INVITE: test template';
+        insert campaign;
+
+        List<CampaignMember> campaignMembersToInsert = new List<CampaignMember>();
+        CampaignMember cmToTextNoPhone1 = new CampaignMember();
+        cmToTextNoPhone1.CampaignId=campaign.Id;
+        cmToTextNoPhone1.ContactId=contactToTextNoPhone1.Id;
+        campaignMembersToInsert.add(cmToTextNoPhone1);
+        CampaignMember cmToTextNoPhone2 = new CampaignMember();
+        cmToTextNoPhone2.CampaignId=campaign.Id;
+        cmToTextNoPhone2.ContactId=contactToTextNoPhone2.Id;
+        campaignMembersToInsert.add(cmToTextNoPhone2);
+        insert campaignMembersToInsert;
+
+        BZ_SettingsFactory_TEST.setSettings();
+        System.assert(BZ_Settings__c.getInstance('bz') != null, 'BZ_Settings__c is null');
+
+        ApexPages.StandardSetController ssc = new ApexPages.StandardSetController(contactsToText);
+        ssc.setSelected(contactsToText);
+        PageReference pageRef = Page.BZ_MassText;
+        Test.setCurrentPage(pageRef);
+        String textMessageBody = 'Hi {!Contact.FirstName}, test text message!';
+        Test.startTest();
+        BZ_MassTextController controller = new BZ_MassTextController(ssc);
+        controller.textMessageBody = textMessageBody;
+        controller.campaignLookup.CampaignId = campaign.Id;
+        PageReference result = controller.sendTextMessages();
+        Test.stopTest();
+
+        System.assert(controller.resultMessage.startsWith('No selected Contacts with Phone numbers'), 'Result message for Mass Text to no Contacts with Phone is wrong.  Actual: '+controller.resultMessage);
+        System.assert(controller.selectedContactsWithPhone.size() == 0, 'Expected 0 contacts with a Phone number, found '+controller.selectedContactsWithPhone.size()+'. controller.selectedContactsWithPhone = ' + controller.selectedContactsWithPhone);
+        List<Task> tasks = [SELECT Id, Subject, WhoId, WhatId, Status, Interaction_Type__c, Description, EmailTemplate__c FROM Task 
+                            WHERE WhatId = :campaign.Id AND Subject LIKE '%Text Message%'];
+        System.Assert(tasks.size() == 0, 'Expected 0 Text Message tasks. Found '+tasks.size()+' tasks');
+    }
+
+    static testMethod void validateEmptyTextMessage() {
+        System.debug('BZ_MassTextController_TEST.validateEmptyTextMessage(): begin');
+        List<Contact> contactsToInsert = new List<Contact>();
+        List<Contact> contactsToText = new List<Contact>();
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(campaignOwner);
+        Contact contactToTextWithPhone1 = new Contact(FirstName='Brian', LastName='xTestMassTextWithPhone1', Phone='5555555555', Email='masstext1@email.com', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(contactToTextWithPhone1);
+        contactsToText.add(contactToTextWithPhone1);
+        insert contactsToInsert;
+
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
+        campaign.Invite_Email_Template__c = 'BZ INVITE: test template';
+        insert campaign;
+
+        List<CampaignMember> campaignMembersToInsert = new List<CampaignMember>();
+        CampaignMember cmToTextWithPhone1 = new CampaignMember();
+        cmToTextWithPhone1.CampaignId=campaign.Id;
+        cmToTextWithPhone1.ContactId=contactToTextWithPhone1.Id;
+        campaignMembersToInsert.add(cmToTextWithPhone1);
+        insert campaignMembersToInsert;
+
+        BZ_SettingsFactory_TEST.setSettings();
+        System.assert(BZ_Settings__c.getInstance('bz') != null, 'BZ_Settings__c is null');
+
+        ApexPages.StandardSetController ssc = new ApexPages.StandardSetController(contactsToText);
+        ssc.setSelected(contactsToText);
+        PageReference pageRef = Page.BZ_MassText;
+        Test.setCurrentPage(pageRef);
+        Test.startTest();
+        BZ_MassTextController controller = new BZ_MassTextController(ssc);
+        controller.campaignLookup.CampaignId = campaign.Id;
+        PageReference result = controller.sendTextMessages();
+        System.assert(controller.resultMessage.contains('Failed sending some text messages'), 'Expected result message to contain "Failed sending some text messages".  It was actually: ' + controller.resultMessage);
+        System.debug('ApexPages.getMessages() = '+ApexPages.getMessages());
+        Test.stopTest();
+    }
+
+    static testMethod void validateBadCampaign() {
+        System.debug('BZ_MassTextController_TEST.validateBadCampaign(): begin');
+        List<Contact> contactsToInsert = new List<Contact>();
+        List<Contact> contactsToText = new List<Contact>();
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(campaignOwner);
+        Contact contactToTextWithPhone1 = new Contact(FirstName='Brian', LastName='xTestMassTextWithPhone1', Phone='5555555555', Email='masstext1@email.com', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(contactToTextWithPhone1);
+        contactsToText.add(contactToTextWithPhone1);
+        insert contactsToInsert;
+
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        List<Campaign> campaignsToInsert = new List<Campaign>();
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
+        campaign.Invite_Email_Template__c = 'BZ INVITE: test template';
+        campaignsToInsert.add(campaign);
+        Campaign deletedCampaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
+        campaignsToInsert.add(deletedCampaign);
+        insert campaignsToInsert;
+
+        Id deletedCampaignId = deletedCampaign.Id;
+        delete deletedCampaign;
+
+        List<CampaignMember> campaignMembersToInsert = new List<CampaignMember>();
+        CampaignMember cmToTextWithPhone1 = new CampaignMember();
+        cmToTextWithPhone1.CampaignId=campaign.Id;
+        cmToTextWithPhone1.ContactId=contactToTextWithPhone1.Id;
+        campaignMembersToInsert.add(cmToTextWithPhone1);
+        insert campaignMembersToInsert;
+
+        BZ_SettingsFactory_TEST.setSettings();
+        System.assert(BZ_Settings__c.getInstance('bz') != null, 'BZ_Settings__c is null');
+
+        ApexPages.StandardSetController ssc = new ApexPages.StandardSetController(contactsToText);
+        ssc.setSelected(contactsToText);
+        PageReference pageRef = Page.BZ_MassText;
+        Test.setCurrentPage(pageRef);
+        String textMessageBody = 'Hi {!Contact.FirstName}, test text message!';
+        Test.startTest();
+        BZ_MassTextController controller = new BZ_MassTextController(ssc);
+        controller.campaignLookup.CampaignId = deletedCampaignId;
+        controller.textMessageBody = textMessageBody;
+
+        PageReference result = controller.sendTextMessages();
+        System.assert(controller.resultMessage.contains('Please select a valid campaign'), 'Expected result message to contain "Please select a valid campaign".  It was actually: ' + controller.resultMessage);
+        System.debug('ApexPages.getMessages() = '+ApexPages.getMessages());
+        Test.stopTest();
+    }
+}

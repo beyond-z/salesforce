@@ -4,10 +4,21 @@
  */
 trigger BZ_CampaignAssigned on CampaignMember (before insert) {
     System.Debug('BZ_CampaignAssigned: begin trigger');
+    
+    if (BZ_CloseRecruitmentController.IsCloseRecruitmentRunning)
+    {
+        // NOOP: we're snapshotting the campaign but we don't want to actively 
+        // queue up tasks to take action, adjust the Participant or Volunteer Info, or set
+        // their Is In Active Recruitment Campaign flag (which the CampaignActive trigger will take care of).
+        // When we close large campaigns, all the trigger logic causes Apex CPU time limit exceptions.
+        System.Debug('BZ_CampaignAssigned: NOOP because were running BZ_CloseRecruitmentController.IsCloseRecruitmentRunning');
+        return;
+    }
         
     List<Task> tasksToAdd = new List<Task>(); 
     List<Task> tasksToUpdate = new List<Task>(); 
     List<Contact> contactsToUpdate = new List<Contact>();
+    List<CampaignMember> campaignMembersToCreateInviteTasksFor = new List<CampaignMember>();
     List<CampaignMember> campaignMembersToCreateIntroTasksFor = new List<CampaignMember>();
     List<CampaignMember> campaignMembersToCreateReinviteTasksFor = new List<CampaignMember>();
     
@@ -21,8 +32,8 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
         //System.Debug('BZ_CampaignAssigned: adding CampaignId='+cm.CampaignId + ' to campaignIds ' + campaignIds);
         campaignIds.add(cm.CampaignId);
     }
-    Map<Id, Contact> contactMap = new Map<Id, Contact>([SELECT Id, Volunteer_Information__c, Participant_Information__c, User_Type__c FROM Contact WHERE Id in :contactIds]);
-    Map<Id, Campaign> campaignMap = new Map<Id, Campaign>([SELECT Id, Type FROM Campaign WHERE Id in :campaignIds]);
+    Map<Id, Contact> contactMap = new Map<Id, Contact>([SELECT Id, Volunteer_Information__c, Participant_Information__c, User_Type__c, Signup_Date__c, BZ_User_Id__c FROM Contact WHERE Id in :contactIds]);
+    Map<Id, Campaign> campaignMap = new Map<Id, Campaign>([SELECT Id, Type, IsActive, Status FROM Campaign WHERE Id in :campaignIds]);
     //System.Debug('BZ_CampaignAssigned: contactMap='+contactMap);
     //System.Debug('BZ_CampaignAssigned: campaignMap='+campaignMap);
                  
@@ -48,15 +59,40 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
         }
         
         boolean isApplicableCampaign = false;
+        boolean hasSignedUpOnWebsite = (contact.BZ_User_Id__c != null && contact.Signup_Date__c != null);
+        boolean hasCourseCompleted = (campaign.IsActive == false && campaign.Status == 'Completed');
+        System.debug('BZ_CampaignAssigned: hasCourseCompleted = '+hasCourseCompleted +', campaign.IsActive='+campaign.IsActive+', campaign.Status='+campaign.Status);
+        System.debug('BZ_CampaignAssigned: cm.Candidate_Status__c = '+cm.Candidate_Status__c +', cm='+cm);
         if (campaign.Type == 'Leadership Coaches') {
             // Note: this is also set in a Workflow when the Lead is converted, 
             // but they may signup as one type but then we determine that they are really 
             // a different type so we still want to run this.
-            contact.Volunteer_Information__c = 'LC Pipeline';
+            if (hasCourseCompleted && cm.Candidate_Status__c == 'Confirmed'){
+                contact.Volunteer_Information__c = 'Former LC';
+            } else {
+                contact.Volunteer_Information__c = 'LC Pipeline';
+            }
+            if (campaign.IsActive){ // If InActive, they may in other Active campaigns, so NOOP
+                contact.Is_In_Active_Recruitment_Campaign__c = true;
+            }
             isApplicableCampaign = true;
         } else if (campaign.Type == 'Program Participants'){
             // Ditto on above comment
-            contact.Participant_Information__c = 'Participant Pipeline';
+            if (hasCourseCompleted && cm.Candidate_Status__c == 'Confirmed'){
+                contact.Participant_Information__c = 'Program Alum';
+            } else {
+                contact.Participant_Information__c = 'Participant Pipeline';
+            }
+            if (campaign.IsActive){ // If InActive, they may in other Active campaigns, so NOOP
+                contact.Is_In_Active_Recruitment_Campaign__c = campaign.IsActive;
+            }
+            isApplicableCampaign = true;
+        } else if (campaign.Type == 'Volunteer'){
+            // Ditto on above comment
+            contact.Volunteer_Information__c = 'Temp Volunteer';
+            if (campaign.IsActive){ // If InActive, they may in other Active campaigns, so NOOP
+                contact.Is_In_Active_Recruitment_Campaign__c = true;
+            }
             isApplicableCampaign = true;
         } else if (campaign.Type == 'Partners')
         {
@@ -75,7 +111,10 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
         if (isApplicableCampaign)
         {   
             contactsToUpdate.add(contact);
-            contactIdsOfTasksToClose.add(contact.Id);
+            if (hasSignedUpOnWebsite)
+            {
+                contactIdsOfTasksToClose.add(contact.Id);
+            }
             
             if (BZ_CopyCampaignMemberController.IsCopyCampaignMemberRunning)
             {
@@ -89,18 +128,26 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
                 // NOOP: we just want to continue where we left off with the old campaign.
                 System.Debug('BZ_CampaignAssigned: skipping email Task b/c Move To Campaign is running for CampaignMember = '+ cm);
             } 
-            else if (BZ_CloseRecruitmentController.IsCloseRecruitmentRunning)
-            {
-                // NOOP: we're snapshotting the campaign but we don't want to actively 
-                // queue up tasks to take action.
-                System.Debug('BZ_CampaignAssigned: skipping email Task b/c Close Recruitment is running for CampaignMember = '+ cm);
-            }
             else
             {
-              campaignMembersToCreateIntroTasksFor.add(cm);
-                System.Debug('BZ_CampaignAssigned: queuing up Intro email for '+cm);
+                if (hasSignedUpOnWebsite)
+                {
+                  campaignMembersToCreateIntroTasksFor.add(cm);
+                    System.Debug('BZ_CampaignAssigned: queuing up Intro email for '+cm);
+                }
+                else
+                {
+                    campaignMembersToCreateInviteTasksFor.add(cm);
+                    System.Debug('BZ_CampaignAssigned: queuing up Invite email for '+cm);
+                }
             }
         }
+    }
+
+    if (campaignMembersToCreateInviteTasksFor.size() > 0)
+    {
+        tasksToAdd = BZ_TaskFactory.createEmailTasks(campaignMembersToCreateInviteTasksFor, 
+                                                 'Send Invite Email', 'Invite_Email_Template__c');
     }
     
     if (campaignMembersToCreateIntroTasksFor.size() > 0)

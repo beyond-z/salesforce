@@ -1,0 +1,38 @@
+@isTest 
+private class BZ_SectionNameInLMSChanged_TEST {    
+    static testMethod void validate() {
+        System.debug('BZ_SectionNameInLMSChanged_TEST.validate() - begin');
+        List<Contact> contactsToInsert = new List<Contact>();
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(campaignOwner);
+        Contact contact1 = new Contact(FirstName='Brian', LastName='xTest1', Phone='5554445555', Email='test@email.com', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(contact1);
+        insert contactsToInsert;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        List<Campaign> campaignsToInsert = new List<Campaign>();
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
+        campaignsToInsert.add(campaign);
+        insert campaignsToInsert;
+        
+        CampaignMember cm = new CampaignMember();
+        cm.CampaignId=campaign.Id;
+        cm.ContactId=contact1.Id;
+        insert cm;
+        
+        // This fires the trigger we're testing.
+        String sectionName = 'SOME Text Section (Tu)';
+        cm.Section_Name_In_LMS__c = sectionName;
+        update cm;
+        
+        Contact updatedContact = [SELECT Id, Section_Name_In_LMS__c FROM Contact WHERE Id = :contact1.Id];
+        System.assertEquals(sectionName, updatedContact.Section_Name_In_LMS__c);
+
+        String sectionName2 = '2SOME Text Section (Tu)2';
+        cm.Section_Name_In_LMS__c = sectionName2;
+        update cm;
+        
+        Contact updatedContact2 = [SELECT Id, Section_Name_In_LMS__c FROM Contact WHERE Id = :contact1.Id];
+        System.assertEquals(sectionName2, updatedContact2.Section_Name_In_LMS__c);
+    }
+}

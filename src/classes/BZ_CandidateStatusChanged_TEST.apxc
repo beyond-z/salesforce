@@ -30,6 +30,59 @@ private class BZ_CandidateStatusChanged_TEST {
         System.assert(resultingTasks.size()==1, 'Expected Task to be created to Send Interview Request Email');
     }
     
+    /*static testMethod void validateStudentRegistrationCodeTask() {
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_srct1', OwnerId=userInfo.getUserId());
+        insert campaignOwner;
+        Contact contact = new Contact(FirstName='Test', LastName='AppStatChanged2');
+        insert contact;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
+        campaign.Request_Student_Id__c = true;
+        insert campaign;
+        
+        CampaignMember cm = new CampaignMember();
+        cm.CampaignId=campaign.Id;
+        cm.ContactId=contact.Id;
+       
+        insert cm;
+        
+        // This fires the trigger we're testing.
+        cm.Candidate_Status__c = 'Accepted';
+        update cm;
+    
+        List<Task> resultingTasks = [SELECT Id, WhoId, WhatId FROM Task
+                                    WHERE WhoId=:cm.ContactId AND 
+                                          WhatId=:cm.CampaignId AND
+                                          Subject LIKE '%Set Student Registration Code%'];
+        System.assert(resultingTasks.size()==1, 'Expected Task to be created to Set Student Registration Code');
+    }*/
+    
+    static testMethod void validateConfirmed() {
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_confirmed1', OwnerId=userInfo.getUserId());
+        insert campaignOwner;
+        Contact contact = new Contact(FirstName='Test', LastName='AppStatChangedToConfirmed1');
+        insert contact;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        insert campaign;
+        
+        CampaignMember cm = new CampaignMember();
+        cm.CampaignId=campaign.Id;
+        cm.ContactId=contact.Id;
+       
+        insert cm;
+        
+        // This fires the trigger we're testing.
+        cm.Candidate_Status__c = 'Confirmed';
+        update cm;
+    
+        Contact updatedContact = [SELECT Id, Volunteer_Information__c, Candidate_Status__c FROM Contact WHERE Id=:cm.ContactId];
+        System.assert(updatedContact.Volunteer_Information__c == 'Current LC', 'When a Contact is Confirmed, their Volunteer Information should be set.');
+        System.assert(updatedContact.Candidate_Status__c == 'Confirmed', 'When a Contact is Confirmed, their Candidate Status should be set.');
+    }
+    
     static testMethod void validateAccepted() {
         Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_aqmct1', OwnerId=userInfo.getUserId());
         insert campaignOwner;
@@ -57,44 +110,87 @@ private class BZ_CandidateStatusChanged_TEST {
                                           Subject LIKE '%Map cohort%'];
         System.assert(resultingTasks.size()==1, 'Expected Task to be created to Map the cohort'); */
         
-        Contact updatedContact = [SELECT Id, Volunteer_Information__c FROM Contact WHERE Id=:cm.ContactId];
-        System.assert(updatedContact.Volunteer_Information__c == 'Current LC', 'When a Contact is Accepted, their Volunteer Information should be set.');
+        Contact updatedContact = [SELECT Id, Volunteer_Information__c, Candidate_Status__c FROM Contact WHERE Id=:cm.ContactId];
+        System.assert(updatedContact.Volunteer_Information__c == 'LC Pipeline', 'When a Contact is Accepted, their Volunteer Information should not be changed.');
+        System.assert(updatedContact.Candidate_Status__c == 'Accepted', 'When a Contact is Accepted, their Candidate Status should be set.');
     }
     
-    static testMethod void validateReviewAppTaskClosed() {
-        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_vratc1', OwnerId=userInfo.getUserId());
+    static testMethod void validateOptedOut() {
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_ooct1', OwnerId=userInfo.getUserId());
         insert campaignOwner;
-        Contact contact_accepted = new Contact(FirstName='Test', LastName='AppStatClosedAccepted1');
-        insert contact_accepted;
-        Contact contact_waitlisted = new Contact(FirstName='Test', LastName='AppStatClosedWaitlisted1');
-        insert contact_waitlisted;
-        Contact contact_not_accepted = new Contact(FirstName='Test', LastName='AppStatClosedNotAccepted1');
-        insert contact_not_accepted;
+        Contact contact = new Contact(FirstName='Test', LastName='AppStatChangedToOptedOut1', Volunteer_Information__c='Current LC');
+        insert contact;
         
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
         Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
         insert campaign;
         
+        CampaignMember cm = new CampaignMember();
+        cm.CampaignId=campaign.Id;
+        cm.ContactId=contact.Id;
+       
+        insert cm;
+        
+        // This fires the trigger we're testing.
+        cm.Candidate_Status__c = 'Opted Out';
+        cm.Opted_Out_Reason__c = 'Dropped - During Program';
+        update cm;
+    
+        Contact updatedContact = [SELECT Id, Volunteer_Information__c, Candidate_Status__c FROM Contact WHERE Id=:cm.ContactId];
+        System.assert(updatedContact.Volunteer_Information__c == 'LC Pipeline', 'When a Contact is Opted Out, their Volunteer Information should be set back to be in the pipeline.');
+        System.assert(updatedContact.Candidate_Status__c == 'Opted Out', 'When a Contact is Opted Out, their Candidate Status should be set.');
+    }
+    
+    static testMethod void validateReviewAppTaskClosed() {
+        List<Contact> contactsToInsert = new List<Contact>();
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_vratc1', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(campaignOwner);
+        Contact contact_accepted = new Contact(FirstName='Test', LastName='AppStatClosedAccepted1');
+        contactsToInsert.add(contact_accepted);
+        Contact contact_waitlisted = new Contact(FirstName='Test', LastName='AppStatClosedWaitlisted1');
+        contactsToInsert.add(contact_waitlisted);
+        Contact contact_not_accepted = new Contact(FirstName='Test', LastName='AppStatClosedNotAccepted1');
+        contactsToInsert.add(contact_not_accepted);
+        Contact contact_opted_out = new Contact(FirstName='Test', LastName='AppStatClosedOptedOut1');
+        contactsToInsert.add(contact_opted_out);
+        insert contactsToInsert;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        insert campaign;
+        
+        List<CampaignMember> campaignMembersToInsert = new List<CampaignMember>();
+        List<Task> tasksToInsert = new List<Task>();
         CampaignMember cm_accepted = new CampaignMember();
         cm_accepted.CampaignId=campaign.Id;
         cm_accepted.ContactId=contact_accepted.Id;
-        insert cm_accepted;
+        campaignMembersToInsert.add(cm_accepted);
         List<Task> t_accepted = BZ_TaskFactory.createTasks(new CampaignMember[]{cm_accepted}, 'Review submitted application for {0}');
-        insert t_accepted;
+        tasksToInsert.addAll(t_accepted);
         
         CampaignMember cm_waitlisted = new CampaignMember();
         cm_waitlisted.CampaignId=campaign.Id;
         cm_waitlisted.ContactId=contact_waitlisted.Id;
-        insert cm_waitlisted;
+        campaignMembersToInsert.add(cm_waitlisted);
         List<Task> t_waitlisted = BZ_TaskFactory.createTasks(new CampaignMember[]{cm_waitlisted}, 'Review submitted application for {0}');
-        insert t_waitlisted;
+        tasksToInsert.addAll(t_waitlisted);
 
         CampaignMember cm_not_accepted = new CampaignMember();
         cm_not_accepted.CampaignId=campaign.Id;
         cm_not_accepted.ContactId=contact_not_accepted.Id;
-        insert cm_not_accepted;
+        campaignMembersToInsert.add(cm_not_accepted);
         List<Task> t_not_accepted = BZ_TaskFactory.createTasks(new CampaignMember[]{cm_not_accepted}, 'Review submitted application for {0}');
-        insert t_not_accepted;
+        tasksToInsert.addAll(t_not_accepted);
+
+        CampaignMember cm_opted_out = new CampaignMember();
+        cm_opted_out.CampaignId=campaign.Id;
+        cm_opted_out.ContactId=contact_opted_out.Id;
+        campaignMembersToInsert.add(cm_opted_out);
+        List<Task> t_opted_out = BZ_TaskFactory.createTasks(new CampaignMember[]{cm_opted_out}, 'Review submitted application for {0}');
+        tasksToInsert.addAll(t_opted_out);
+        
+        insert campaignMembersToInsert;
+        insert tasksToInsert;
         
         Test.startTest();
 
@@ -127,6 +223,17 @@ private class BZ_CandidateStatusChanged_TEST {
                                            Status='Completed' AND
                                            Subject LIKE '%Review submitted application for%'];
         System.assert(resultingTasks_not_accepted.size()==1, 'Expected Task to Review the application to be closed when Not Accepted.');
+        
+        cm_opted_out.Candidate_Status__c = 'Opted Out';
+        cm_opted_out.Opted_Out_Reason__c = 'No Time';
+        update cm_opted_out;
+        
+        List<Task> resultingTasks_opted_out = [SELECT Id, Status FROM Task 
+                                     WHERE WhoId=:cm_opted_out.ContactId AND 
+                                           WhatId=:cm_opted_out.CampaignId AND
+                                           Status='Completed' AND
+                                           Subject LIKE '%Review submitted application for%'];
+        System.assert(resultingTasks_opted_out.size()==1, 'Expected Task to Review the application to be closed when Opted Out.');
         
         Test.stopTest();
     }

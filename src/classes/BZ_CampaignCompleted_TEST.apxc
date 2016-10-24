@@ -1,0 +1,76 @@
+@isTest 
+private class BZ_CampaignCompleted_TEST {
+    static testMethod void validate() {
+        System.debug('BZ_CampaignCompleted_TEST.validate - begin');
+        List<Contact> contactsToInsert = new List<Contact>();
+        Contact fellowContact1 = new Contact(FirstName='Test', LastName='Fellow1', Email='testfellow1@bebraven.org', Participant_Information__c='Participant Pipeline');
+        contactsToInsert.add(fellowContact1);
+        Contact fellowContact2 = new Contact(FirstName='Test', LastName='Fellow2', Email='testfellow2@bebraven.org', Participant_Information__c='Participant Pipeline');
+        contactsToInsert.add(fellowContact2);
+        Contact lcContact1 = new Contact(FirstName='Test', LastName='LC1', Email='testlc1@bebraven.org', Volunteer_Information__c='LC Pipeline');
+        contactsToInsert.add(lcContact1);
+        Contact lcContact2 = new Contact(FirstName='Test', LastName='LC2', Email='testlc2@bebraven.org', Volunteer_Information__c='LC Pipeline');
+        contactsToInsert.add(lcContact2);
+
+        insert contactsToInsert;
+        
+        List<Campaign> campaignsToInsert = new List<Campaign>();
+        Campaign lcCampaign = BZ_CampaignFactory_TEST.create(userInfo.getUserId(), 'Leadership Coaches');
+        lcCampaign.IsActive = false;
+        lcCampaign.Status = 'In Progress';
+        campaignsToInsert.add(lcCampaign);
+        
+        Campaign fellowCampaign = BZ_CampaignFactory_TEST.create(userInfo.getUserId(), 'Program Participants');
+        fellowCampaign.IsActive = false;
+        fellowCampaign.Status = 'In Progress';
+        campaignsToInsert.add(fellowCampaign);
+
+        insert campaignsToInsert;
+        
+        List<CampaignMember> campaignMembersToInsert = new List<CampaignMember>();
+        CampaignMember lcCm1 = new CampaignMember();
+        lcCm1.CampaignId=lcCampaign.Id;
+        lcCm1.ContactId=lcContact1.Id;
+        lcCm1.Candidate_Status__c = 'Confirmed';
+        campaignMembersToInsert.add(lcCm1);
+        
+        CampaignMember lcCm2 = new CampaignMember();
+        lcCm2.CampaignId=lcCampaign.Id;
+        lcCm2.ContactId=lcContact2.Id;
+        lcCm2.Candidate_Status__c = 'Accepted';
+        campaignMembersToInsert.add(lcCm2);
+
+        CampaignMember fellowCm1 = new CampaignMember();
+        fellowCm1.CampaignId=fellowCampaign.Id;
+        fellowCm1.ContactId=fellowContact1.Id;
+        fellowCm1.Candidate_Status__c = 'Confirmed';
+        campaignMembersToInsert.add(fellowCm1);
+        
+        CampaignMember fellowCm2 = new CampaignMember();
+        fellowCm2.CampaignId=fellowCampaign.Id;
+        fellowCm2.ContactId=fellowContact2.Id;
+        fellowCm2.Candidate_Status__c = 'Accepted';
+        campaignMembersToInsert.add(fellowCm2);
+
+        insert campaignMembersToInsert;
+                
+        // Fires the trigger we're testing.
+        fellowCampaign.Status = 'Completed';
+        update fellowCampaign;
+        lcCampaign.Status = 'Completed';
+        update lcCampaign;
+        
+        Contact updatedConfirmedLC = [SELECT Id, Volunteer_Information__c FROM Contact WHERE Id = :lcContact1.Id];
+        System.Assert(updatedConfirmedLC.Volunteer_Information__c == 'Former LC', 'When a Campaign is marked Completed, Confirmed members should become alumni');
+        
+        Contact updatedAcceptedLC = [SELECT Id, Volunteer_Information__c FROM Contact WHERE Id = :lcContact2.Id];
+        System.Assert(updatedAcceptedLC.Volunteer_Information__c == 'LC Pipeline', 'When a Campaign is marked Completed, Accepted members should stay in the pipeline');
+
+        Contact updatedConfirmedFellow = [SELECT Id, Participant_Information__c FROM Contact WHERE Id = :fellowContact1.Id];
+        System.Assert(updatedConfirmedFellow.Participant_Information__c == 'Program Alum', 'When a Campaign is marked Completed, Confirmed members should become alumni');
+        
+        Contact updatedAcceptedFellow = [SELECT Id, Participant_Information__c FROM Contact WHERE Id = :fellowContact2.Id];
+        System.Assert(updatedAcceptedFellow.Participant_Information__c == 'Participant Pipeline', 'When a Campaign is marked Completed, Accepted members should stay in the pipeline');
+        
+    }
+}

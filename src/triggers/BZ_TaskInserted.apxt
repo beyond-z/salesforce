@@ -1,0 +1,4 @@
+trigger BZ_TaskInserted on Task (before insert) {
+    System.Debug('BZ_TaskInserted: begin trigger');
+    new BZ_SetCultivationLevel(Trigger.new).Run();
+}

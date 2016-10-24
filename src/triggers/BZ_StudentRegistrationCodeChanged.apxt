@@ -1,22 +1,55 @@
 trigger BZ_StudentRegistrationCodeChanged on CampaignMember (before update) {
     System.Debug('BZ_StudentRegistrationCodeChanged: begin trigger');
+    
+    if (BZ_CloseRecruitmentController.IsCloseRecruitmentRunning)
+    {
+        // NOOP: we're snapshotting the campaign and don't need to update the Student_Registration_Code__c
+        // since it's cloned.  When we close large campaigns, all the trigger logic causes
+        // Apex CPU time limit exceptions.
+        System.Debug('BZ_StudentRegistrationCodeChanged: NOOP because were running BZ_CloseRecruitmentController.IsCloseRecruitmentRunning');
+        return;
+    }
 
     List<Contact> contactsToUpdate = new List<Contact>();
+    List<Task> tasksToUpdate = new List<Task>();
     for (CampaignMember cm : Trigger.new)
     {
         if (Trigger.oldMap.get(cm.Id).Student_Registration_Code__c != cm.Student_Registration_Code__c)
         {
-            
             Contact contact = [SELECT Id, Student_Registration_Code__c
                                FROM Contact WHERE Id=:cm.ContactId];
             System.Debug('BZ_StudentRegistrationCodeChanged: setting contact.Student_Registration_Code__c to ' + cm.Student_Registration_Code__c);
             contact.Student_Registration_Code__c = cm.Student_Registration_Code__c;
             contactsToUpdate.add(contact);
+            
+            if (cm.Student_Registration_Code__c != NULL)
+            {
+                System.debug('BZ_StudentRegistrationCodeChanged: closing task to Set Student Registration Code');
+                List<Task> setStudentRegCodeTasks = [SELECT Id, Status FROM Task 
+                                             WHERE WhoId=:cm.ContactId AND 
+                                             WhatId=:cm.CampaignId AND
+                                             Status != 'Completed' AND
+                                             Subject LIKE '%Set Student Registration Code for%'];
+                if (setStudentRegCodeTasks != null && setStudentRegCodeTasks.size() > 0)
+                {
+                    Task setStudentRegCodeTask = setStudentRegCodeTasks.get(0);
+                    System.debug('BZ_StudentRegistrationCodeChanged: setStudentRegCodeTask = ' + setStudentRegCodeTask);
+                    setStudentRegCodeTask.Status = 'Completed';
+                    tasksToUpdate.add(setStudentRegCodeTask);
+                }
+            }
         }
     }
     
     if (!contactsToUpdate.isEmpty())
     {
+        System.Debug('BZ_StudentRegistrationCodeChanged: updating '+contactsToUpdate.size() + ' contacts.');
         update contactsToUpdate;
+    }
+    
+    if (!tasksToUpdate.isEmpty())
+    {
+        System.Debug('BZ_StudentRegistrationCodeChanged: updating '+tasksToUpdate.size() + ' tasks.');
+        update tasksToUpdate;
     }
 }

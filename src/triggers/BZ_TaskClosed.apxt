@@ -1,0 +1,4 @@
+trigger BZ_TaskClosed on Task (before update) {
+    System.Debug('BZ_TaskClosed: begin trigger');
+    new BZ_SetCultivationLevel(Trigger.new).Run();
+}

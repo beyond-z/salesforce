@@ -58,7 +58,7 @@ public class BZ_SyncToLMS {
         else
         {
             m_hasRun = true;
-            m_resultMessage = 'There are no members to sync.';
+            m_resultMessage = 'There are no members to sync.  Only members that are \'Confirmed\' and have their \'Section Name in LMS\' field set are eligible to be synced.';
         }
     }
     

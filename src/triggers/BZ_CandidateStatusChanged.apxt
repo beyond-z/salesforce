@@ -1,30 +1,58 @@
 trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
     System.Debug('BZ_CandidateStatusChanged: begin trigger');
     
+    if (BZ_CloseRecruitmentController.IsCloseRecruitmentRunning)
+    {
+        // NOOP: we're snapshotting the campaign and don't need to worry about the 
+        // Candidate_Status__c changing since it's cloned.  When we close large campaigns, 
+        // all the trigger logic causes Apex CPU time limit exceptions.
+        System.Debug('BZ_CandidateStatusChanged: NOOP because were running BZ_CloseRecruitmentController.IsCloseRecruitmentRunning');
+        return;
+    }
+    
     Set<Id> contactIds = new Set<Id>();
     Set<Id> campaignIds = new Set<Id>();
     for (CampaignMember cm : Trigger.new)
-    {        
-        //System.Debug('BZ_CandidateStatusChanged: adding ContactId='+cm.ContactId + ' to contactIds ' + contactIds);
-        contactIds.add(cm.ContactId);
-        //System.Debug('BZ_CandidateStatusChanged: adding CampaignId='+cm.CampaignId + ' to campaignIds ' + campaignIds);
-        campaignIds.add(cm.CampaignId);
+    {
+        if (Trigger.oldMap.get(cm.Id).Candidate_Status__c != cm.Candidate_Status__c)
+        {
+            //System.Debug('BZ_CandidateStatusChanged: adding ContactId='+cm.ContactId + ' to contactIds ' + contactIds);
+            contactIds.add(cm.ContactId);
+            //System.Debug('BZ_CandidateStatusChanged: adding CampaignId='+cm.CampaignId + ' to campaignIds ' + campaignIds);
+            campaignIds.add(cm.CampaignId);
+        }
     }
+    
+    if (contactIds.size() <= 0 || campaignIds.size() <= 0){
+        System.debug('BZ_CandidateStatusChanged: exiting because no contacts with changed Candidate_Status__c found');
+        return;
+    }
+    
     Map<Id, Contact> contactMap = new Map<Id, Contact>([SELECT Id, Volunteer_Information__c, Participant_Information__c, User_Type__c FROM Contact WHERE Id in :contactIds]);
-    Map<Id, Campaign> campaignMap = new Map<Id, Campaign>([SELECT Id, Type FROM Campaign WHERE Id in :campaignIds]);
+    Map<Id, Campaign> campaignMap = new Map<Id, Campaign>([SELECT Id, Type, Request_Student_Id__c FROM Campaign WHERE Id in :campaignIds]);
     //System.Debug('BZ_CandidateStatusChanged: contactMap='+contactMap);
     //System.Debug('BZ_CandidateStatusChanged: campaignMap='+campaignMap);
     
-    List<CampaignMember> campaignMembersToCreateTasksFor = new List<CampaignMember>();
+    List<CampaignMember> campaignMembersToCreateInterviewTasksFor = new List<CampaignMember>();
+
+    // We no longer use these for SJSU.  Keeping the code around for now in case we
+    // change our minds.
+    //List<CampaignMember> campaignMembersToCreateRegistrationCodeTasksFor = new List<CampaignMember>();
+    
+    List<Task> tasksToUpdate = new List<Task>();
+    List<Contact> contactsToUpdate = new List<Contact>();
     
     for (CampaignMember cm : Trigger.new)
     {
         if (Trigger.oldMap.get(cm.Id).Candidate_Status__c != cm.Candidate_Status__c)
         {
-            List<Task> tasksToUpdate = new List<Task>();
-            List<Contact> contactsToUpdate = new List<Contact>();
-            
             boolean closeReviewAppTask = false;
+            Campaign campaign = campaignMap.get(cm.CampaignId);
+            Contact contact = contactMap.get(cm.ContactId);
+
+            // Have the contact reflect the most recent candidate status change for reporting purposes.
+            contact.Candidate_Status__c = cm.Candidate_Status__c;
+            contactsToUpdate.add(contact);
             
             // If the candidate status is changed to Interview Requested, 
             // queue up a task with the Email Template To Send set to notify 
@@ -33,28 +61,49 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
             if (cm.Candidate_Status__c == 'Interview Requested')
             {
                 closeReviewAppTask = true;
-                campaignMembersToCreateTasksFor.add(cm);
+                campaignMembersToCreateInterviewTasksFor.add(cm);
             }
             else if(cm.Candidate_Status__c == 'Accepted')
             {   
                 closeReviewAppTask = true;
-                
-                Campaign campaign = campaignMap.get(cm.CampaignId);
                 //System.debug('BZ_CandidateStatusChanged: campaign='+campaign);
-                Contact contact = contactMap.get(cm.ContactId);
-                //System.debug('BZ_CandidateStatusChanged: contact='+contact); 
         
-                if (campaign.Type == 'Leadership Coaches') {
-                    contact.Volunteer_Information__c = 'Current LC';
-                    contactsToUpdate.add(contact);
-                } else if (campaign.Type == 'Program Participants'){
-                    contact.Participant_Information__c = 'Participant';
-                    contactsToUpdate.add(contact);
-                }
-            } else if(cm.Candidate_Status__c == 'Not Accepted' || cm.Candidate_Status__c == 'Waitlisted')
+                /*if (campaign.Type == 'Program Participants'&& campaign.Request_Student_Id__c == true){
+                    
+                    // Queue up task to set the Student Registration Code if this is a Campaign for 
+                    // colleges where the student has to register the course in the college's 
+                    // registration system.
+                    campaignMembersToCreateRegistrationCodeTasksFor.add(cm);
+                }*/
+            } 
+            else if(cm.Candidate_Status__c == 'Not Accepted' || cm.Candidate_Status__c == 'Waitlisted')
             {
                 closeReviewAppTask = true;
             }
+            else if (cm.Candidate_Status__c == 'Confirmed') {
+                System.debug('BZ_CandidateStatusChanged: campaign='+campaign);
+                System.debug('BZ_CandidateStatusChanged: contact='+contact); 
+
+                if (campaign.Type == 'Leadership Coaches') {
+                    contact.Volunteer_Information__c = 'Current LC';
+                } else if (campaign.Type == 'Program Participants'){
+                    contact.Participant_Information__c = 'Participant';
+                } else if (campaign.Type == 'Volunteer'){
+                    contact.Volunteer_Information__c = 'Temp Volunteer';
+                }
+            }
+            else if (cm.Candidate_Status__c == 'Opted Out') {
+                System.debug('BZ_CandidateStatusChanged: campaign='+campaign);
+                System.debug('BZ_CandidateStatusChanged: contact='+contact); 
+                closeReviewAppTask = true;
+                // They may have been Confirmed, but later Opted Out (e.g. Dropped)
+                // So we set them back to being in the pipeline
+                if (campaign.Type == 'Leadership Coaches') {
+                    contact.Volunteer_Information__c = 'LC Pipeline';
+                } else if (campaign.Type == 'Program Participants'){
+                    contact.Participant_Information__c = 'Participant Pipeline';
+                }
+            } 
             
             if (closeReviewAppTask)
             {
@@ -67,22 +116,45 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
                 if (reviewAppTasks != null && reviewAppTasks.size() > 0)
                 {
                     Task reviewAppTask = reviewAppTasks.get(0);
-                    System.debug('BZ_CampaignAssigned: reviewAppTask = ' + reviewAppTask);
+                    System.debug('BZ_CandidateStatusChanged: reviewAppTask = ' + reviewAppTask);
                     reviewAppTask.Status = 'Completed';
                     tasksToUpdate.add(reviewAppTask);
                 }
             }
-            
-            
-            update contactsToUpdate;
-            update tasksToUpdate;
         }
     }
     
-    if (campaignMembersToCreateTasksFor.size() > 0)
+    if (contactsToUpdate.size() > 0){
+        System.Debug('BZ_CandidateStatusChanged: updating '+contactsToUpdate.size()+' contacts.');
+        update contactsToUpdate;        
+    }
+    else {
+        System.Debug('BZ_CandidateStatusChanged: NOT updating any contacts.  None changed.');
+    }
+
+    if (tasksToUpdate.size() > 0){
+        System.Debug('BZ_CandidateStatusChanged: updating '+tasksToUpdate.size()+' tasks.');
+        update tasksToUpdate;
+    }
+    else {
+        System.Debug('BZ_CandidateStatusChanged: NOT updating any tasks.  None changed.');
+    }
+    
+    if (campaignMembersToCreateInterviewTasksFor.size() > 0)
     {
-        insert BZ_TaskFactory.createEmailTasks(campaignMembersToCreateTasksFor, 
+        System.Debug('BZ_CandidateStatusChanged: inserting '+campaignMembersToCreateInterviewTasksFor.size()+' interview email tasks.');
+        insert BZ_TaskFactory.createEmailTasks(campaignMembersToCreateInterviewTasksFor, 
                                                'Send Interview Request Email', 
                                                'App_Interview_Requested_Email_Template__c');
     }
+    else {
+        System.Debug('BZ_CandidateStatusChanged: NOT creating any interview tasks.  None needed it.');
+    }
+    
+    /*if (campaignMembersToCreateRegistrationCodeTasksFor.size() > 0)
+    {
+        insert BZ_TaskFactory.createTasks(campaignMembersToCreateRegistrationCodeTasksFor, 
+                                          'Set Student Registration Code for {0}',
+                                          'Retrieve a \"Student Registration Code\" for \"{0}\" by getting a code from the college registrar, then clicking the \"Campaign Member\" link below in the \"Sign Up And Application Info\" section, and populating the field with the code.  Dont forget to Save!');
+    }*/
 }

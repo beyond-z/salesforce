@@ -1,0 +1,57 @@
+/**
+ * When a Campaign is marked as Completed, that means the course has ended and they
+ * are now Alumni.  Update all their statuses.
+ */
+trigger BZ_CampaignCompleted on Campaign (before update) {
+    System.Debug('BZ_CampaignCompleted: begin trigger');
+    for (Campaign currentCampaign : Trigger.new)
+    {
+        // Only run this if this is a completed recruitment campaign.
+        if (currentCampaign.Status == 'Completed' &&
+            Trigger.oldMap.get(currentCampaign.Id).Status != 'Completed' &&
+            currentCampaign.IsActive == false &&
+               (
+               currentCampaign.Type == 'Leadership Coaches' ||
+               currentCampaign.Type == 'Program Participants'
+               )
+           )
+        {
+            System.Debug('BZ_CampaignCompleted: trigger processing campaign: ' + currentCampaign);
+            Set<Id> contactIdsToUpdate = new Set<Id>();
+            List<CampaignMember> cms = [SELECT Id, ContactId, CampaignId, Candidate_Status__c
+                                        FROM CampaignMember WHERE CampaignId=:currentCampaign.Id];
+            for(CampaignMember cm : cms)
+            {
+                if (cm.Candidate_Status__c == 'Confirmed')
+                {
+                    contactIdsToUpdate.add(cm.ContactId);
+                }
+            }
+            
+            List<Contact> contactsToUpdate = [SELECT Id, Email, Volunteer_Information__c, Participant_Information__c
+                                             FROM Contact WHERE Id in :contactIdsToUpdate];
+            String urlEncodedEmails = '';
+            if (currentCampaign.Type == 'Leadership Coaches'){
+                for (Contact c : contactsToUpdate){
+                    c.Volunteer_Information__c = 'Former LC';
+                    urlEncodedEmails += System.EncodingUtil.urlEncode(c.Email, 'UTF-8') + ',';
+                }
+            } else if (currentCampaign.Type == 'Program Participants'){
+                for (Contact c : contactsToUpdate){
+                    c.Participant_Information__c = 'Program Alum';
+                    urlEncodedEmails += System.EncodingUtil.urlEncode(c.Email, 'UTF-8') + ',';
+                }
+            }
+            update contactsToUpdate;
+            
+            // Now that these people are Alumni, turn of their email notifications on Braven
+            // Help so that they don't mark us as spam when a new semester launches and people
+            // start asking tactical questions about the course
+            if (contactsToUpdate.size() > 0){
+                urlEncodedEmails = urlEncodedEmails.removeEnd(',');
+                System.debug('BZ_CampaignCompleted: disabling email notifications on Braven Help for: ' + urlEncodedEmails);
+                BZ_Notifications.disableOSQAEmailNotifications(urlEncodedEmails);
+            }
+        }
+    }
+}

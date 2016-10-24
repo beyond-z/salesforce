@@ -1,0 +1,103 @@
+<!-- Page that handles the "Bulk Invite" button on a Campaign. -->
+<apex:page standardController="Campaign" extensions="BZ_BulkInviteController">
+  <apex:form >
+    <apex:pageMessages id="messages"/>
+    <apex:pageBlock id="uploadSection" rendered="{!contactsLoaded==false}">
+        <apex:pageMessage severity="confirm" title="Upload a .csv file of user information to add to this campaign" summary="The users uploaded will be added to this campaign as Prospects and have an INVITE email and text message queued up." />
+        <!--  Component to allow user to upload file from local machine -->
+        <apex:inputFile value="{!contentFile}" filename="{!nameFile}" />
+        <apex:commandButton action="{!ReadFile}" value="Invite Them!" id="uploadButton" style="width:150px;"/>
+        <br/> <br/>
+        <font color="red"> <b>Note: </b></font> the .csv should have 6 columns with the info below.
+        Please use <a href="https://drive.google.com/a/beyondz.org/file/d/0BxkyYmQz77njdHdpRk9IeXRlLVk/view?usp=sharing" target="_blank"> this template </a>.
+        <br/> <br/>
+        <table border="1">
+            <tr>
+            <td style="padding:0 10px 0 10px;">First Name</td>
+            <td style="padding:0 10px 0 10px;">Last Name</td>
+            <td style="padding:0 10px 0 10px;">Email</td>
+            <td style="padding:0 10px 0 10px;">Phone</td>
+            <td style="padding:0 10px 0 10px;">InteractionType</td>
+            <td style="padding:0 10px 0 10px;">InteractionDescription</td>
+            </tr>
+        </table>
+        <br/><br/>
+        The value of the InteractionType MUST exactly match the available values for a <a href="https://na17.salesforce.com/00No0000008PVQD?setupid=ActivityFields">Task or Activity</a>.
+        At the time of writing, the possible values for InteractionType are following (but that could change):
+        <ul>
+            <li>Email</li>
+            <li>Phone Call</li>
+            <li>Voicemail</li>
+            <li>Text Message</li>
+            <li>Camera to Camera Virtual Meeting</li>
+            <li>1:1 In-Person Meeting</li>
+            <li>Small Group In-Person Meeting</li>
+            <li>Interaction at Larger Function</li>
+            <li>Attended BZ Function</li>
+        </ul>
+        <em>Notes:</em>
+        <ul>
+            <li>The InteractionDescription is also used to set the Initial Connection on the Contact record</li>
+            <li>The Primary Affiliation is set to the value of the Program Site on the Campaign</li>
+            <li>For Fellows, the Undergraduate University is set to the Program Site on the Campaign.  You can change this after if you'd like.</li>
+        </ul>
+    </apex:pageBlock>
+    <apex:outputPanel id="sendTextMessageSection" style="display:block;width:100%;"> <!-- Needed to rerender child on button press.  Cant do it directly. -->
+    <apex:pageBlock rendered="{!contactsLoaded==true && textMessagesSent==false}">
+        <strong>The following contacts have been added to the Campaign and have an INVITE email queued up.</strong>
+        <br/>
+        <div style="padding-left: 20px;">
+           <em>* Note: Contacts already in Active recruitment campaigns were skipped.</em>
+        </div>
+        <apex:pageBlockSection columns="1">
+            <apex:pageBlockSectionItem >
+                <apex:outputText id="previewContactsToInvite" value="{!contactsToInviteDisplay}" escape="false">
+                </apex:outputText>
+            </apex:pageBlockSectionItem>
+        </apex:pageBlockSection>
+        <apex:pageBlockSection columns="1">
+            <apex:pageBlockSectionItem >
+            <apex:outputText >
+                <br/>
+                If you would also like to send them a text message invite, edit the message below and press "Send Text Invites!" below. 
+                <br/>
+                <br/>
+                <div style="padding-left: 20px;">
+                <em>* Note: only those with a Phone number specified will receive a text.</em>
+                <br/>
+                <em>* Note: only the {&#33;Contact.FirstName} merge field is supported.</em>
+                </div>
+            </apex:outputText>
+            </apex:pageBlockSectionItem>
+        </apex:pageBlockSection>
+        <apex:pageBlockSection columns="1">
+            <apex:pageBlockSectionItem >
+                <apex:inputText value="{!textMessageBody}" size="158" maxlength="158" style="width: 70%;"></apex:inputText>
+            </apex:pageBlockSectionItem>
+        </apex:pageBlockSection>
+        <apex:pageBlockSection columns="1">
+            <apex:pageBlockSectionItem >
+                <apex:outputPanel >
+                <table>
+                <tr>
+                    <td><apex:commandButton action="{!sendTextMessages}" value="Send Text Invites!" rerender="resultmessages,sendTextMessageSection" status="SendStatus" /></td>
+                    <td><apex:commandButton action="{!cancel}" value="Cancel" /></td>
+                </tr>
+                </table>
+                </apex:outputPanel>
+            </apex:pageBlockSectionItem>
+        </apex:pageBlockSection>
+    </apex:pageBlock>
+    </apex:outputPanel>
+    <apex:outputPanel id="resultmessages">
+        <apex:outputPanel >
+            <apex:actionStatus id="SendStatus" startText="... Sending Text Messages ..." />
+        </apex:outputPanel>
+        <apex:outputPanel >
+            {!resultMessage}
+            <br/>
+            <apex:commandButton action="{!cancel}" value="Ok" rendered="{!textMessagesSent==true}" />
+        </apex:outputPanel>
+    </apex:outputPanel>
+    </apex:form>
+</apex:page>

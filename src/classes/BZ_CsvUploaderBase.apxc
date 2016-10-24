@@ -1,0 +1,75 @@
+/**
+ * Base class to handle uploading CSV files and processing it's contents.
+ * On a Visualforce page, bind to this class using something like:
+ * <apex:inputFile value="{!contentFile}" filename="{!nameFile}" />
+ * <apex:commandButton action="{!ReadFile}" value="Upload File" />
+ */
+public abstract class BZ_CsvUploaderBase {
+    public string nameFile{get;set;}
+    public Blob contentFile{get;set;}
+    String[] filelines = new String[]{};
+
+    /**
+     * Called for each row in the uploaded CSV so subclasses can process them.
+     */
+    abstract boolean ProcessRow(String[] rowValues);
+
+    /**
+     * Called when the file contents are done being read and ProcessRow has been
+     * called for each row.
+     */
+    abstract void finishRead();
+
+
+    /* This function reads the CSV file and calls ProcessRow for each row in the file. */
+    public Pagereference ReadFile()
+    {
+        //Convert the uploaded file which is in BLOB format into a string
+        nameFile = blobToString( contentFile,'ISO-8859-1');
+        return ProcessFile(nameFile);
+    }
+
+    /* This function processes the contents of a CSV file passed as a string and
+     * calls ProcessRow for each row in the file. 
+     */
+    public Pagereference ProcessFile(String fileContents)
+    {
+        try
+        {
+            //Now sepatate every row of the excel file
+            filelines = fileContents.split('\n');
+
+            //Iterate through every line and create a Account record for each row
+            for (Integer i=1;i<filelines.size();i++)
+            {
+                String[] inputvalues = new String[]{};
+                inputvalues = filelines[i].split(',');
+
+                ProcessRow(inputvalues);
+            }
+        }
+        catch(Exception e){
+            ApexPages.Message errormsg = new ApexPages.Message(ApexPages.severity.ERROR,'An error has occured reading the CSV file'+e.getMessage());
+            ApexPages.addMessage(errormsg);
+        }
+
+        finishRead();
+
+        return null;
+    }
+
+    /**
+     * This function convers the input CSV file in BLOB format into a string
+     *   @param input    Blob data representing correct string in @inCharset encoding
+     *   @param inCharset    encoding of the Blob data (for example 'ISO 8859-1')
+     */
+    public static String blobToString(Blob input, String inCharset){
+        String hex = EncodingUtil.convertToHex(input);
+        System.assertEquals(0, hex.length() & 1);
+        final Integer bytesCount = hex.length() >> 1;
+        String[] bytes = new String[bytesCount];
+        for(Integer i = 0; i < bytesCount; ++i)
+            bytes[i] =  hex.mid(i << 1, 2);
+        return EncodingUtil.urlDecode('%' + String.join(bytes, '%'), inCharset);
+    }
+}

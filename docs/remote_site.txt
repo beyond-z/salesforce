@@ -1,12 +1,17 @@
 Remote Site Name: BZ_Production_SSL
 Name: BZ_Production_SSL
-Remote Site URL: https://www.beyondz.org
+Remote Site URL: https://join.bebraven.org
 Disable Protocol Security: Not Checked
 Description: Allows Salesforce code to access the Beyond Z Website over SSL.
 
 
 Remote Site Name: BZ_Production
 Name: BZ_Production
-Remote Site URL: http://www.beyondz.org
+Remote Site URL: http://www.bebraven.org
 Disable Protocol Security: Not Checked
 Description: Allows Salesforce code to access the Beyond Z Website
+
+
+Remote Site Name: Twilio
+Remote Site URL: https://api.twilio.com
+Description: Allow calls out to Twilio API to send SMS messages

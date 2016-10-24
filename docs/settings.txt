@@ -7,13 +7,13 @@ be these names with a __c appended at the end.
 The instance name is 'bz'.
 
 class BZ_Settings {
-	/// The base url used to communicate with the beyondz.org site.
+	/// The base url used to communicate with the join.bebraven.org site.
 	/// It should contain protocol and domain, but no ending slash.
 	///
-	/// Remember, this is beyondz.org, NOT canvas.
+	/// Remember, this is join.bebraven.org, NOT canvas.
 	///
-	/// For example, http://staging.beyondz.org
-	/// or https://www.beyondz.org
+	/// For example, https://stagingjoin.bebraven.org
+	/// or https://join.bebraven.org
 	String base_url;
 
 	/// The magic token is a random alphanumeric string that serves
@@ -24,4 +24,16 @@ class BZ_Settings {
 	///
 	/// It must match on the Salesforce settings side and on the BZ environment.
 	String magic_token;
+
+  /// The Phone number that outoing Twilio text messages come from.
+  /// This number is what we have our Twilio account configured to use.
+  /// We must own it.
+  String BZ_Twilio_From_Phone__c;
+
+  /// The Acount SID used to connect to our Twilio account using the
+  /// API
+  String BZ_Twilio_Account__c;
+
+  /// The token used to connection to our Twilio account using the API
+  String BZ_Twilio_Token__c;
 }

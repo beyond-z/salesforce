@@ -1,0 +1,68 @@
+<apex:page standardController="Contact" extensions="BZ_MassTextController"
+    title="Mass Text Contacts"
+    id="contactMassTextPage"
+    recordSetVar="contacts"
+    showHeader="true">
+
+    <apex:outputPanel id="contactList">
+    <apex:pageBlock title="Contacts who will receive a mass text" rendered="{!textMessagesSent==false}">
+        <apex:pageBlockTable value="{!selectedContactsWithPhone}" var="c">
+                <apex:column value="{!c.Name}"/>
+                <apex:column value="{!c.Email}"/>
+                <apex:column value="{!c.Phone}"/>
+        </apex:pageBlockTable>
+    </apex:pageBlock>
+    </apex:outputPanel>
+    <apex:form id="sendTextsForm">
+        <!-- Don't wrap the title of the section below. -->
+        <style type="text/css">
+        .pbTitle {
+            white-space: nowrap
+        }
+        </style>
+        <apex:pageBlock title="Edit the text message below and press 'Send Texts!'." rendered="{!textMessagesSent==false}">
+            <apex:pageBlockSection columns="2">
+                <apex:pageBlockSectionItem dataStyle="width:85%" labelStyle="width:15%" >
+                    <apex:outputLabel value="Campaign For Tracking:" for="inputCampaign"/>
+                    <apex:inputField value="{!campaignLookup.CampaignId}" id="inputCampaign" style="width: 150px;"/>   
+                </apex:pageBlockSectionItem>
+            </apex:pageBlockSection>
+            <apex:pageBlockSection columns="2">
+                <apex:pageBlockSectionItem dataStyle="width:85%" labelStyle="width:15%">
+                    <apex:outputLabel value="Text Message:" for="inputTextMessage"/>
+                    <apex:inputText value="{!textMessageBody}" id="inputTextMessage" size="158" maxlength="158" style="width: 80%;"/>
+                </apex:pageBlockSectionItem>
+            </apex:pageBlockSection>
+            <apex:pageBlockSection columns="1">
+                <apex:pageBlockSectionItem >
+                <apex:outputText >
+                    <div style="padding-left: 20px;">
+                    <em>* Note: only the {&#33;Contact.FirstName} and {&#33;Contact.Mass_Text_Merge_Field__c} merge fields are supported.</em>
+                    </div>
+                </apex:outputText>
+                </apex:pageBlockSectionItem>
+            </apex:pageBlockSection>
+            <apex:pageBlockSection columns="1" id="textMessageButtons">
+            <apex:pageBlockSectionItem >
+                <apex:outputPanel >
+                <table>
+                <tr>
+                    <td><apex:commandButton action="{!sendTextMessages}" value="Send Texts!" rerender="resultmessages,contactList,sendTextsForm" status="SendStatus" /></td>
+                    <td><apex:commandButton action="{!cancel}" value="Cancel" /></td>
+                </tr>
+                </table>
+                </apex:outputPanel>
+            </apex:pageBlockSectionItem>
+        </apex:pageBlockSection>
+        </apex:pageBlock>
+        <apex:outputPanel id="resultmessages">
+        <apex:outputPanel >
+            <apex:actionStatus id="SendStatus" startText="... Sending Text Messages ..." />
+        </apex:outputPanel>
+        <apex:outputPanel >
+            {!resultMessage} &nbsp; &nbsp;
+            <apex:commandButton action="{!cancel}" value="Ok" rendered="{!textMessagesSent==true}" />
+        </apex:outputPanel>
+    </apex:outputPanel>
+    </apex:form>
+</apex:page>

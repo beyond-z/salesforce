@@ -11,7 +11,7 @@ public class BZ_BulkEmailer {
     public static List<Task> getQueuedEmails(Campaign campaign, User sender)
     {
         System.debug('BZ_BulkEmailer.getQueuedEmails('+campaign+','+sender+'): begin');
-        List<Task> emailTasks = [SELECT Id, WhoId, WhatId, OwnerId, Status, EmailTemplate__c // WhoId = Name field
+        List<Task> emailTasks = [SELECT Id, WhoId, WhatId, OwnerId, Status, EmailTemplate__c, CampaignMemberId__c // WhoId = Name field
                                  FROM Task 
                                  WHERE WhatId = :campaign.Id    // Related To
                                   AND OwnerId = :sender.Id    // Assigned To
@@ -94,12 +94,27 @@ public class BZ_BulkEmailer {
         Map<String, List<CampaignMember>> emailTemplateToRecipients = new Map<String, List<CampaignMember>>();
         Integer count = 0;
         
-        List<CampaignMember> acceptedUsers = 
-            [SELECT CampaignId, ContactId, Contact.Email, Contact.Name FROM CampaignMember 
-             WHERE CampaignId = :campaign.Id AND
+        List<CampaignMember> acceptedUsers;
+        /*if (campaign.Request_Student_Id__c == true)
+        {
+            // Exclude students without Registration Code set since it's required for the email
+            // template to give them a code to use to register with the campus registrar
+             acceptedUsers = [SELECT CampaignId, ContactId, Student_Registration_Code__c, Contact.Email, Contact.Name FROM CampaignMember 
+                 WHERE CampaignId = :campaign.Id AND
+                   Application_Decision_Sent__c = FALSE AND
+                   Candidate_Status__c = 'Accepted' AND
+                   Student_Registration_Code__c != NULL 
+            ];
+        }
+        else
+        {*/
+            acceptedUsers = [SELECT CampaignId, ContactId, Contact.Email, Contact.Name FROM CampaignMember 
+                WHERE CampaignId = :campaign.Id AND
                    Application_Decision_Sent__c = FALSE AND
                    Candidate_Status__c = 'Accepted'
             ];
+        /*}*/
+        
         //System.debug('BZ_BulkEmailer.getQueuedApplicationDecisions: acceptedUsers.size() = '+acceptedUsers.size());
         //System.Debug('BZ_BulkEmailer.getQueuedApplicationDecisions: acceptedUsers.get(0).Contact.Email = ' + acceptedUsers.get(0).Contact.Email);
         if (acceptedUsers != null && acceptedUsers.size() > 0)
@@ -180,12 +195,22 @@ public class BZ_BulkEmailer {
         
         for (String emailTemplate : emailTemplateToRecipients.keySet())
         {
+            // Grab the template ID once for the list to avoid SOQL limits.
+            Id templateId;  
+            try {
+                templateId = [select id from EmailTemplate where DeveloperName = :emailTemplate].id;
+            }
+            catch (Exception e) {
+              throw new BZ_EmailException ('BZ_BulkEmailer.sendQueuedApplicationDecisions(): '+
+                                   'Unable to locate EmailTemplate using name: ' + emailTemplate + 
+                                   ' refer to Setup | Communications Templates | ' + emailTemplate);
+            }
             List<CampaignMember> cms = emailTemplateToRecipients.get(emailTemplate);
             for (CampaignMember cm : cms)
             {
                 String[] recipients = new String[]{cm.Contact.Email};
                 BZ_SendTemplatedEmail.sendTemplatedEmail(
-                    recipients, null, emailTemplate, 
+                    recipients, null, templateId, 
                     cm.ContactId, cm.CampaignId, null, TRUE, null); 
                 emailsSent++;
                 cm.Application_Decision_Sent__c = TRUE;
