@@ -284,8 +284,8 @@ public class BZ_CloseRecruitmentController {
                     }
                     
                     List<Task> tasksToAdd = 
-                        BZ_TaskFactory.createEmailTasks(membersNotPurged, 
-                                                        'Reinvite For New Program', 
+                        BZ_TaskFactory.createEmailTasks(membersNotPurged,
+                                                        'Send ReInvite Email', 
                                                         'Previous_Candidate_New_Invite__c');
                     System.Debug('BZ_CloseRecruitmentControllerQueueable.execute(): inserting tasksToAdd = ' + tasksToAdd);
                     insert tasksToAdd;
