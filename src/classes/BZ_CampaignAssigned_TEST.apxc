@@ -156,23 +156,42 @@ private class BZ_CampaignAssigned_TEST {
         // Mimic someone who we manually entered and added to a Participant Campaign. e.g. no signup date or BZ User Id
         Contact contact = new Contact(FirstName='Test', LastName='User5', User_Type__c='Undergrad');
         insert contact;
+        // Mimic someone who had already signed up on the website.
+        Contact existingContact = new Contact(FirstName='Test2', LastName='User6', User_Type__c='Undergrad', BZ_User_Id__c=1234, Signup_Date__c=DateTime.now());
+        insert existingContact;
         
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
         Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
         insert campaign;
         
+        List<CampaignMember> cms = new List<CampaignMember>();
         CampaignMember cm = new CampaignMember();
         cm.CampaignId=campaign.Id;
         cm.ContactId=contact.Id;
+        cms.add(cm);
+        
+        CampaignMember cmExisting = new CampaignMember();
+        cmExisting.CampaignId=campaign.Id;
+        cmExisting.ContactId=existingContact.Id;
+        cms.add(cmExisting);
         
         // This fires the trigger we're testing.
-        insert cm;
+        insert cms;
         
+        // Brand new prospects get the Invite email directing them to the signup form
         CampaignMember updatedCm = [SELECT Id, ContactId, CampaignId FROM CampaignMember WHERE Id=:cm.Id];
         List<Task> resultingTasks = [SELECT Id, WhoId, WhatId FROM Task
                                      WHERE WhoId=:updatedCm.ContactId AND
                                            WhatId=:updatedCm.CampaignId AND
                                            Subject LIKE '%Send Invite Email%'];
         System.assert(resultingTasks.size()==1, 'Expected Task to be created to Send Invite Email to a Program Participants that didnt signup');
+        
+        // People who have accounts are sent the Intro email telling them to log back in.
+        CampaignMember updatedExistingCm = [SELECT Id, ContactId, CampaignId FROM CampaignMember WHERE Id=:cmExisting.Id];
+        List<Task> resultingTasks2 = [SELECT Id, WhoId, WhatId FROM Task
+                                     WHERE WhoId=:updatedExistingCm.ContactId AND
+                                           WhatId=:updatedExistingCm.CampaignId AND
+                                           Subject LIKE '%Send Intro Email%'];
+        System.assert(resultingTasks2.size()==1, 'Expected Task to be created to Send Intro Email to a Program Participants that had already signed up');
     }
 }

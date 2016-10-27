@@ -75,14 +75,15 @@ private class BZ_BulkInviteController_TEST {
         
         Test.startTest();
         PageReference result = controller.ProcessFile(csvContents);
+        Test.stopTest(); // Force the queued background worker process to complete
         String textMessageBody = controller.getTextMessageBody();
         controller.setTextMessageBody(textMessageBody + 'SLIGHTLY CHANGED!');
         if (controller.getContactsLoaded() && !String.isEmpty(controller.getContactsToInviteDisplay()))
         {
             controller.sendTextMessages();
         }
-        Test.stopTest();
         
+        System.assertEquals(false, BZ_BulkInviteController.IsBulkInviteRunning);
         System.assert(controller.getTextMessagesSent(), 'Text messages not sent!');
         List<Contact> duplicateExsitingContacts = [SELECT Id FROM Contact WHERE Email = :existingEmail1];
         System.assert(duplicateExsitingContacts.size() == 1, 'Expected 1 contact with email: ' + existingEmail1 + '.  Found: ' + duplicateExsitingContacts.size());
@@ -174,11 +175,17 @@ private class BZ_BulkInviteController_TEST {
             'Brian,xTest4,badEmail,badPhone,,,,\n'+
             'badRow\n';
 
+        Boolean exceptionCaught = false;
         Test.startTest();
-        PageReference result = controller.ProcessFile(csvContents);
-        Test.stopTest();
+        try {
+            PageReference result = controller.ProcessFile(csvContents);
+            Test.stopTest();
+        } catch(Exception e){
+            exceptionCaught = true;
+        }
 
-        System.assert(!String.isEmpty(controller.getResultMessage()), 'Result Message should be set');
+        System.assertEquals(false, BZ_BulkInviteController.IsBulkInviteRunning);
+        System.AssertEquals(true, exceptionCaught);
         System.assert(controller.getTextMessagesSent() == false, 'Text messages should not be sent!');
 
         List<CampaignMember> campaignMembers = [SELECT Id, Name, FirstName, LastName, Email, Phone, ContactId FROM CampaignMember WHERE CampaignId = :campaign.Id];
@@ -209,11 +216,17 @@ private class BZ_BulkInviteController_TEST {
             'Brian,xTest1,email1@email.com,5554443333,Phone Call,Description of phone call\n'+
             'Brian,xTest5,email2@email.com,5554443333,,\n';
 
+        Boolean exceptionCaught = false;
         Test.startTest();
-        PageReference result = controller.ProcessFile(csvContents);            
-        Test.stopTest();
+        try {
+            PageReference result = controller.ProcessFile(csvContents);
+            Test.stopTest();            
+        } catch(BZ_BulkInviteController.BZ_BulkInviteException e){
+            exceptionCaught = true;
+        }
 
-        System.assert(!String.isEmpty(controller.getResultMessage()), 'Result Message should be set');
+        System.assertEquals(false, BZ_BulkInviteController.IsBulkInviteRunning);
+        System.AssertEquals(true, exceptionCaught);
 
         List<CampaignMember> campaignMembers = [SELECT Id, Name, FirstName, LastName, Email, Phone, ContactId FROM CampaignMember WHERE CampaignId = :campaign.Id];
         System.Assert(campaignMembers.size() == 0, 'Expected 0 CampaignMembers. Found '+campaignMembers.size());
@@ -245,6 +258,7 @@ private class BZ_BulkInviteController_TEST {
                 'Brian,xTest1,email@email.com,5554443333,Phone Call,Description of phone call\n'+
                 'Brian,xTest2,email2@email.com,5554443334,Phone Call,Description of phone call\n';
             PageReference result = controller.ProcessFile(csvContents);
+            Test.stopTest(); // This forces the background queued process to complete
             if (controller.getContactsLoaded() && !String.isEmpty(controller.getContactsToInviteDisplay()))
             {
                 controller.sendTextMessages();
@@ -252,8 +266,8 @@ private class BZ_BulkInviteController_TEST {
         } finally {
             BZ_BulkTexter.SimilateExceptionWhileSendingTexts = false;
         }
-        Test.stopTest();
 
+        System.assertEquals(false, BZ_BulkInviteController.IsBulkInviteRunning);
         System.assert(!String.isEmpty(controller.getResultMessage()), 'Result Message should be set');
         System.assert(controller.getResultMessage().contains('Failed sending text messages to the following phone numbers'),'The result message of trying to send texts isnt what was expected.  Actual: '+controller.getResultMessage());
     }
@@ -284,6 +298,7 @@ private class BZ_BulkInviteController_TEST {
         PageReference result = controller.ProcessFile(csvContents);
         Test.stopTest();
 
+        System.assertEquals(false, BZ_BulkInviteController.IsBulkInviteRunning);
         System.assert(!String.isEmpty(controller.getResultMessage()), 'Result Message should be set');
         System.assert(controller.getTextMessagesSent() == false, 'Text messages should not be sent!');
 
