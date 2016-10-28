@@ -2,11 +2,22 @@
 <apex:page standardController="Campaign" extensions="BZ_BulkInviteController">
   <apex:form >
     <apex:pageMessages id="messages"/>
-    <apex:pageBlock id="uploadSection" rendered="{!contactsLoaded==false}">
-        <apex:pageMessage severity="confirm" title="Upload a .csv file of user information to add to this campaign" summary="The users uploaded will be added to this campaign as Prospects and have an INVITE email and text message queued up." />
+    <apex:pageBlock id="uploadSection" rendered="{!hasStarted==false}">
+        <apex:pageMessage severity="confirm" 
+                          title="Upload a .csv file of user information to add to this campaign"
+                          summary="The users uploaded will be added to this campaign as Prospects and have an INVITE email or REINVITE email queued up depending on if they've signed up in the past and have an account or not.  On the next screen, you'll have the option to send them a text message." />
+        Note: the reason that users with existing accounts who have signed up in the past
+        get a REINVITE email instead of an INVITE email is because the instructions should just 
+        have them log back into their account instead of asking them to signup again.
+        If they try to signup, it will say their email is already registered 
+        or they will lose previous application information they already filled out if they 
+        signup with a new email. <font color="blue">Make sure the templates are set accordingly!</font>
+        <br/> <br/>
         <!--  Component to allow user to upload file from local machine -->
+        <div style="border:2px solid red; padding:15px">
         <apex:inputFile value="{!contentFile}" filename="{!nameFile}" />
         <apex:commandButton action="{!ReadFile}" value="Invite Them!" id="uploadButton" style="width:150px;"/>
+        </div>
         <br/> <br/>
         <font color="red"> <b>Note: </b></font> the .csv should have 6 columns with the info below.
         Please use <a href="https://drive.google.com/a/beyondz.org/file/d/0BxkyYmQz77njdHdpRk9IeXRlLVk/view?usp=sharing" target="_blank"> this template </a>.
@@ -42,13 +53,15 @@
             <li>For Fellows, the Undergraduate University is set to the Program Site on the Campaign.  You can change this after if you'd like.</li>
         </ul>
     </apex:pageBlock>
+      <apex:pageBlock id="processStatus" rendered="{!hasStarted && textMessagesSent==false}">
+          <apex:outputText value="Bulk Invite is running.  It may take a minute or two.  The status will be shown when it finishes.<br/><br/>" escape="false" rendered="{!hasStarted&&hasCompleted==false}"/>
+          <apex:outputText value="{!progressString}" id="progress" escape="false"/>
+          <apex:actionPoller enabled="{!hasStarted&&hasCompleted==false}" action="{!checkComplete}" interval="5" reRender="processStatus,progress,sendTextMessageSection"/>
+      </apex:pageBlock>
     <apex:outputPanel id="sendTextMessageSection" style="display:block;width:100%;"> <!-- Needed to rerender child on button press.  Cant do it directly. -->
-    <apex:pageBlock rendered="{!contactsLoaded==true && textMessagesSent==false}">
-        <strong>The following contacts have been added to the Campaign and have an INVITE email queued up.</strong>
+    <apex:pageBlock rendered="{!contactsLoaded==true && hasCompleted==true && textMessagesSent==false}">
+        <strong>The following contacts have been added to the Campaign and have an INVITE or INTRO email queued up depending on if they already have an account (aka they have signed up in the past).</strong>
         <br/>
-        <div style="padding-left: 20px;">
-           <em>* Note: Contacts already in Active recruitment campaigns were skipped.</em>
-        </div>
         <apex:pageBlockSection columns="1">
             <apex:pageBlockSectionItem >
                 <apex:outputText id="previewContactsToInvite" value="{!contactsToInviteDisplay}" escape="false">

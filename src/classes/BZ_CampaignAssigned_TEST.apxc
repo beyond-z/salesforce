@@ -6,7 +6,8 @@ private class BZ_CampaignAssigned_TEST {
         String anticipatedGraduation = '2006';
         String anticipatedGraduationSemester = 'Spring';
         String startedCollege = '1999';
-        Lead l = new Lead(OwnerId=UserInfo.getUserId(), User_Type__c='Volunteer', Signup_Date__c=signupDate, Anticipated_Graduation__c=anticipatedGraduation, Anticipated_Graduation_Semester__c=anticipatedGraduationSemester, Started_College__c=startedCollege, BZ_User_Id__c=1234, Account_Activated__c=true, LeadSource='Website Signup', FirstName='Someone', LastName='New', Company='Someone New (individual)', Status='Open');
+        String collegeEnrollmentSemester = 'Fall';
+        Lead l = new Lead(OwnerId=UserInfo.getUserId(), User_Type__c='Volunteer', Signup_Date__c=signupDate, Anticipated_Graduation__c=anticipatedGraduation, Anticipated_Graduation_Semester__c=anticipatedGraduationSemester, Started_College__c=startedCollege, Enrollment_Semester__c=collegeEnrollmentSemester, BZ_User_Id__c=1234, Account_Activated__c=true, LeadSource='Website Signup', FirstName='Someone', LastName='New', Company='Someone New (individual)', Status='Open');
         insert l;
         
         // THis happens automatically now on lead insertion above.
@@ -17,7 +18,7 @@ private class BZ_CampaignAssigned_TEST {
         lc.setConvertedStatus(convertStatus.MasterLabel);
         Database.LeadConvertResult lcr = Database.convertLead(lc); */    
         Lead updatedLead = [SELECT Id, ConvertedContactId FROM Lead Where Id = :l.Id];
-        Contact contact = [SELECT Id, Signup_Date__c, Anticipated_Graduation__c, Anticipated_Graduation_Semester__c, Started_College__c FROM Contact WHERE Id = :updatedLead.ConvertedContactId];
+        Contact contact = [SELECT Id, Signup_Date__c, Anticipated_Graduation__c, Anticipated_Graduation_Semester__c, Started_College__c, Enrollment_Semester__c FROM Contact WHERE Id = :updatedLead.ConvertedContactId];
 
         // I think this happens in the ruby code when the lead is converted?  Going to have to check
         // how these fields get from lead to contact.
@@ -25,6 +26,7 @@ private class BZ_CampaignAssigned_TEST {
         contact.Anticipated_Graduation_Semester__c = anticipatedGraduationSemester;
         contact.Signup_Date__c = signupDate;
         contact.Started_College__c = startedCollege;
+        contact.Enrollment_Semester__c = collegeEnrollmentSemester;
         update contact;
         
         Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner1', OwnerId=userInfo.getUserId());
@@ -43,8 +45,8 @@ private class BZ_CampaignAssigned_TEST {
         insert cm;
         test.stopTest();
         
-        CampaignMember updatedCm = [SELECT Id, ContactId, CampaignId, Signup_Date__c, Anticipated_Graduation__c, Anticipated_Graduation_Semester__c, Started_College__c FROM CampaignMember WHERE Id=:cm.Id];
-        Contact updatedContact = [SELECT Id, Volunteer_Information__c, Signup_Date__c, Anticipated_Graduation__c, Anticipated_Graduation_Semester__c, Started_College__c FROM Contact WHERE Id=:updatedCm.ContactId];
+        CampaignMember updatedCm = [SELECT Id, ContactId, CampaignId, Signup_Date__c, Anticipated_Graduation__c, Anticipated_Graduation_Semester__c, Started_College__c, Enrollment_Semester__c FROM CampaignMember WHERE Id=:cm.Id];
+        Contact updatedContact = [SELECT Id, Volunteer_Information__c, Signup_Date__c, Anticipated_Graduation__c, Anticipated_Graduation_Semester__c, Started_College__c, Enrollment_Semester__c FROM Contact WHERE Id=:updatedCm.ContactId];
         System.assert(updatedContact.Volunteer_Information__c == 'LC Pipeline', 'When a Contact is added to an LC Campaign, their Volunteer Information should be set.');
 
         // Not sure why this isn't working but the BZ_Copy_Contact_Info_To_Campaign_Member flow in the
@@ -52,7 +54,8 @@ private class BZ_CampaignAssigned_TEST {
         /*System.assert(updatedCm.Signup_Date__c == signupDate, 'When a Contact is added to an LC Campaign, their Signup Date should be set.');
         System.assert(updatedCm.Anticipated_Graduation__c == anticipatedGraduation, 'When a Contact is added to an LC Campaign, their Anticipated_Graduation__c should be set.');
         System.assert(updatedCm.Anticipated_Graduation_Semester__c == anticipatedGraduationSemester, 'When a Contact is added to an LC Campaign, their Anticipated_Graduation_Semester__c should be set.');
-        System.assert(updatedCm.Started_College__c == startedCollege, 'When a Contact is added to an LC Campaign, their Started_College__c should be set.');*/
+        System.assert(updatedCm.Started_College__c == startedCollege, 'When a Contact is added to an LC Campaign, their Started_College__c should be set.');
+        System.assert(updatedCm.Enrollment_Semester__c == collegeEnrollmentSemester, 'When a Contact is added to an LC Campaign, their Enrollment_Semester__c should be set.');*/
 
         List<Task> resultingTasks = [SELECT Id, WhoId, WhatId, Interaction_Type__c FROM Task
                                      WHERE WhoId=:updatedCm.ContactId AND
@@ -153,23 +156,42 @@ private class BZ_CampaignAssigned_TEST {
         // Mimic someone who we manually entered and added to a Participant Campaign. e.g. no signup date or BZ User Id
         Contact contact = new Contact(FirstName='Test', LastName='User5', User_Type__c='Undergrad');
         insert contact;
+        // Mimic someone who had already signed up on the website.
+        Contact existingContact = new Contact(FirstName='Test2', LastName='User6', User_Type__c='Undergrad', BZ_User_Id__c=1234, Signup_Date__c=DateTime.now());
+        insert existingContact;
         
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
         Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
         insert campaign;
         
+        List<CampaignMember> cms = new List<CampaignMember>();
         CampaignMember cm = new CampaignMember();
         cm.CampaignId=campaign.Id;
         cm.ContactId=contact.Id;
+        cms.add(cm);
+        
+        CampaignMember cmExisting = new CampaignMember();
+        cmExisting.CampaignId=campaign.Id;
+        cmExisting.ContactId=existingContact.Id;
+        cms.add(cmExisting);
         
         // This fires the trigger we're testing.
-        insert cm;
+        insert cms;
         
+        // Brand new prospects get the Invite email directing them to the signup form
         CampaignMember updatedCm = [SELECT Id, ContactId, CampaignId FROM CampaignMember WHERE Id=:cm.Id];
         List<Task> resultingTasks = [SELECT Id, WhoId, WhatId FROM Task
                                      WHERE WhoId=:updatedCm.ContactId AND
                                            WhatId=:updatedCm.CampaignId AND
                                            Subject LIKE '%Send Invite Email%'];
         System.assert(resultingTasks.size()==1, 'Expected Task to be created to Send Invite Email to a Program Participants that didnt signup');
+        
+        // People who have accounts are sent the Intro email telling them to log back in.
+        CampaignMember updatedExistingCm = [SELECT Id, ContactId, CampaignId FROM CampaignMember WHERE Id=:cmExisting.Id];
+        List<Task> resultingTasks2 = [SELECT Id, WhoId, WhatId FROM Task
+                                     WHERE WhoId=:updatedExistingCm.ContactId AND
+                                           WhatId=:updatedExistingCm.CampaignId AND
+                                           Subject LIKE '%Send Intro Email%'];
+        System.assert(resultingTasks2.size()==1, 'Expected Task to be created to Send Intro Email to a Program Participants that had already signed up');
     }
 }

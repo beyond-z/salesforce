@@ -66,8 +66,9 @@
 		Identify As First Gen
 		Hometown
 		Section Name In LMS # this is the one for the fellows. coaches are TAs in here, fellows are Students
-		Started College
-		Anticipated Graduation
+		College Enrollment Year
+    College Enrollment Semester
+    Anticipated Graduation
     Anticipated Graduation Semester
 		Eligible
 		GPA Circumstances
@@ -127,7 +128,8 @@
 		Interested in opening BZ 
 		Keep Informed
 		Signup Date
-		Started College
+		College Enrollment Year
+    College Enrollment Semester
 		User Type
 		Interested In
 		Industry 
@@ -164,7 +166,8 @@
 		University Name
 		Anticipated Graduation
     Anticipated Graduation Semester
-		Started College
+		College Enrollment Year
+    College Enrollment Semester
 		Interested in opening BZ
 		BZ Region
 		Keep Informed

@@ -100,7 +100,7 @@ public class BZ_SetCultivationLevel {
         // failed to trigger a flow.
         List<CampaignMember> campaignMembersToUpdate = new List<CampaignMember>(
             [SELECT Id, ContactId, Last_Interaction_Date__c, Cultivation_Level__c,
-             Anticipated_Graduation_Semester__c, Anticipated_Graduation__c, Signup_Date__c, Started_College__c
+             Anticipated_Graduation_Semester__c, Anticipated_Graduation__c, Signup_Date__c, Started_College__c, Enrollment_Semester__c
              FROM CampaignMember WHERE ContactId in :allContactIdsWeveInteractedWith]);
 
         if (!campaignMembersToUpdate.isEmpty()){

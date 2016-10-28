@@ -132,8 +132,13 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
             {
                 if (hasSignedUpOnWebsite)
                 {
-                  campaignMembersToCreateIntroTasksFor.add(cm);
-                    System.Debug('BZ_CampaignAssigned: queuing up Intro email for '+cm);
+                    if (BZ_BulkInviteController.IsBulkInviteRunning){
+                        campaignMembersToCreateReinviteTasksFor.add(cm);
+                        System.Debug('BZ_CampaignAssigned: queuing up Reinvite email for '+cm+' because they already have an account and are being Bulk Invited to a new Campaign.');
+                    } else {
+                      campaignMembersToCreateIntroTasksFor.add(cm);
+                        System.Debug('BZ_CampaignAssigned: queuing up Intro email for '+cm);
+                    }
                 }
                 else
                 {
@@ -146,20 +151,20 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
 
     if (campaignMembersToCreateInviteTasksFor.size() > 0)
     {
-        tasksToAdd = BZ_TaskFactory.createEmailTasks(campaignMembersToCreateInviteTasksFor, 
-                                                 'Send Invite Email', 'Invite_Email_Template__c');
+        tasksToAdd.addAll(BZ_TaskFactory.createEmailTasks(campaignMembersToCreateInviteTasksFor, 
+                                                 'Send Invite Email', 'Invite_Email_Template__c'));
     }
     
     if (campaignMembersToCreateIntroTasksFor.size() > 0)
     {
-        tasksToAdd = BZ_TaskFactory.createEmailTasks(campaignMembersToCreateIntroTasksFor, 
-                                                 'Send Intro Email', 'Intro_Email_Template__c');
+        tasksToAdd.addAll(BZ_TaskFactory.createEmailTasks(campaignMembersToCreateIntroTasksFor, 
+                                                 'Send Intro Email', 'Intro_Email_Template__c'));
     }
     
     if (campaignMembersToCreateReinviteTasksFor.size() > 0)
     {
-        tasksToAdd = BZ_TaskFactory.createEmailTasks(campaignMembersToCreateReinviteTasksFor, 
-                                                 'Reinvite For New Program', 'Previous_Candidate_New_Invite__c');
+        tasksToAdd.addAll(BZ_TaskFactory.createEmailTasks(campaignMembersToCreateReinviteTasksFor, 
+                                                 'Send ReInvite Email', 'Previous_Candidate_New_Invite__c'));
     }
     
     Id senderId = UserInfo.getUserId();

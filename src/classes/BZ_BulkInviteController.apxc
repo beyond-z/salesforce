@@ -3,6 +3,12 @@
  * Queues up an INVITE email and a text message invite (if there is a phone number set).
  */
 public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
+    // This is true when the Bulk Invite add Campaign Member logic is running
+    public static Boolean IsBulkInviteRunning {get; set;}
+    static {
+        IsBulkInviteRunning = false;
+    }
+    
     private ApexPages.StandardController m_controller {get; set;}
     private Campaign m_campaign {get;set;}
     List<Contact> m_contactsToBulkInvite;
@@ -11,6 +17,8 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
     private String m_contactsToInviteDisplay;
     private boolean m_contactsLoaded;
     private boolean m_textMessagesSent;
+    private ID m_jobId;
+    private BZ_BulkInviteControllerQueueable m_queueableController;
 
     public BZ_BulkInviteController(ApexPages.StandardController controller) {
         System.debug('BZ_BulkInviteController(): begin');
@@ -18,12 +26,15 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
             controller.addFields(new String[]{'Id', 'OwnerId', 'Type', 'Program_Site__c'}); // Avoid error: "SObject row was retrieved via SOQL without querying the requested field".  These fields are used when creating a Task history of the text messages sent.
         }
         this.m_controller = controller;
+        this.m_campaign = (Campaign)m_controller.getRecord();
         this.m_contactsToBulkInvite = new List<Contact>();
         this.m_textMessageBody = '{!Contact.FirstName}, ready to apply to Braven? Go to: https://bebraven.org/apply-now or reply STOP to stop receiving text messages.';
         this.m_contactsLoaded = false;
         this.m_textMessagesSent = false;
         this.m_resultMessage = '';
-        this.m_campaign = (Campaign)m_controller.getRecord();
+        hasCompleted = false;
+        hasStarted = false;
+        progressString = '. . .';
     }
 
     // method called from the VF's action attribute to run the logic
@@ -33,13 +44,14 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
         {
             // We need to reload the contacts from the database so that composite
             // fields like Name are populated and we have all the fields needed by
-            // the BZ_BulkTexter.
-            Set<Id> contactIdsToText = new Set<Id>();
+            // the BZ_BulkTexter.  Also, we can't load them by Id b/c the Id is populated
+            // during async execution and doesn't seem to propogate back here.
+            Set<String> contactEmailsToText = new Set<String>();
             System.debug('BZ_BulkInviteController.sendTextMessages(): m_contactsToBulkInvite = '+m_contactsToBulkInvite);
             for (Contact c : m_contactsToBulkInvite){
-                contactIdsToText.add(c.Id);
+                contactEmailsToText.add(c.Email);
             }
-            List<Contact> contactsToText = [SELECT Id, FirstName, LastName, Name, Phone FROM Contact WHERE Id in :contactIdsToText];
+            List<Contact> contactsToText = [SELECT Id, FirstName, LastName, Name, Phone FROM Contact WHERE Email in :contactEmailsToText];
             System.debug('BZ_BulkInviteController.sendTextMessages(): about to send text messages to: '+contactsToText);
             BZ_BulkTexter texter = new BZ_BulkTexter(contactsToText, m_textMessageBody, m_campaign);
             texter.sendTextMessages();
@@ -84,41 +96,17 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
             {
                 contactsToAdd.put(c.Email.toLowerCase(), c);
             }
-            
-            // An existing contact in an active recruitment campaign will 
-            // not be added.
-            List<CampaignMember> campaignMembersToSkip = 
-                [SELECT ContactId FROM CampaignMember 
-                 WHERE CampaignId in 
-                     (SELECT Id FROM Campaign 
-                      WHERE IsActive = true AND 
-                      (
-                          Type = 'Leadership Coaches' OR 
-                          Type = 'Program Participants' OR 
-                          Type = 'Volunteer')
-                     )
-                ];
-            Set<Id> contactIdsOfCampaignMembersToSkip = new Set<Id>();
-            for (CampaignMember cm : campaignMembersToSkip){
-                contactIdsOfCampaignMembersToSkip.add(cm.ContactId);
-            }
-            List<Contact> existingContactsInActiveRecruitmentCampaign = 
+
+            List<Contact> existingContacts = 
                 [SELECT Id, Firstname, LastName, Email, Phone, npsp__Primary_Affiliation__c, Undergrad_University__c  
                 FROM Contact 
-                WHERE Email in :contactsToAdd.keySet() AND
-                      Id in :contactIdsOfCampaignMembersToSkip];
-            
-            List<Contact> existingContactsNotInActiveRecruitmentCampaign = 
-                [SELECT Id, FirstName, LastName, Email, Phone, npsp__Primary_Affiliation__c, Undergrad_University__c  
-                FROM Contact 
-                WHERE Email in :contactsToAdd.keySet() AND
-                      Id NOT in :contactIdsOfCampaignMembersToSkip];
+                WHERE Email in :contactsToAdd.keySet()];
 
-            if (existingContactsInActiveRecruitmentCampaign.size() > 0)
+            if (existingContacts.size() > 0)
             {
-                for (Contact c : existingContactsInActiveRecruitmentCampaign)
+                for (Contact c : existingContacts)
                 {
-                    System.debug('BZ_BulkInviteController.finishRead(): removing '+c+' from contactsToAdd.  Already IN active recruitment campaign.');
+                    System.debug('BZ_BulkInviteController.finishRead(): removing '+c+' from contactsToAdd b/c they already are in SF.');
                     Contact updatedContact = contactsToAdd.get(c.Email.toLowerCase());
                     c.FirstName = updatedContact.FirstName;
                     c.LastName = updatedContact.LastName;
@@ -127,93 +115,27 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
                 }
             }
             
-            if (existingContactsNotInActiveRecruitmentCampaign.size() > 0)
+            m_contactsToBulkInvite = new List<Contact>();
+            m_contactsToBulkInvite.addAll(contactsToAdd.values());
+            m_contactsToBulkInvite.addAll(existingContacts);
+            System.debug('BZ_BulkInviteController.finishRead(): m_contactsToBulkInvite = '+m_contactsToBulkInvite);
+            
+            m_contactsToInviteDisplay = '<table border="1"><tr><td style="padding:0 15px 0 15px;"><strong>Name</strong></td><td style="padding:0 15px 0 15px;"><strong>Email</strong></td><td style="padding:0 15px 0 15px;"><strong>Phone</strong></td></tr>';
+            for (Contact c : m_contactsToBulkInvite)
             {
-                for (Contact c : existingContactsNotInActiveRecruitmentCampaign)
-                {
-                    System.debug('BZ_BulkInviteController.finishRead(): removing '+c+' from contactsToAdd.  NOT in active recruitment campaign.');
-                    Contact updatedContact = contactsToAdd.get(c.Email.toLowerCase());
-                    c.FirstName = updatedContact.FirstName;
-                    c.LastName = updatedContact.LastName;
-                    c.Phone = updatedContact.Phone;
-                    contactsToAdd.remove(c.Email.toLowerCase());
-                }
+                m_contactsToInviteDisplay += '<tr><td style="padding:0 15px 0 15px;">' + c.FirstName + ' ' + c.LastName + '</td><td style="padding:0 15px 0 15px;">' + c.Email + '</td><td style="padding:0 15px 0 15px;">' + c.Phone + '</td></tr>';
             }
-
-            Savepoint sp = Database.setSavepoint();
-            try
-            {
-                System.debug('BZ_BulkInviteController.finishRead(): inserting the following new contacts: ' + contactsToAdd.values());
-                insert contactsToAdd.values();
-                
-                // We may need to add their phone number or correct their name, 
-                // so we stil update the contacts using the info in the sheet.
-                System.debug('BZ_BulkInviteController.finishRead(): updating the following existing contacts in an Active recruitment campaign: ' + existingContactsInActiveRecruitmentCampaign);
-                update existingContactsInActiveRecruitmentCampaign;
-                System.debug('BZ_BulkInviteController.finishRead(): updating the following existing contacts NOT in an Active recruitment campaign: ' + existingContactsNotInActiveRecruitmentCampaign);
-                update existingContactsNotInActiveRecruitmentCampaign;
-                
-                m_contactsToBulkInvite = new List<Contact>();
-                m_contactsToBulkInvite.addAll(contactsToAdd.values());
-                m_contactsToBulkInvite.addAll(existingContactsNotInActiveRecruitmentCampaign);
-                System.debug('BZ_BulkInviteController.finishRead(): m_contactsToBulkInvite = '+m_contactsToBulkInvite);
-
-                List<CampaignMember> cms = new List<CampaignMember>();
-                m_contactsToInviteDisplay = '<table border="1"><tr><td style="padding:0 15px 0 15px;"><strong>Name</strong></td><td style="padding:0 15px 0 15px;"><strong>Email</strong></td><td style="padding:0 15px 0 15px;"><strong>Phone</strong></td></tr>';
-                for (Contact c : m_contactsToBulkInvite)
-                {
-                    CampaignMember cm;
-                    if (m_campaign.Type == 'Program Participants'){
-                        cm = new CampaignMember(ContactId=c.Id, campaignId=m_campaign.Id, Undergrad_University__c=m_campaign.Program_Site__c);
-                    } else {
-                        cm = new CampaignMember(ContactId=c.Id, campaignId=m_campaign.Id);
-                    }
-                    cms.add(cm);
-                    m_contactsToInviteDisplay += '<tr><td style="padding:0 15px 0 15px;">' + c.FirstName + ' ' + c.LastName + '</td><td style="padding:0 15px 0 15px;">' + c.Email + '</td><td style="padding:0 15px 0 15px;">' + c.Phone + '</td></tr>';    
-                    System.debug('BZ_BulkInviteController.finishRead(): Added the following CampaignMember: '+cm);
-                }
-                m_contactsToInviteDisplay += '</table>';
-                insert cms;
-
-                Map<String, String[]> interactionInfoMap = getInteractionInfoMap();
-                Map<Id, Contact> contactsToCreateInteractionInfoFor = new Map<Id, Contact>();
-                for (Contact c : m_contactsToBulkInvite){
-                    contactsToCreateInteractionInfoFor.put(c.Id, c);
-                }
-                List<Task> interactionTasksToAdd = BZ_TaskFactory.createTasks(cms, 'Interaction: How We Met {0}');
-                for (Task t : interactionTasksToAdd){
-                    Contact c = contactsToCreateInteractionInfoFor.get(t.WhoId);
-                    String[] interactionInfo = interactionInfoMap.get(c.Email.toLowerCase());
-                    if (interactionInfo != null){
-                        t.Interaction_Type__c = interactionInfo[0];
-                        t.Description = interactionInfo[1];
-                        c.Initial_Connection__c = interactionInfo[1];
-                    }
-                    else {
-                        System.debug('BZ_BulkInviteController.finishRead(): no interaction info found for "'+c.Email+'" -- SKIPPING task creation.');
-                        t.Description = 'Added using Bulk Invite with no InteractionType information';
-                        c.Initial_Connection__c = t.Description;
-                    }
-                    t.Status = 'Completed';
-                    t.IsReminderSet = false;
-                    if (m_campaign.Type == 'Program Participants'){
-                        c.Undergrad_University__c = m_campaign.Program_Site__c;
-                    }
-                    c.npsp__Primary_Affiliation__c = primaryAffiliationId;
-                }
-                insert interactionTasksToAdd;
-                update contactsToCreateInteractionInfoFor.values();
-
-                m_contactsLoaded = true;
-            } 
-            catch (Exception e)
-            {
-                // roll everything back in case of error
-                Database.rollback(sp);
-                ApexPages.addMessages(e);
-                System.Debug('BZ_BulkInviteController.finishRead(): Exception = ' + e);
-                m_resultMessage = 'Failed adding the specified users.  Details: ' + e;
-            }
+            m_contactsToInviteDisplay += '</table>';
+            m_contactsLoaded = true;
+            
+            Map<String, String[]> interactionInfoMap = getInteractionInfoMap();
+            
+            m_queueableController = new BZ_BulkInviteControllerQueueable(
+                m_campaign, primaryAffiliationId, contactsToAdd, existingContacts,
+                m_contactsToBulkInvite, interactionInfoMap);
+            
+            m_jobId = System.enqueueJob(m_queueableController);
+            hasStarted = true;
         }
         else
         {
@@ -221,6 +143,26 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
             m_resultMessage = 'There are no Contacts to invite.  Double check the spreadsheet?';
         }
         System.debug('BZ_BulkInviteController: finishRead() end');
+    }
+    
+     public PageReference checkComplete(){
+        AsyncApexJob job = [SELECT Status, NumberOfErrors, ExtendedStatus FROM AsyncApexJob WHERE Id=:m_jobId];
+        System.debug('BZ_BulkInviteController.checkComplete(): job status = '+job);         
+        if (job.Status == 'Completed'){
+            hasCompleted = true;
+            progressString = 'Success!';
+        } else if (job.Status == 'Failed'){
+            progressString = 'Uh oh, something went wrong!  Here is the error: <br/><br/>' + job.ExtendedStatus;
+            hasCompleted = true;
+            ApexPages.Message errormsg = new ApexPages.Message(ApexPages.severity.ERROR,'The Bulk Invite operation failed.  Please contact your system administrator.');
+            ApexPages.addMessage(errormsg);
+            m_resultMessage = 'Failed adding the specified users.  Details: ' + job.ExtendedStatus;
+        }
+        else {
+            progressString += ' .';
+            hasCompleted = false;
+        }
+        return null;
     }
 
     public String getTextMessageBody(){
@@ -246,5 +188,112 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
 
     public String getContactsToInviteDisplay(){
         return m_contactsToInviteDisplay;
+    }
+                                        
+    /*
+     * Starts off false and set to true when the operation is complete.
+     */    
+    public Boolean hasCompleted { get; set; }
+    
+    /*
+     * Starts off false and set to true when the operation is queued up.
+     */    
+    public Boolean hasStarted { get; set; }
+    
+    /*
+     * Displays progress as we poll the status of the job.
+     */
+    public String progressString { get; set; }
+    
+    public class BZ_BulkInviteException extends Exception {}
+    
+    private class BZ_BulkInviteControllerQueueable implements Queueable, Database.AllowsCallouts {
+    
+        private Campaign m_campaign;
+        private Id m_primaryAffiliationId;
+        Map<String, Contact> m_contactsToAdd;
+        List<Contact> m_existingContactsToUpdate;
+        List<Contact> m_contactsToBulkInvite;
+        Map<String, String[]> m_interactionInfoMap;
+        
+        public BZ_BulkInviteControllerQueueable(Campaign campaign, Id primaryAffiliationId, 
+                                                Map<String, Contact> contactsToAdd,
+                                                List<Contact> existingContactsToUpdate,
+                                                List<Contact> contactsToBulkInvite,
+                                                Map<String, String[]> interactionInfoMap)
+        {
+            m_campaign = campaign;
+            m_primaryAffiliationId = primaryAffiliationId;
+            m_contactsToAdd = contactsToAdd;
+            m_existingContactsToUpdate = existingContactsToUpdate;
+            m_contactsToBulkInvite = contactsToBulkInvite;
+            m_interactionInfoMap = interactionInfoMap;
+        }
+        
+        public void execute(QueueableContext context)
+        {
+            System.Debug('BZ_BulkInviteControllerQueueable.execute(): begin');
+            Savepoint sp = Database.setSavepoint();
+            IsBulkInviteRunning = true;
+            try 
+            {
+                System.debug('BZ_BulkInviteControllerQueueable.finishRead(): inserting the following new contacts: ' + m_contactsToAdd.values());
+                insert m_contactsToAdd.values();
+                
+                // We may need to add their phone number or correct their name, 
+                // so we stil update the contacts using the info in the sheet.
+                System.debug('BZ_BulkInviteControllerQueueable.execute(): updating the following existing contacts: ' + m_existingContactsToUpdate);
+                update m_existingContactsToUpdate;
+                
+                List<CampaignMember> cms = new List<CampaignMember>();
+                for (Contact c : m_contactsToBulkInvite)
+                {
+                    CampaignMember cm;
+                    if (m_campaign.Type == 'Program Participants'){
+                        cm = new CampaignMember(ContactId=c.Id, campaignId=m_campaign.Id, Undergrad_University__c=m_campaign.Program_Site__c);
+                    } else {
+                        cm = new CampaignMember(ContactId=c.Id, campaignId=m_campaign.Id);
+                    }
+                    cms.add(cm);
+                    System.debug('BZ_BulkInviteControllerQueueable.execute(): Added the following CampaignMember: '+cm);
+                }
+                insert cms;
+
+                Map<Id, Contact> contactsToCreateInteractionInfoFor = new Map<Id, Contact>();
+                for (Contact c : m_contactsToBulkInvite){
+                    contactsToCreateInteractionInfoFor.put(c.Id, c);
+                }
+                List<Task> interactionTasksToAdd = BZ_TaskFactory.createTasks(cms, 'Interaction: How We Met {0}');
+                for (Task t : interactionTasksToAdd){
+                    Contact c = contactsToCreateInteractionInfoFor.get(t.WhoId);
+                    String[] interactionInfo = m_interactionInfoMap.get(c.Email.toLowerCase());
+                    if (interactionInfo != null){
+                        t.Interaction_Type__c = interactionInfo[0];
+                        t.Description = interactionInfo[1];
+                        c.Initial_Connection__c = interactionInfo[1];
+                    }
+                    else {
+                        throw new BZ_BulkInviteException('No Interaction Info found for "'+c.Email+'".  Please make sure to set the Interaction Info for everyone -- Bulk Invite failed!');
+                    }
+                    t.Status = 'Completed';
+                    t.IsReminderSet = false;
+                    if (m_campaign.Type == 'Program Participants'){
+                        c.Undergrad_University__c = m_campaign.Program_Site__c;
+                    }
+                    c.npsp__Primary_Affiliation__c = m_primaryAffiliationId;
+                }
+                insert interactionTasksToAdd;
+                update contactsToCreateInteractionInfoFor.values();
+            } catch (Exception e){
+                // roll everything back in case of error
+                Database.rollback(sp);
+                System.Debug('BZ_BulkInviteControllerQueueable.execute(): Exception = ' + e);
+                throw e;
+            }
+            finally {
+                IsBulkInviteRunning = false;
+            }
+            System.Debug('BZ_BulkInviteControllerQueueable.execute(): end');
+        }
     }
 }
