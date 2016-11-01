@@ -15,7 +15,9 @@ private class BZ_MassTextController_TEST {
         insert contactsToInsert;
 
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        String campaignName ='Test Campaign Name';
         Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
+        campaign.Name = campaignName;
         campaign.Invite_Email_Template__c = 'BZ INVITE: test template';
         insert campaign;
 
@@ -41,7 +43,7 @@ private class BZ_MassTextController_TEST {
         Test.startTest();
         BZ_MassTextController controller = new BZ_MassTextController(ssc);
         controller.textMessageBody = textMessageBody;
-        controller.campaignLookup.CampaignId = campaign.Id;
+        controller.campaignName = campaignName;
         PageReference result = controller.sendTextMessages();
         Test.stopTest();
 
@@ -75,8 +77,10 @@ private class BZ_MassTextController_TEST {
         insert contactsToInsert;
 
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        String campaignName = 'Test Campaign Name 2';
         Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
         campaign.Invite_Email_Template__c = 'BZ INVITE: test template';
+        campaign.Name = campaignName;
         insert campaign;
 
         List<CampaignMember> campaignMembersToInsert = new List<CampaignMember>();
@@ -101,7 +105,7 @@ private class BZ_MassTextController_TEST {
         Test.startTest();
         BZ_MassTextController controller = new BZ_MassTextController(ssc);
         controller.textMessageBody = textMessageBody;
-        controller.campaignLookup.CampaignId = campaign.Id;
+        controller.campaignName = campaignName;
         PageReference result = controller.sendTextMessages();
         Test.stopTest();
 
@@ -124,8 +128,10 @@ private class BZ_MassTextController_TEST {
         insert contactsToInsert;
 
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        String campaignName = 'Test Campaign Name 3';
         Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
         campaign.Invite_Email_Template__c = 'BZ INVITE: test template';
+        campaign.Name = campaignName;
         insert campaign;
 
         List<CampaignMember> campaignMembersToInsert = new List<CampaignMember>();
@@ -144,10 +150,9 @@ private class BZ_MassTextController_TEST {
         Test.setCurrentPage(pageRef);
         Test.startTest();
         BZ_MassTextController controller = new BZ_MassTextController(ssc);
-        controller.campaignLookup.CampaignId = campaign.Id;
+        controller.campaignName = campaignName;
         PageReference result = controller.sendTextMessages();
-        System.assert(controller.resultMessage.contains('Failed sending some text messages'), 'Expected result message to contain "Failed sending some text messages".  It was actually: ' + controller.resultMessage);
-        System.debug('ApexPages.getMessages() = '+ApexPages.getMessages());
+        System.assert(ApexPages.getMessages()[0].getSummary().contains('You must set the text message before sending'), 'Expected result message to contain "Failed sending some text messages".  It was actually: ' + controller.resultMessage);
         Test.stopTest();
     }
 
@@ -164,14 +169,16 @@ private class BZ_MassTextController_TEST {
 
         // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
         List<Campaign> campaignsToInsert = new List<Campaign>();
+        String campaignName1 = 'Test Campaign Name 4';
         Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
         campaign.Invite_Email_Template__c = 'BZ INVITE: test template';
+        campaign.Name = campaignName1;
         campaignsToInsert.add(campaign);
+        String campaignName2 = 'Test Campaign Name 5';
         Campaign deletedCampaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
+        deletedCampaign.Name = campaignName2;
         campaignsToInsert.add(deletedCampaign);
         insert campaignsToInsert;
-
-        Id deletedCampaignId = deletedCampaign.Id;
         delete deletedCampaign;
 
         List<CampaignMember> campaignMembersToInsert = new List<CampaignMember>();
@@ -191,12 +198,11 @@ private class BZ_MassTextController_TEST {
         String textMessageBody = 'Hi {!Contact.FirstName}, test text message!';
         Test.startTest();
         BZ_MassTextController controller = new BZ_MassTextController(ssc);
-        controller.campaignLookup.CampaignId = deletedCampaignId;
+        controller.campaignName = campaignName2;
         controller.textMessageBody = textMessageBody;
 
         PageReference result = controller.sendTextMessages();
-        System.assert(controller.resultMessage.contains('Please select a valid campaign'), 'Expected result message to contain "Please select a valid campaign".  It was actually: ' + controller.resultMessage);
-        System.debug('ApexPages.getMessages() = '+ApexPages.getMessages());
+        System.assert(ApexPages.getMessages()[0].getSummary().contains('Please select a valid campaign'), 'Expected result message to contain "Please select a valid campaign".  It was actually: ' + controller.resultMessage);
         Test.stopTest();
     }
 }

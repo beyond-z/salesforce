@@ -15,8 +15,6 @@ public with sharing class BZ_MassTextController {
             controller.addFields(new List<String>{'Phone', 'Name', 'Email', 'Mass_Text_Merge_Field__c'});
         }
 
-        // This is a dummy object that the Visualforce page will populate
-        campaignLookup = new CampaignMember();
         this.m_controller = controller;
         List<Contact> allSelectedContacts = (List<Contact>)controller.getSelected();
         System.debug('BZ_MassTextController: allSelectedContacts.size() = ' + allSelectedContacts.size());
@@ -45,9 +43,9 @@ public with sharing class BZ_MassTextController {
                 throw new TextMessageEmptyException('You must set the text message before sending.');
             }
 
-            List<Campaign> campaigns = [SELECT Id, Name, OwnerId FROM Campaign WHERE Id = :campaignLookup.CampaignId];
+            List<Campaign> campaigns = [SELECT Id, Name, OwnerId FROM Campaign WHERE Name = :campaignName];
             if (campaigns == null || campaigns.size() != 1){
-                throw new InvalidCampaignException('Please select a valid campaign to record the text message history on.');
+                throw new InvalidCampaignException('Please select a valid campaign to record the text message history on.  No campaign named "'+campaignName+'" was found.');
             }
 
             BZ_BulkTexter texter = new BZ_BulkTexter(m_selectedContactsWithPhone, textMessageBody, campaigns[0]);
@@ -59,7 +57,6 @@ public with sharing class BZ_MassTextController {
         catch (Exception e){
             ApexPages.addMessages(e);
             System.Debug('BZ_MassTextController.sendTextMessages(): Exception = ' + e);
-            this.resultMessage = 'Failed sending some text messages.  Details: ' + e;
         }
         return null;
     }
@@ -85,7 +82,9 @@ public with sharing class BZ_MassTextController {
         private set;
     }
 
-    public CampaignMember campaignLookup {
+    // The built in campaign lookup only works for active campaigns, 
+    // so we have them manually enter the Campaign.
+    public String campaignName {
         get;
         set;
     }
