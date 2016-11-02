@@ -33,13 +33,14 @@ public class BZ_SetCultivationLevel {
                 
                 // When we send queued emails, the built in Salesforce email sending mechanism
                 // inserts a new completed task (and our code deletes the queued task that had
-                // the Interaction Type set).  This adjusts the interaction type for these.
+                // the Interaction Type set).  This adjusts the interaction type for these so the
+                // logic below picks it up.  Note: we should probably actually update the new
+                // Email task but we don't really need it for now and that is complicated
+                // b/c it would trigger calling this code again so we'll punt for now.
                 if (task.Subject.startsWith('Email:')){
                     task.Interaction_Type__c = 'Email';
                 }
-    
-                // All other Interaction_Type__c values other than Text correspond to those
-                // that we have met in some way.
+                
                 if (task.WhoId != null &&
                     !String.isEmpty(task.Interaction_Type__c) &&
                     task.Interaction_Type__c != '--None--')
@@ -47,7 +48,7 @@ public class BZ_SetCultivationLevel {
                     allContactIdsWeveInteractedWith.add(task.WhoId);
                     
                     //System.Debug('BZ_TaskClosed: adding Contact Id '+ task.WhoId + ' to contactIdsWeHaveMet');
-                    if (task.Interaction_Type__c == 'Email' || task.Interaction_Type__c == 'Voicemail' || 
+                    if (task.Interaction_Type__c == 'Voicemail' || 
                         task.Interaction_Type__c == 'Text Message'){
                         contactIdsWeHaveReachedOutTo.add(task.WhoId);
                     }
@@ -62,6 +63,11 @@ public class BZ_SetCultivationLevel {
                         // analogous to someone coming to our website and hearing about us 
                         // (e.g. a passing conversation at a larger function) but we haven't actively started 
                         // cultivating them yet.
+                        // 
+                        // Also, task.Interaction_Type__c == 'Email' is left blank since we email
+                        // people as part of the signup flow.  Ideally, we would distinguish between normal
+                        // signup flow related emails and explicit, manually created emails
+                        // but for now we'll just leave them blank.
                         otherContactIdsWeHaveInteractedWith.add(task.WhoId);
                     }
                 }
@@ -89,6 +95,7 @@ public class BZ_SetCultivationLevel {
             } else if (otherContactIdsWeHaveInteractedWith.contains(c.Id)){
                 c.Last_Interaction_Date__c = DateTime.now();
             }
+            System.debug('BZ_SetCultivationLevel: setting Contact[Last_Interaction_Date__c = ' + c.Last_Interaction_Date__c.getTime() + ', Cultivation_Level__c = ' + c.Cultivation_Level__c+']');
         }
         
         update contactIdToContactMap.values();
@@ -108,6 +115,7 @@ public class BZ_SetCultivationLevel {
                 Contact c = contactIdToContactMap.get(cm.ContactId);
                 cm.Last_Interaction_Date__c = c.Last_Interaction_Date__c;
                 cm.Cultivation_Level__c = c.Cultivation_Level__c;
+                System.debug('BZ_SetCultivationLevel: updating Campaign Member[Last_Interaction_Date__c = ' + cm.Last_Interaction_Date__c.getTime() + ', Cultivation_Level__c = ' + cm.Cultivation_Level__c+']');
             }
             update campaignMembersToUpdate;
         }
