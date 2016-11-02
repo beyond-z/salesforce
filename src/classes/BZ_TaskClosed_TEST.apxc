@@ -18,6 +18,7 @@ private class BZ_TaskClosed_TEST {
         Task t1 = new Task(Subject='Test Interaction Task1', Status='Completed', OwnerId=sender.Id, WhoId=contact.Id);
         insert t1;
         
+        System.debug('BZ_TaskClosed_TEST: setting Interaction_Type__c = Attended BZ Function');
         t1.Interaction_Type__c = 'Attended BZ Function';
         update t1;
 
@@ -28,6 +29,21 @@ private class BZ_TaskClosed_TEST {
         System.assert(String.isEmpty(updatedCampaignMember.Cultivation_Level__c), 'Attended BZ Function interaction means we havent Reached Out or Met them.  Here is the value we found: ' + updatedCampaignMember.Cultivation_Level__c);
         System.assert(updatedCampaignMember.Last_Interaction_Date__c > DateTime.now().addMinutes(-20), 'The Last_Interaction_Date__c was not set to a recent time.  It is: '+updatedCampaignMember.Last_Interaction_Date__c+' which is less than '+DateTime.now().addMinutes(-20));
         
+        // Email shouldn't change the Cultivation Level since they happen as part of the
+        // normal signup flow.  We use Cultivation Level to tell if we need to reach out or talk
+        // to them directly to help them get through the application process.
+        System.debug('BZ_TaskClosed_TEST: setting Interaction_Type__c = Email');
+        t1.Interaction_Type__c = 'Email';
+        update t1;
+
+        updatedContact = [SELECT Id, Name, Cultivation_Level__c, Last_Interaction_Date__c FROM Contact WHERE Id = :contact.Id];
+        System.assert(String.isEmpty(updatedContact.Cultivation_Level__c), 'Email interaction means we havent Reached Out or Met them.  Here is the value we found: ' + updatedContact.Cultivation_Level__c);
+        System.assert(updatedContact.Last_Interaction_Date__c > DateTime.now().addMinutes(-20), 'The Last_Interaction_Date__c was not set to a recent time.  It is: '+updatedContact.Last_Interaction_Date__c+' which is less than '+DateTime.now().addMinutes(-20));
+        updatedCampaignMember = [SELECT Id, ContactId, Cultivation_Level__c, Last_Interaction_Date__c FROM CampaignMember WHERE ContactId = :contact.Id];
+        System.assert(String.isEmpty(updatedContact.Cultivation_Level__c), 'Email interaction means we havent Reached Out or Met them.  Here is the value we found: ' + updatedCampaignMember.Cultivation_Level__c);
+        System.assert(updatedCampaignMember.Last_Interaction_Date__c > DateTime.now().addMinutes(-20), 'The Last_Interaction_Date__c was not set to a recent time.  It is: '+updatedCampaignMember.Last_Interaction_Date__c+' which is less than '+DateTime.now().addMinutes(-20));
+        
+        System.debug('BZ_TaskClosed_TEST: setting Interaction_Type__c = Text Message');
         t1.Interaction_Type__c = 'Text Message';
         update t1;
 
@@ -37,7 +53,11 @@ private class BZ_TaskClosed_TEST {
         updatedCampaignMember = [SELECT Id, Cultivation_Level__c, Last_Interaction_Date__c FROM CampaignMember WHERE ContactId = :contact.Id];
         System.assert(updatedCampaignMember.Cultivation_Level__c == 'Reached Out', 'Text Message interaction means weve Reached Out, not: ' + updatedCampaignMember.Cultivation_Level__c);
         System.assert(updatedCampaignMember.Last_Interaction_Date__c > DateTime.now().addMinutes(-20), 'The Last_Interaction_Date__c was not set to a recent time.  It is: '+updatedCampaignMember.Last_Interaction_Date__c+' which is less than '+DateTime.now().addMinutes(-20));
+        // Note: i tried making sure the Last Interaction Date is greater than before 
+        // but working with datetimes down to the millisecond is a pain.  It was getting truncated
+        // somewhere even though I see it set properly in the logs.
 
+        System.debug('BZ_TaskClosed_TEST: setting Interaction_Type__c = 1:1 In-Person Meeting');
         t1.Interaction_Type__c = '1:1 In-Person Meeting';
         update t1;
 
@@ -50,6 +70,7 @@ private class BZ_TaskClosed_TEST {
         
         // We had a bug where if they were "Met" but then after went to a function,
         // the Cultivation Level was set back to null on the Campaign Member.  This tests that.
+        System.debug('BZ_TaskClosed_TEST: setting Interaction_Type__c = Interaction at Larger Function');
         t1.Interaction_Type__c = 'Interaction at Larger Function';
         update t1;
 
