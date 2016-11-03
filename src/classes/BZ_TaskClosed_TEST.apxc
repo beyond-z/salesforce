@@ -7,13 +7,23 @@ private class BZ_TaskClosed_TEST {
         Contact contact = new Contact(FirstName='Test', LastName='TaskClosed1');
         insert contact;
         
+        List<Campaign> campaignsToInsert = new List<Campaign>();
         Campaign campaign = BZ_CampaignFactory_TEST.create();
-        insert campaign;
+        campaignsToInsert.add(campaign);
+        Campaign campaign2 = BZ_CampaignFactory_TEST.create();
+        campaignsToInsert.add(campaign2);
+        insert campaignsToInsert;
         
+        List<CampaignMember> campaignMembersToInsert = new List<CampaignMember>();
         CampaignMember cm = new CampaignMember();
         cm.ContactId = contact.Id;
         cm.CampaignId = campaign.Id;
-        insert cm;
+        campaignMembersToInsert.add(cm);        
+        CampaignMember cm2 = new CampaignMember();
+        cm2.ContactId = contact.Id;
+        cm2.CampaignId = campaign2.Id;
+        campaignMembersToInsert.add(cm2);
+        insert campaignMembersToInsert;
 
         Task t1 = new Task(Subject='Test Interaction Task1', Status='Completed', OwnerId=sender.Id, WhoId=contact.Id);
         insert t1;
@@ -25,10 +35,17 @@ private class BZ_TaskClosed_TEST {
         Contact updatedContact = [SELECT Id, Name, Cultivation_Level__c, Last_Interaction_Date__c FROM Contact WHERE Id = :contact.Id];
         System.assert(String.isEmpty(updatedContact.Cultivation_Level__c), 'Attended BZ Function interaction means we havent Reached Out or Met them.  Here is the value we found: ' + updatedContact.Cultivation_Level__c);
         System.assert(updatedContact.Last_Interaction_Date__c > DateTime.now().addMinutes(-20), 'The Last_Interaction_Date__c was not set to a recent time.  It is: '+updatedContact.Last_Interaction_Date__c+' which is less than '+DateTime.now().addMinutes(-20));
-        CampaignMember updatedCampaignMember = [SELECT Id, ContactId, Cultivation_Level__c, Last_Interaction_Date__c FROM CampaignMember WHERE ContactId = :contact.Id];
-        System.assert(String.isEmpty(updatedCampaignMember.Cultivation_Level__c), 'Attended BZ Function interaction means we havent Reached Out or Met them.  Here is the value we found: ' + updatedCampaignMember.Cultivation_Level__c);
-        System.assert(updatedCampaignMember.Last_Interaction_Date__c > DateTime.now().addMinutes(-20), 'The Last_Interaction_Date__c was not set to a recent time.  It is: '+updatedCampaignMember.Last_Interaction_Date__c+' which is less than '+DateTime.now().addMinutes(-20));
+        CampaignMember updatedCampaignMember = [SELECT Id, ContactId, Cultivation_Level__c, Last_Interaction_Date__c FROM CampaignMember WHERE ContactId = :contact.Id AND CampaignId = :campaign.Id];
+        System.assert(String.isEmpty(updatedCampaignMember.Cultivation_Level__c), 'The task was not Related To the Campaign Member, so its Cultivation_Level__c should not have been updated but it was.  Cultivation_Level__c = ' + updatedCampaignMember.Cultivation_Level__c);
+        System.assert(updatedCampaignMember.Last_Interaction_Date__c == null, 'The task was not Related To the Campaign Member, so its Last_Interaction_Date__c should not have been updated but it was.  Last_Interaction_Date__c = ' + updatedCampaignMember.Last_Interaction_Date__c);
+        CampaignMember updatedCampaignMember2 = [SELECT Id, ContactId, Cultivation_Level__c, Last_Interaction_Date__c FROM CampaignMember WHERE ContactId = :contact.Id AND CampaignId = :campaign2.Id];
+        System.assert(String.isEmpty(updatedCampaignMember2.Cultivation_Level__c), 'The task was not Related To the Campaign Member, so its Cultivation_Level__c should not have been updated but it was.  Cultivation_Level__c = ' + updatedCampaignMember2.Cultivation_Level__c);
+        System.assert(updatedCampaignMember2.Last_Interaction_Date__c == null, 'The task was not Related To the Campaign Member, so its Last_Interaction_Date__c should not have been updated but it was.  Last_Interaction_Date__c = ' + updatedCampaignMember2.Last_Interaction_Date__c);
         
+        // For the rest of the tests, make the task Related To the campaign so the CampaignMember's
+        // are updated as well.
+        t1.WhatId = campaign.Id;
+
         // Email shouldn't change the Cultivation Level since they happen as part of the
         // normal signup flow.  We use Cultivation Level to tell if we need to reach out or talk
         // to them directly to help them get through the application process.
@@ -39,10 +56,13 @@ private class BZ_TaskClosed_TEST {
         updatedContact = [SELECT Id, Name, Cultivation_Level__c, Last_Interaction_Date__c FROM Contact WHERE Id = :contact.Id];
         System.assert(String.isEmpty(updatedContact.Cultivation_Level__c), 'Email interaction means we havent Reached Out or Met them.  Here is the value we found: ' + updatedContact.Cultivation_Level__c);
         System.assert(updatedContact.Last_Interaction_Date__c > DateTime.now().addMinutes(-20), 'The Last_Interaction_Date__c was not set to a recent time.  It is: '+updatedContact.Last_Interaction_Date__c+' which is less than '+DateTime.now().addMinutes(-20));
-        updatedCampaignMember = [SELECT Id, ContactId, Cultivation_Level__c, Last_Interaction_Date__c FROM CampaignMember WHERE ContactId = :contact.Id];
+        updatedCampaignMember = [SELECT Id, ContactId, Cultivation_Level__c, Last_Interaction_Date__c FROM CampaignMember WHERE ContactId = :contact.Id AND CampaignId = :campaign.Id];
         System.assert(String.isEmpty(updatedContact.Cultivation_Level__c), 'Email interaction means we havent Reached Out or Met them.  Here is the value we found: ' + updatedCampaignMember.Cultivation_Level__c);
         System.assert(updatedCampaignMember.Last_Interaction_Date__c > DateTime.now().addMinutes(-20), 'The Last_Interaction_Date__c was not set to a recent time.  It is: '+updatedCampaignMember.Last_Interaction_Date__c+' which is less than '+DateTime.now().addMinutes(-20));
-        
+        updatedCampaignMember2 = [SELECT Id, ContactId, Cultivation_Level__c, Last_Interaction_Date__c FROM CampaignMember WHERE ContactId = :contact.Id AND CampaignId = :campaign2.Id];
+        System.assert(String.isEmpty(updatedCampaignMember2.Cultivation_Level__c), 'The task was not Related To the Campaign Member, so its Cultivation_Level__c should not have been updated but it was.  Cultivation_Level__c = ' + updatedCampaignMember2.Cultivation_Level__c);
+        System.assert(updatedCampaignMember2.Last_Interaction_Date__c == null, 'The task was not Related To the Campaign Member, so its Last_Interaction_Date__c should not have been updated but it was.  Last_Interaction_Date__c = ' + updatedCampaignMember2.Last_Interaction_Date__c);
+
         System.debug('BZ_TaskClosed_TEST: setting Interaction_Type__c = Text Message');
         t1.Interaction_Type__c = 'Text Message';
         update t1;
@@ -50,12 +70,16 @@ private class BZ_TaskClosed_TEST {
         updatedContact = [SELECT Id, Name, Cultivation_Level__c, Last_Interaction_Date__c FROM Contact WHERE Id = :contact.Id];
         System.assert(updatedContact.Cultivation_Level__c == 'Reached Out', 'Text Message interaction means weve Reached Out, not: ' + updatedContact.Cultivation_Level__c);
         System.assert(updatedContact.Last_Interaction_Date__c > DateTime.now().addMinutes(-20), 'The Last_Interaction_Date__c was not set to a recent time.  It is: '+updatedContact.Last_Interaction_Date__c+' which is less than '+DateTime.now().addMinutes(-20));
-        updatedCampaignMember = [SELECT Id, Cultivation_Level__c, Last_Interaction_Date__c FROM CampaignMember WHERE ContactId = :contact.Id];
+        updatedCampaignMember = [SELECT Id, Cultivation_Level__c, Last_Interaction_Date__c FROM CampaignMember WHERE ContactId = :contact.Id AND CampaignId = :campaign.Id];
         System.assert(updatedCampaignMember.Cultivation_Level__c == 'Reached Out', 'Text Message interaction means weve Reached Out, not: ' + updatedCampaignMember.Cultivation_Level__c);
         System.assert(updatedCampaignMember.Last_Interaction_Date__c > DateTime.now().addMinutes(-20), 'The Last_Interaction_Date__c was not set to a recent time.  It is: '+updatedCampaignMember.Last_Interaction_Date__c+' which is less than '+DateTime.now().addMinutes(-20));
         // Note: i tried making sure the Last Interaction Date is greater than before 
         // but working with datetimes down to the millisecond is a pain.  It was getting truncated
         // somewhere even though I see it set properly in the logs.
+        updatedCampaignMember2 = [SELECT Id, ContactId, Cultivation_Level__c, Last_Interaction_Date__c FROM CampaignMember WHERE ContactId = :contact.Id AND CampaignId = :campaign2.Id];
+        System.assert(String.isEmpty(updatedCampaignMember2.Cultivation_Level__c), 'The task was not Related To the Campaign Member, so its Cultivation_Level__c should not have been updated but it was.  Cultivation_Level__c = ' + updatedCampaignMember2.Cultivation_Level__c);
+        System.assert(updatedCampaignMember2.Last_Interaction_Date__c == null, 'The task was not Related To the Campaign Member, so its Last_Interaction_Date__c should not have been updated but it was.  Last_Interaction_Date__c = ' + updatedCampaignMember2.Last_Interaction_Date__c);
+
 
         System.debug('BZ_TaskClosed_TEST: setting Interaction_Type__c = 1:1 In-Person Meeting');
         t1.Interaction_Type__c = '1:1 In-Person Meeting';
@@ -64,10 +88,13 @@ private class BZ_TaskClosed_TEST {
         updatedContact = [SELECT Id, Name, Cultivation_Level__c, Last_Interaction_Date__c FROM Contact WHERE Id = :contact.Id];
         System.assert(updatedContact.Cultivation_Level__c == 'Met', '1:1 In-Person Meeting interaction means weve Met them, not: ' + updatedContact.Cultivation_Level__c);
         System.assert(updatedContact.Last_Interaction_Date__c > DateTime.now().addMinutes(-20), 'The Last_Interaction_Date__c was not set to a recent time.  It is: '+updatedContact.Last_Interaction_Date__c+' which is less than '+DateTime.now().addMinutes(-20));
-        updatedCampaignMember = [SELECT Id, Cultivation_Level__c, Last_Interaction_Date__c FROM CampaignMember WHERE ContactId = :contact.Id];
+        updatedCampaignMember = [SELECT Id, Cultivation_Level__c, Last_Interaction_Date__c FROM CampaignMember WHERE ContactId = :contact.Id AND CampaignId = :campaign.Id];
         System.assert(updatedCampaignMember.Cultivation_Level__c == 'Met', '1:1 In-Person Meeting interaction means weve Met them, not: ' + updatedCampaignMember.Cultivation_Level__c);
         System.assert(updatedCampaignMember.Last_Interaction_Date__c > DateTime.now().addMinutes(-20), 'The Last_Interaction_Date__c was not set to a recent time.  It is: '+updatedCampaignMember.Last_Interaction_Date__c+' which is less than '+DateTime.now().addMinutes(-20));
-        
+        updatedCampaignMember2 = [SELECT Id, ContactId, Cultivation_Level__c, Last_Interaction_Date__c FROM CampaignMember WHERE ContactId = :contact.Id AND CampaignId = :campaign2.Id];
+        System.assert(String.isEmpty(updatedCampaignMember2.Cultivation_Level__c), 'The task was not Related To the Campaign Member, so its Cultivation_Level__c should not have been updated but it was.  Cultivation_Level__c = ' + updatedCampaignMember2.Cultivation_Level__c);
+        System.assert(updatedCampaignMember2.Last_Interaction_Date__c == null, 'The task was not Related To the Campaign Member, so its Last_Interaction_Date__c should not have been updated but it was.  Last_Interaction_Date__c = ' + updatedCampaignMember2.Last_Interaction_Date__c);
+
         // We had a bug where if they were "Met" but then after went to a function,
         // the Cultivation Level was set back to null on the Campaign Member.  This tests that.
         System.debug('BZ_TaskClosed_TEST: setting Interaction_Type__c = Interaction at Larger Function');
@@ -77,8 +104,12 @@ private class BZ_TaskClosed_TEST {
         updatedContact = [SELECT Id, Name, Cultivation_Level__c, Last_Interaction_Date__c FROM Contact WHERE Id = :contact.Id];
         System.assert(updatedContact.Cultivation_Level__c == 'Met', 'Interaction that is less than Met while the contact is already Met, should not reduce the level.  We expected Met but found: ' + updatedContact.Cultivation_Level__c);
         System.assert(updatedContact.Last_Interaction_Date__c > DateTime.now().addMinutes(-20), 'The Last_Interaction_Date__c was not set to a recent time.  It is: '+updatedContact.Last_Interaction_Date__c+' which is less than '+DateTime.now().addMinutes(-20));
-        updatedCampaignMember = [SELECT Id, ContactId, Cultivation_Level__c, Last_Interaction_Date__c FROM CampaignMember WHERE ContactId = :contact.Id];
+        updatedCampaignMember = [SELECT Id, ContactId, Cultivation_Level__c, Last_Interaction_Date__c FROM CampaignMember WHERE ContactId = :contact.Id AND CampaignId = :campaign.Id];
         System.assert(updatedCampaignMember.Cultivation_Level__c == 'Met', 'Interaction that is less than Met while the CampaignMember is already Met, should not reduce the level.  We expected Met but found: ' + updatedCampaignMember.Cultivation_Level__c);
         System.assert(updatedCampaignMember.Last_Interaction_Date__c > DateTime.now().addMinutes(-20), 'The Last_Interaction_Date__c was not set to a recent time.  It is: '+updatedCampaignMember.Last_Interaction_Date__c+' which is less than '+DateTime.now().addMinutes(-20));
+        updatedCampaignMember2 = [SELECT Id, ContactId, Cultivation_Level__c, Last_Interaction_Date__c FROM CampaignMember WHERE ContactId = :contact.Id AND CampaignId = :campaign2.Id];
+        System.assert(String.isEmpty(updatedCampaignMember2.Cultivation_Level__c), 'The task was not Related To the Campaign Member, so its Cultivation_Level__c should not have been updated but it was.  Cultivation_Level__c = ' + updatedCampaignMember2.Cultivation_Level__c);
+        System.assert(updatedCampaignMember2.Last_Interaction_Date__c == null, 'The task was not Related To the Campaign Member, so its Last_Interaction_Date__c should not have been updated but it was.  Last_Interaction_Date__c = ' + updatedCampaignMember2.Last_Interaction_Date__c);
+
     }   
 }

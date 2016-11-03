@@ -25,6 +25,7 @@ public class BZ_SetCultivationLevel {
         Set<Id> contactIdsWeHaveReachedOutTo = new Set<Id>();
         Set<Id> otherContactIdsWeHaveInteractedWith = new Set<Id>();
         Set<Id> allContactIdsWeveInteractedWith = new Set<Id>();
+        Map<Id, Set<Id>> contactIdToRelevantCampaignIds = new Map<Id, Set<Id>>();
         for(Task task : m_tasksToProcess){
             
             if (task.Status == 'Completed')
@@ -46,6 +47,17 @@ public class BZ_SetCultivationLevel {
                     task.Interaction_Type__c != '--None--')
                 {
                     allContactIdsWeveInteractedWith.add(task.WhoId);
+                    
+                    // If the Related To field (aka WhatId) is a Campaign, add that to
+                    // the list of relevatn campaign IDs associated with the contact
+                    if (task.WhatId != null && 
+                        task.WhatId.getSObjectType().getDescribe().getName() == 'Campaign')
+                    {
+                        if (!contactIdToRelevantCampaignIds.containsKey(task.WhoId)){
+                            contactIdToRelevantCampaignIds.put(task.WhoId, new Set<Id>());
+                        }
+                        contactIdToRelevantCampaignIds.get(task.WhoId).add(task.WhatId);
+                    }
                     
                     //System.Debug('BZ_TaskClosed: adding Contact Id '+ task.WhoId + ' to contactIdsWeHaveMet');
                     if (task.Interaction_Type__c == 'Voicemail' || 
@@ -105,19 +117,30 @@ public class BZ_SetCultivationLevel {
         // System.DmlException: Update failed. First exception on row 0 with id 00v17000003lt45AAA; 
         // first error: CANNOT_EXECUTE_FLOW_TRIGGER, The record couldn’t be saved because it 
         // failed to trigger a flow.
-        List<CampaignMember> campaignMembersToUpdate = new List<CampaignMember>(
-            [SELECT Id, ContactId, Last_Interaction_Date__c, Cultivation_Level__c,
+        Map<Id, CampaignMember> campaignMembersToUpdate = new Map<Id, CampaignMember>(
+            [SELECT Id, ContactId, CampaignId, Last_Interaction_Date__c, Cultivation_Level__c,
              Anticipated_Graduation_Semester__c, Anticipated_Graduation__c, Signup_Date__c, Started_College__c, Enrollment_Semester__c
              FROM CampaignMember WHERE ContactId in :allContactIdsWeveInteractedWith]);
 
+        // Note: if the task.WhatId (aka Related To) field is set to a campaign, 
+        // update the cultivation level on that campaign but don't just blindly do 
+        // it for all campaigns they are in.
         if (!campaignMembersToUpdate.isEmpty()){
-            for (CampaignMember cm : campaignMembersToUpdate){
-                Contact c = contactIdToContactMap.get(cm.ContactId);
-                cm.Last_Interaction_Date__c = c.Last_Interaction_Date__c;
-                cm.Cultivation_Level__c = c.Cultivation_Level__c;
-                System.debug('BZ_SetCultivationLevel: updating Campaign Member[Last_Interaction_Date__c = ' + cm.Last_Interaction_Date__c.getTime() + ', Cultivation_Level__c = ' + cm.Cultivation_Level__c+']');
+            System.debug('BZ_SetCultivationLevel: potential campaignMembersToUpdate.size() = ' + campaignMembersToUpdate.size());
+            for (CampaignMember cm : campaignMembersToUpdate.values()){
+                Set<Id> relevantCampaigns = contactIdToRelevantCampaignIds.get(cm.ContactId);
+                if (relevantCampaigns != null && relevantCampaigns.contains(cm.CampaignId)){
+                    Contact c = contactIdToContactMap.get(cm.ContactId);
+                    cm.Last_Interaction_Date__c = c.Last_Interaction_Date__c;
+                    cm.Cultivation_Level__c = c.Cultivation_Level__c;
+                    System.debug('BZ_SetCultivationLevel: updating Campaign Member[Last_Interaction_Date__c = ' + cm.Last_Interaction_Date__c.getTime() + ', Cultivation_Level__c = ' + cm.Cultivation_Level__c+']');
+                }
+                else{
+                    campaignMembersToUpdate.remove(cm.Id);
+                }
             }
-            update campaignMembersToUpdate;
+            System.debug('BZ_SetCultivationLevel: actual campaignMembersToUpdate.size() = ' + campaignMembersToUpdate.size() + ' after removing irrelevant campaigns');
+            update campaignMembersToUpdate.values();
         }
     }
 }
