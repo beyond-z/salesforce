@@ -17,7 +17,7 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
         
     List<Task> tasksToAdd = new List<Task>(); 
     List<Task> tasksToUpdate = new List<Task>(); 
-    List<Contact> contactsToUpdate = new List<Contact>();
+    Map<Id,Contact> contactsToUpdate = new Map<Id,Contact>();
     List<CampaignMember> campaignMembersToCreateInviteTasksFor = new List<CampaignMember>();
     List<CampaignMember> campaignMembersToCreateIntroTasksFor = new List<CampaignMember>();
     List<CampaignMember> campaignMembersToCreateReinviteTasksFor = new List<CampaignMember>();
@@ -110,7 +110,10 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
         
         if (isApplicableCampaign)
         {   
-            contactsToUpdate.add(contact);
+            if (contactsToUpdate.containsKey(contact.Id) == false){
+                contactsToUpdate.put(contact.Id, contact);
+            }
+            
             if (hasSignedUpOnWebsite)
             {
                 contactIdsOfTasksToClose.add(contact.Id);
@@ -186,7 +189,7 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
         tasksToUpdate.add(taskToClose);
     }
     
-    update contactsToUpdate;
+    update contactsToUpdate.values();
     update tasksToUpdate;
     insert tasksToAdd;
 }
