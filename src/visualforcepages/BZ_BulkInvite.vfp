@@ -60,15 +60,27 @@
       </apex:pageBlock>
     <apex:outputPanel id="sendTextMessageSection" style="display:block;width:100%;"> <!-- Needed to rerender child on button press.  Cant do it directly. -->
     <apex:pageBlock rendered="{!contactsLoaded==true && hasCompleted==true && textMessagesSent==false}">
-        <strong>The following contacts have been added to the Campaign and have an INVITE or INTRO email queued up depending on if they already have an account (aka they have signed up in the past).</strong>
-        <br/>
-        <apex:pageBlockSection columns="1">
+        <apex:pageBlockSection columns="1" rendered="{!haveContactsBeenInvited}">
+            <strong>The following contacts have been added to the Campaign and have an INVITE or INTRO email queued up depending on if they already have an account (aka they have signed up in the past).</strong>
+            <br/>
             <apex:pageBlockSectionItem >
                 <apex:outputText id="previewContactsToInvite" value="{!contactsToInviteDisplay}" escape="false">
                 </apex:outputText>
             </apex:pageBlockSectionItem>
         </apex:pageBlockSection>
-        <apex:pageBlockSection columns="1">
+        <apex:pageBlockSection columns="1" rendered="{!haveContactsBeenInvited==false}">
+            <strong>No contacts were found that could be invited to this campaign.</strong>
+            <br/>
+        </apex:pageBlockSection>
+        <apex:pageBlockSection columns="1" rendered="{!haveContactsBeenSkipped}">
+            <strong>The following contacts were skipped because they have either already been Bulk Invited to this campaign or they signed up on their own.</strong>
+            <br/>
+            <apex:pageBlockSectionItem >
+                <apex:outputText value="{!contactsSkippedDisplay}" escape="false">
+                </apex:outputText>
+            </apex:pageBlockSectionItem>
+        </apex:pageBlockSection>
+        <apex:pageBlockSection columns="1" rendered="{!haveContactsBeenInvited}">
             <apex:pageBlockSectionItem >
             <apex:outputText >
                 <br/>
@@ -83,12 +95,12 @@
             </apex:outputText>
             </apex:pageBlockSectionItem>
         </apex:pageBlockSection>
-        <apex:pageBlockSection columns="1">
+        <apex:pageBlockSection columns="1" rendered="{!haveContactsBeenInvited}">
             <apex:pageBlockSectionItem >
                 <apex:inputText value="{!textMessageBody}" size="158" maxlength="158" style="width: 70%;"></apex:inputText>
             </apex:pageBlockSectionItem>
         </apex:pageBlockSection>
-        <apex:pageBlockSection columns="1">
+        <apex:pageBlockSection columns="1" rendered="{!haveContactsBeenInvited}">
             <apex:pageBlockSectionItem >
                 <apex:outputPanel >
                 <table>
@@ -97,6 +109,13 @@
                     <td><apex:commandButton action="{!cancel}" value="Cancel" /></td>
                 </tr>
                 </table>
+                </apex:outputPanel>
+            </apex:pageBlockSectionItem>
+        </apex:pageBlockSection>
+        <apex:pageBlockSection columns="1" rendered="{!haveContactsBeenInvited==false}">
+            <apex:pageBlockSectionItem >
+                <apex:outputPanel>
+                    <apex:commandButton action="{!cancel}" value="Ok"/>
                 </apex:outputPanel>
             </apex:pageBlockSectionItem>
         </apex:pageBlockSection>

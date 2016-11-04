@@ -15,6 +15,7 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
     private String m_textMessageBody;
     private String m_resultMessage;
     private String m_contactsToInviteDisplay;
+    private String m_contactsSkippedDisplay;
     private boolean m_contactsLoaded;
     private boolean m_textMessagesSent;
     private ID m_jobId;
@@ -97,14 +98,15 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
                 contactsToAdd.put(c.Email.toLowerCase(), c);
             }
 
-            List<Contact> existingContacts = 
+            List<String> existingContactEmails = new List<String>();
+            Map<Id, Contact> existingContacts = new Map<Id, Contact>(
                 [SELECT Id, Firstname, LastName, Email, Phone, npsp__Primary_Affiliation__c, Undergrad_University__c  
                 FROM Contact 
-                WHERE Email in :contactsToAdd.keySet()];
+                WHERE Email in :contactsToAdd.keySet()]);
 
             if (existingContacts.size() > 0)
             {
-                for (Contact c : existingContacts)
+                for (Contact c : existingContacts.values())
                 {
                     System.debug('BZ_BulkInviteController.finishRead(): removing '+c+' from contactsToAdd b/c they already are in SF.');
                     Contact updatedContact = contactsToAdd.get(c.Email.toLowerCase());
@@ -112,26 +114,46 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
                     c.LastName = updatedContact.LastName;
                     c.Phone = updatedContact.Phone;
                     contactsToAdd.remove(c.Email.toLowerCase());
+                    existingContactEmails.add(c.Email.toLowerCase());
+                }
+                
+                // When we table on campus to get contact info, we give them a flyer.  Some 
+                // people signup on their own using the flyer before we Bulk Invite 
+                // them causing a duplicate key exception.  So we exclude existing
+                // campaign members.
+                List<CampaignMember> existingCampaignMembers = 
+                    [SELECT Id, FirstName, LastName, ContactId, Email, Phone FROM CampaignMember
+                     WHERE CampaignId = :m_campaign.Id AND Email in :existingContactEmails];
+                if (existingCampaignMembers.size() > 0){
+                    m_contactsSkippedDisplay = '<table border="1"><tr><td style="padding:0 15px 0 15px;"><strong>Name</strong></td><td style="padding:0 15px 0 15px;"><strong>Email</strong></td><td style="padding:0 15px 0 15px;"><strong>Phone</strong></td></tr>';
+                    for (CampaignMember cm : existingCampaignMembers){
+                        existingContacts.remove(cm.ContactId);
+                        m_contactsSkippedDisplay += '<tr><td style="padding:0 15px 0 15px;">' + cm.FirstName + ' ' + cm.LastName + '</td><td style="padding:0 15px 0 15px;">' + cm.Email + '</td><td style="padding:0 15px 0 15px;">' + cm.Phone + '</td></tr>';
+                    }
+                    m_contactsSkippedDisplay += '</table>';
+                    System.debug('BZ_BulkInviteController.finishRead(): m_contactsSkippedDisplay = '+m_contactsSkippedDisplay);
                 }
             }
             
             m_contactsToBulkInvite = new List<Contact>();
             m_contactsToBulkInvite.addAll(contactsToAdd.values());
-            m_contactsToBulkInvite.addAll(existingContacts);
+            m_contactsToBulkInvite.addAll(existingContacts.values());
             System.debug('BZ_BulkInviteController.finishRead(): m_contactsToBulkInvite = '+m_contactsToBulkInvite);
             
-            m_contactsToInviteDisplay = '<table border="1"><tr><td style="padding:0 15px 0 15px;"><strong>Name</strong></td><td style="padding:0 15px 0 15px;"><strong>Email</strong></td><td style="padding:0 15px 0 15px;"><strong>Phone</strong></td></tr>';
-            for (Contact c : m_contactsToBulkInvite)
-            {
-                m_contactsToInviteDisplay += '<tr><td style="padding:0 15px 0 15px;">' + c.FirstName + ' ' + c.LastName + '</td><td style="padding:0 15px 0 15px;">' + c.Email + '</td><td style="padding:0 15px 0 15px;">' + c.Phone + '</td></tr>';
+            if (m_contactsToBulkInvite.size() > 0){
+                m_contactsToInviteDisplay = '<table border="1"><tr><td style="padding:0 15px 0 15px;"><strong>Name</strong></td><td style="padding:0 15px 0 15px;"><strong>Email</strong></td><td style="padding:0 15px 0 15px;"><strong>Phone</strong></td></tr>';
+                for (Contact c : m_contactsToBulkInvite)
+                {
+                    m_contactsToInviteDisplay += '<tr><td style="padding:0 15px 0 15px;">' + c.FirstName + ' ' + c.LastName + '</td><td style="padding:0 15px 0 15px;">' + c.Email + '</td><td style="padding:0 15px 0 15px;">' + c.Phone + '</td></tr>';
+                }
+                m_contactsToInviteDisplay += '</table>';
             }
-            m_contactsToInviteDisplay += '</table>';
             m_contactsLoaded = true;
             
             Map<String, String[]> interactionInfoMap = getInteractionInfoMap();
             
             m_queueableController = new BZ_BulkInviteControllerQueueable(
-                m_campaign, primaryAffiliationId, contactsToAdd, existingContacts,
+                m_campaign, primaryAffiliationId, contactsToAdd, existingContacts.values(),
                 m_contactsToBulkInvite, interactionInfoMap);
             
             m_jobId = System.enqueueJob(m_queueableController);
@@ -188,6 +210,18 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
 
     public String getContactsToInviteDisplay(){
         return m_contactsToInviteDisplay;
+    }
+    
+    public Boolean getHaveContactsBeenInvited(){
+        return !String.isEmpty(m_contactsToInviteDisplay);
+    }
+    
+    public String getContactsSkippedDisplay(){
+        return m_contactsSkippedDisplay;
+    }
+    
+    public Boolean getHaveContactsBeenSkipped(){
+        return !String.isEmpty(m_contactsSkippedDisplay);
     }
                                         
     /*
