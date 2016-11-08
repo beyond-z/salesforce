@@ -32,6 +32,7 @@
     Volunteer Opportunities
 
 	CAMPAIGN MEMBER
+		Date App Submitted
 		Selected Timeslot
 		Company
 		Industry
