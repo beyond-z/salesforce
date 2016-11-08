@@ -111,7 +111,6 @@ global class BZ_Notifications {
         System.Debug('BZ_Notifications.changeCampaigns(): calling change_campaigns with contactIds = ' + contactIdsString);
         request.setEndpoint(base_url + '/salesforce/change_campaigns');
 	request.setBody('magic_token='+magic_token+'&contactIds=' + contactIdsString +'&oldCampaignId=' + oldCampaignId + '&newCampaignId=' + newCampaignId); 
-	request.setCompressed(true);
         request.setMethod('POST'); 
         HttpResponse response = http.send(request); 
         String responseBody = response.getBody();
