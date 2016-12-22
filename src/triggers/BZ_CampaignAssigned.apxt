@@ -60,6 +60,8 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
         
         boolean isApplicableCampaign = false;
         boolean hasSignedUpOnWebsite = (contact.BZ_User_Id__c != null && contact.Signup_Date__c != null);
+        // Temp Volunteers get an email through calendly, so we exempt them from getting an Intro email from Salesforce
+        boolean contactTypeThatGetsIntroEmail = true;
         boolean hasCourseCompleted = (campaign.IsActive == false && campaign.Status == 'Completed');
         System.debug('BZ_CampaignAssigned: hasCourseCompleted = '+hasCourseCompleted +', campaign.IsActive='+campaign.IsActive+', campaign.Status='+campaign.Status);
         System.debug('BZ_CampaignAssigned: cm.Candidate_Status__c = '+cm.Candidate_Status__c +', cm='+cm);
@@ -94,6 +96,7 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
                 contact.Is_In_Active_Recruitment_Campaign__c = true;
             }
             isApplicableCampaign = true;
+            contactTypeThatGetsIntroEmail = false;
         } else if (campaign.Type == 'Partners')
         {
             // Website signup as employer partner or university partner
@@ -138,8 +141,8 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
                     if (BZ_BulkInviteController.IsBulkInviteRunning){
                         campaignMembersToCreateReinviteTasksFor.add(cm);
                         System.Debug('BZ_CampaignAssigned: queuing up Reinvite email for '+cm+' because they already have an account and are being Bulk Invited to a new Campaign.');
-                    } else {
-                      campaignMembersToCreateIntroTasksFor.add(cm);
+                    } else if (contactTypeThatGetsIntroEmail){
+            	        campaignMembersToCreateIntroTasksFor.add(cm);
                         System.Debug('BZ_CampaignAssigned: queuing up Intro email for '+cm);
                     }
                 }

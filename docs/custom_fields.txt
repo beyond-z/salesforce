@@ -109,8 +109,10 @@
 		Reference 2 How Long Known
 		Reference 2 Phone
 		Reference 2 Email
+    Opted Out Reason
     Cultivation Level
     Last Interaction Date
+    Volunteer Event Signups
 
 	CONTACT
 		Middle Name
