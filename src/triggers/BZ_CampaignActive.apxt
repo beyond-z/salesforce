@@ -7,31 +7,104 @@
 trigger BZ_CampaignActive on Campaign (before update) {
     System.Debug('BZ_CampaignActive: begin trigger');
     List<CampaignMember> campaignMembersToCreateTasksFor = new List<CampaignMember>();
-    for (Campaign campaign : Trigger.new)
-    {
-        // Only run this if the Active field changes.
-        if (Trigger.oldMap.get(campaign.Id).IsActive != campaign.IsActive)
+    Set<Id> contactIdsToMaybeSetInactive = new Set<Id>();
+    Set<Id> contactIdsToSetActive = new Set<Id>();
+    Set<Id> campaignIdsBecomingInactive = new Set<Id>();
+    for (Campaign currentCampaign : Trigger.new)
+    { 
+        // Only run this if the Active field changes and it's a recruitment campaign
+        // with an application associated.
+        if (Trigger.oldMap.get(currentCampaign.Id).IsActive != currentCampaign.IsActive &&
+               (
+               currentCampaign.Type == 'Leadership Coaches' ||
+               currentCampaign.Type == 'Program Participants' ||
+               currentCampaign.Type == 'Volunteer'
+               )
+           )
         {
-            System.Debug('BZ_CampaignActive: trigger processing campaign: ' + campaign);
+            System.Debug('BZ_CampaignActive: trigger processing campaign: ' + currentCampaign);
             List<CampaignMember> cms = [SELECT Id, ContactId, CampaignId 
-                                        FROM CampaignMember WHERE CampaignId=:campaign.Id];
+                                        FROM CampaignMember WHERE CampaignId=:currentCampaign.Id];
             List<Task> tasksToAdd = new List<Task>();
             for(CampaignMember cm : cms)
             {
                 System.debug('BZ_CampaignActive: processing CampaignMember: '+ cm);
-                cm.Apply_Button_Enabled__c = campaign.IsActive; 
+                cm.Apply_Button_Enabled__c = currentCampaign.IsActive; 
                 
-                // If the campaign is becoming active, queue up tasks to send emails to 
-                // existing member letting them know the app is open.
-                if (campaign.IsActive && !BZ_CloseRecruitmentController.IsCloseRecruitmentRunning)
+                if (currentCampaign.IsActive)
                 {
-                    campaignMembersToCreateTasksFor.add(cm);
+                    // If the campaign is becoming active, queue up tasks to send emails to 
+                    // existing member letting them know the app is open.
+                    if (!BZ_CloseRecruitmentController.IsCloseRecruitmentRunning){
+                        campaignMembersToCreateTasksFor.add(cm);
+                    }
+                    
+                    contactIdsToSetActive.add(cm.ContactId);                    
+                }
+                else
+                {
+                    campaignIdsBecomingInactive.add(currentCampaign.Id);
+                    contactIdsToMaybeSetInactive.add(cm.ContactId);
                 }
             }
             update cms;
             
             //System.Debug('BZ_CampaignActive: updated '+cms.size()+' CampaignMember.Apply_Button_Enabled__c field(s)');
         }
+    }
+    
+    if (contactIdsToSetActive.size() > 0){
+        List<Contact> contacts = [SELECT Id, Is_In_Active_Recruitment_Campaign__c FROM Contact WHERE Id in :contactIdsToSetActive];
+        for (Contact c : contacts){
+            System.Debug('BZ_CampaignActive: updating '+c+' and setting Is_In_Active_Recruitment_Campaign__c = true');
+            c.Is_In_Active_Recruitment_Campaign__c = true;
+        }
+        update contacts;
+    }
+    
+    if (contactIdsToMaybeSetInactive.size() > 0){
+        List<CampaignMember> allCampaignMembersForInactiveContacts = [SELECT Id, ContactId, CampaignId FROM CampaignMember WHERE ContactId in :contactIdsToMaybeSetInactive];
+        Set<Id> otherCampaignIds = new Set<Id>();
+        Map<Id, List<Id>> contactToCampaignsMap = new Map<Id, List<Id>>();
+        for (CampaignMember cm : allCampaignMembersForInactiveContacts){
+            if (!campaignIdsBecomingInactive.contains(cm.CampaignId)){ // For campaigns becoming Inactive, they are currently Active since it's a before update.  Ignore them when looking for Active campaigns.
+                otherCampaignIds.add(cm.CampaignId);
+                if (contactToCampaignsMap.containsKey(cm.ContactId)){
+                    contactToCampaignsMap.get(cm.ContactId).add(cm.CampaignId);
+                } else {
+                    contactToCampaignsMap.put(cm.ContactId, new List<Id>{cm.CampaignId});
+                }
+            }
+        }
+        Map<Id, Campaign> campaignMap = new Map<Id, Campaign>([SELECT Id, IsActive, Type FROM Campaign WHERE Id in :otherCampaignIds]);
+        List<Contact> contacts = [SELECT Id, Is_In_Active_Recruitment_Campaign__c FROM Contact WHERE Id in :contactIdsToMaybeSetInactive];
+        List<Contact> contactsTpUpdate = new List<Contact>();
+        for (Contact c : contacts){
+            boolean inAnActiveRecruitmentCampaign = false;
+            if (contactToCampaignsMap.containsKey(c.Id)){
+                for(Id i : contactToCampaignsMap.get(c.Id)){
+                    Campaign campaign = campaignMap.get(i);
+                    if (campaign.IsActive && 
+                           (
+                           campaign.Type == 'Leadership Coaches' ||
+                           campaign.Type == 'Program Participants' ||
+                           campaign.Type == 'Volunteer'
+                           )
+                       )
+                    {
+                        System.Debug('BZ_CampaignActive: SKIPPING '+c+' because they are in an Active recruitment campaign: ' + campaign);
+                        inAnActiveRecruitmentCampaign = true;
+                    }
+                }
+            }
+            
+            if (inAnActiveRecruitmentCampaign == false){
+                System.Debug('BZ_CampaignActive: updating '+c+' and setting Is_In_Active_Recruitment_Campaign__c = false');
+                c.Is_In_Active_Recruitment_Campaign__c = false;
+                contactsTpUpdate.add(c);
+            }
+        }
+        update contactsTpUpdate;
     }
     
     if (campaignMembersToCreateTasksFor.size() > 0)
