@@ -1,0 +1,62 @@
+trigger BZ_ContactUpdated on Contact (before update) {
+    System.Debug('BZ_ContactUpdated: begin trigger');
+    Map<Id,Contact> contactsToUpdateMap = new Map<Id,Contact>();
+    Map<Id, Account> contactIdsToAccountsToInsertMap = new Map<Id, Account>();
+    List<RecordType> organizationsRecordsTypes = [SELECT Id FROM RecordType 
+                                   WHERE IsActive = true AND 
+                                   DeveloperName = 'Organization' AND sObjectType = 'Account'];
+    if (organizationsRecordsTypes == null || organizationsRecordsTypes.size() <= 0){
+        System.debug('BZ_ContactUpdated: no Record Type of Organization found for Account. Skipping ');
+        return;
+    }
+    Id organizationRecordTypeId = organizationsRecordsTypes[0].Id;
+    for (Contact c : Trigger.new)
+    {
+        if (Trigger.oldMap.get(c.Id).Company__c != c.Company__c && !String.isBlank(c.Company__c))
+        {
+            System.Debug('BZ_ContactUpdated: Company value changed from '+Trigger.oldMap.get(c.Id).Company__c+' to '+c.Company__c);
+            List<Account> existingAccounts = [SELECT Id, RecordTypeId FROM Account WHERE Name = :c.Company__c];
+            if (existingAccounts != null && existingAccounts.size() > 0)
+            {
+                Account a = existingAccounts[0];
+                if (a.RecordTypeId == organizationRecordTypeId) 
+                {
+                    // Note: setting the Primary Affiliation automatically adds it to the 
+                    // Affilition list.  It appends to existing ones too.
+                    c.npsp__Primary_Affiliation__c = a.Id;
+                    contactsToUpdateMap.put(c.Id, c);
+                    System.Debug('BZ_ContactUpdated: updated Primary Affiliation to Account: '+a);
+                }
+                else 
+                {
+                    System.debug('BZ_ContactUpdated: Existing Account: ' + a + ' not an organization Account type. Cant make it a Company affiliation');
+                }
+            }
+            else
+            {
+                Account newAccount = new Account();
+                newAccount.Name = c.Company__c;
+                newAccount.Type = 'Organization';
+                newAccount.RecordTypeId = organizationRecordTypeId;
+                newAccount.Organization_s_Primary_Contact__c = c.Id;
+                System.Debug('BZ_ContactUpdated: created new Account for Company: '+c.Company__c);
+                contactIdsToAccountsToInsertMap.put(c.Id, newAccount);
+                contactsToUpdateMap.put(c.Id, c);
+            }
+        }
+    }
+    
+    // Insert new Accounts
+    if (contactIdsToAccountsToInsertMap.size() > 0){
+        insert contactIdsToAccountsToInsertMap.values();
+        for (Account a : contactIdsToAccountsToInsertMap.values()){
+            Contact c = contactsToUpdateMap.get(a.Organization_s_Primary_Contact__c);
+            c.npsp__Primary_Affiliation__c = a.Id;
+        }
+    }
+    
+    // Note: since this is a before trigger, the updated values are automatically
+    // committed to the database
+    // Update all Primary Affilitions
+    //update contactsToUpdateMap.values(); 
+}

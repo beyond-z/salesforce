@@ -1,0 +1,51 @@
+// This code is used to sync the LinkedIn URL between Contacts and CampaignMembers
+// It was run when we first released the LinkedIn URL field on the Contact and which is automatically populated
+// when someone signs up to be a Champion.
+//
+// Note: before running this, I selected all CampaignMember with a LinkedIn URL set and then ran the first few lines of
+// the code below to see how many campaignMembersToPullFrom where found, to see that the number matched, meaning
+// that there were no CampaignMembers with URLs where the Contact already has a URL set as well.  The numbers matched.
+
+Map<Id, Contact> contactsWithEmptyURLs = new Map<Id, Contact>(
+    [SELECT Id, Name, Email, LinkedIn_URL__c FROM Contact
+     WHERE LinkedIn_URL__c = '']);
+
+System.debug('There are '+contactsWithEmptyURLs.size()+' contacts with an empty LinkedIn URL that are candidates to update');
+
+List<CampaignMember> campaignMembersToPullFrom = new List<CampaignMember>(
+            [SELECT Id, ContactId, LinkedIn_URL__c FROM CampaignMember
+             WHERE LinkedIn_URL__c <> '' AND
+                   ContactId in :contactsWithEmptyURLs.keySet()]);
+System.debug('Processing '+campaignMembersToPullFrom.size()+' campaign members with LinkedIn URLs to set on Contacts');
+
+Integer i = 0;
+List<Contact> contactsToUpdate = new List<Contact>();
+for (CampaignMember cm : campaignMembersToPullFrom){
+    Contact c = contactsWithEmptyURLs.get(cm.ContactId);
+    c.LinkedIn_URL__c = cm.LinkedIn_URL__c;
+    contactsToUpdate.Add(c);
+    i++;
+    System.debug('Setting Contact LinkedIn field from the CampaignMember for Contact: ' + c);
+}
+update contactsToUpdate;
+System.debug('Processed ' + i + ' contacts and set their LinkedIn URL using the CampaignMember');
+
+Map<Id, Contact> contactsWithURLs = new Map<Id, Contact>(
+    [SELECT Id, Name, Email, LinkedIn_URL__c FROM Contact
+     WHERE LinkedIn_URL__c <> '' AND
+     Id not in :contactsWithEmptyURLs.keySet()
+]);
+
+System.debug('There are '+contactsWithURLs.size()+' contacts with LinkedIn URLs that need to be copied to the CampaignMember');
+
+List<CampaignMember> campaignMembersToUpdate = new List<CampaignMember>(
+            [SELECT Id, ContactId, LinkedIn_URL__c FROM CampaignMember
+             WHERE ContactId in :contactsWithURLs.keySet()]);
+System.debug('Processing '+campaignMembersToUpdate.size()+' campaign members that need to be updated using the LinkedIn URL set on their Contact');
+
+for (CampaignMember cm : campaignMembersToUpdate){
+    Contact c = contactsWithURLs.get(cm.ContactId);
+    cm.LinkedIn_URL__c= c.LinkedIn_URL__c;
+    System.debug('Setting LinkedIn URL for Campaign Member: ' + cm);
+}
+update campaignMembersToUpdate;
