@@ -1,0 +1,51 @@
+@isTest 
+private class BZ_ContactUpdated_TEST {
+    static testMethod void validateExistingCompanyAccountSet() {
+        List<RecordType> organizationRecordType = [SELECT Id FROM RecordType 
+                                   WHERE IsActive = true AND 
+                                   DeveloperName = 'Organization' AND sObjectType = 'Account'];
+        Id organizationRecordTypeId = organizationRecordType[0].Id;
+        String newCompanyName = 'SomeTestCompany';
+        Account a = new Account(Name=newCompanyName, Type='Organization', RecordTypeId=organizationRecordTypeId);
+        insert a;
+        
+        List<Contact> contactsToInsert = new List<Contact>();
+        Contact contactToUpdate = new Contact(FirstName='TestContact', LastName='UpdateComany', Email='TestContact.UpdateCompany@bz.org');
+        contactsToInsert.add(contactToUpdate);
+        insert contactsToInsert;
+
+        // This fires the trigger we're testing.
+        contactToUpdate.Company__c = newCompanyName;
+        update contactToUpdate;
+        
+        Contact updatedContact = [SELECT Id, npsp__Primary_Affiliation__r.Name, npsp__Primary_Affiliation__r.Id FROM Contact WHERE Id = :contactToUpdate.Id];
+        System.assertEquals(newCompanyName, updatedContact.npsp__Primary_Affiliation__r.Name, 'Expected Primary Affiliation to be set to Account with matching Name');
+        System.assertEquals(a.Id, updatedContact.npsp__Primary_Affiliation__r.Id, 'Expected Primary Affiliation to be set to existing Account');
+        List<Account> accountsWithName = [SELECT Id FROM Account WHERE Name = :newCompanyName];
+        System.assertEquals(1, accountsWithName.size(), 'Expected Primary Affiliation to be set to existing Account, not create a new one');
+    }
+
+    static testMethod void validateNewCompanyAccountSet() {
+        Id organizationRecordTypeId = [SELECT Id FROM RecordType 
+                                   WHERE IsActive = true AND 
+                                   DeveloperName = 'Organization' AND sObjectType = 'Account'][0].Id;
+        
+        List<Contact> contactsToInsert = new List<Contact>();
+        Contact contactToUpdate = new Contact(FirstName='TestContact2', LastName='UpdateComany2', Email='TestContact2.UpdateCompany2@bz.org');
+        contactsToInsert.add(contactToUpdate);
+        insert contactsToInsert;
+
+        String newCompanyName = 'SomeTestCompany2';        
+        List<Account> accountsWithName = [SELECT Id FROM Account WHERE Name = :newCompanyName];
+        System.assert(accountsWithName == null || accountsWithName.size() == 0, 'Found existing Account with Name: ' + newCompanyName + ' . It shouldnt exist yet');
+
+        // This fires the trigger we're testing.
+        contactToUpdate.Company__c = newCompanyName;
+        update contactToUpdate;
+        
+        Contact updatedContact = [SELECT Id, npsp__Primary_Affiliation__r.Name, npsp__Primary_Affiliation__r.Id FROM Contact WHERE Id = :contactToUpdate.Id];
+        System.assertEquals(newCompanyName, updatedContact.npsp__Primary_Affiliation__r.Name, 'Expected Primary Affiliation to be set to Account with matching Name');
+        List<Account> updatedAccountsWithName = [SELECT Id FROM Account WHERE Name = :newCompanyName];
+        System.assertEquals(1, updatedAccountsWithName.size(), 'Expected Primary Affiliation to be set and create a new Account');
+    }
+}
