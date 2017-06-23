@@ -7,7 +7,7 @@ private class BZ_BulkTexter_TEST {
         List<Contact> contactsToInsert = new List<Contact>();
         Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
         contactsToInsert.add(campaignOwner);
-        String mergedText = 'Some Text Merged Into Message';
+        String mergedText = 'Some Text Merged Into Message\'s';
         Contact contact1 = new Contact(FirstName='Brian', LastName='xTest1', Phone='5554445555', Email='test@email.com', Mass_Text_Merge_Field__c=mergedText, OwnerId=userInfo.getUserId());
         contactsToInsert.add(contact1);
         insert contactsToInsert;
@@ -20,7 +20,7 @@ private class BZ_BulkTexter_TEST {
         
         BZ_SettingsFactory_TEST.setSettings();
         System.assert(BZ_Settings__c.getInstance('bz') != null, 'BZ_Settings__c is null');
-        BZ_BulkTexter texter = new BZ_BulkTexter(new List<Contact>{contact1}, 'Heyo, here is the merged text {!Contact.Mass_Text_Merge_Field__c}.  Cool, huh?', campaign);
+        BZ_BulkTexter texter = new BZ_BulkTexter(new List<Contact>{contact1}, 'Heyo, here\'s the merged text {!Contact.Mass_Text_Merge_Field__c}.  Cool, huh?', campaign);
         Test.startTest();
         texter.sendTextMessages();
         Test.stopTest();
@@ -31,6 +31,7 @@ private class BZ_BulkTexter_TEST {
         System.assertEquals('Completed', tasks[0].Status);
         System.assertEquals('Text Message', tasks[0].Interaction_Type__c);
         System.assert(tasks[0].Description.contains(mergedText), 'Expected the Mass Text Merge Field to be merged.  The message was actually: ' + tasks[0].Description);
+        System.assert(tasks[0].Description.contains('\''), 'Expected the Mass Text to retain apostrophes.  The message was actually: ' + tasks[0].Description);
     }
     
      static testMethod void validateMassTextMergeFieldException() {
