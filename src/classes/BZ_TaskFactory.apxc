@@ -67,16 +67,16 @@ public class BZ_TaskFactory {
         for (CampaignMember cm : cms)
         {
             Task t = new Task(
-                OwnerId = campaignMap.get(cm.CampaignId).OwnerId,         // Assigned To
+                OwnerId = campaignMap.get(cm.CampaignId).OwnerId,					// Assigned To
                 Subject = 'Email: ' + taskSubjectPrefix + ' To ' + contactMap.get(cm.ContactId).Name,
                 Description = description,
                 Interaction_Type__c = 'Email',
                 IsReminderSet = true,
                 ReminderDateTime = System.now(),
-                ActivityDate = Date.today(),      // Due Date
-                WhoId = cm.ContactId,             // Name
-                WhatId = cm.CampaignId,         // Related To
-                EmailTemplate__c = emailTemplateMap.get(cm.CampaignId),   // Email Template To Send
+                ActivityDate = Date.today(), 			// Due Date
+                WhoId = cm.ContactId, 						// Name
+                WhatId = cm.CampaignId,					// Related To
+                EmailTemplate__c = emailTemplateMap.get(cm.CampaignId),		// Email Template To Send
                 CampaignMemberId__c = cm.Id);
 
             tasks.add(t);
@@ -139,15 +139,19 @@ public class BZ_TaskFactory {
                 //System.debug('BZ_TaskFactory: campaignId='+campaignId);
                 Campaign campaign = campaignMap.get(campaignId);
                 //System.debug('BZ_TaskFactory: campaign='+campaign);
+                // Need to escape single quotes or String.Format will remove it:
+                // https://developer.salesforce.com/forums/?id=906F00000008yzsIAA
+                String escapedSubject = escapeSingleQuoteForStringFormat(taskSubjectPattern);
+                String escapedDescription = escapeSingleQuoteForStringFormat(descriptionPattern);
                 Task t = new Task(
-                        OwnerId = campaign.OwnerId,           // Assigned To
-                        Subject = System.String.format(taskSubjectPattern, new String[]{contact.Name}),
-                        Description = System.String.format(descriptionPattern, new String[]{contact.Name}),
+                        OwnerId = campaign.OwnerId,						// Assigned To
+                        Subject = System.String.format(escapedSubject, new String[]{contact.Name}),
+                        Description = System.String.format(escapedDescription, new String[]{contact.Name}),
                         IsReminderSet = true,
                         ReminderDateTime = System.now(),
-                        ActivityDate = Date.today(),      // Due Date
-                        WhoId = contactId,            // Name
-                        WhatId = campaignId,                    // Related To
+                        ActivityDate = Date.today(), 			// Due Date
+                        WhoId = contactId, 						// Name
+                        WhatId = campaignId,		                // Related To
                         CampaignMemberId__c = cm.Id);
                 
                 tasksToAdd.add(t);
@@ -197,16 +201,19 @@ public class BZ_TaskFactory {
     {
         List<Task> tasksToAdd = new List<Task>();
         for (Contact c : contacts){
-
+            // Need to escape single quotes or String.Format will remove it:
+            // https://developer.salesforce.com/forums/?id=906F00000008yzsIAA
+            String escapedSubject = escapeSingleQuoteForStringFormat(taskSubjectPattern);
+            String escapedDescription = escapeSingleQuoteForStringFormat(descriptionPattern);
             Task t = new Task(
-                        OwnerId = campaign.OwnerId,           // Assigned To
-                        Subject = System.String.format(taskSubjectPattern, new String[]{c.Name}),
-                        Description = System.String.format(descriptionPattern, new String[]{c.Name}),
+                        OwnerId = campaign.OwnerId,						// Assigned To
+                        Subject = System.String.format(escapedSubject, new String[]{c.Name}),
+                        Description = System.String.format(escapedDescription, new String[]{c.Name}),
                         IsReminderSet = setReminder,
                         Status = status,
-                        ActivityDate = Date.today(),          // Due Date
-                        WhoId = c.Id,                     // Name
-                        WhatId = campaign.Id                    // Related To
+                        ActivityDate = Date.today(), 			    // Due Date
+                        WhoId = c.Id, 						        // Name
+                        WhatId = campaign.Id		                // Related To
                         );
             
             if (setReminder)
@@ -234,14 +241,21 @@ public class BZ_TaskFactory {
     public static Task createTask(Lead lead, String taskSubjectPattern, String description) {
         // For some reason, the Lead.Name is null in a create trigger: https://developer.salesforce.com/forums/ForumsMain?id=906F00000008yQ5IAI
         String name = lead.FirstName + ' ' + lead.LastName;
+        // Need to escape single quotes or String.Format will remove it:
+        // https://developer.salesforce.com/forums/?id=906F00000008yzsIAA
+        String escapedSubject = escapeSingleQuoteForStringFormat(taskSubjectPattern);
         Task t = new Task(
-                OwnerId = lead.OwnerId,           // Assigned To
-                Subject = System.String.format(taskSubjectPattern, new String[]{name}),
+                OwnerId = lead.OwnerId,						// Assigned To
+                Subject = System.String.format(escapedSubject, new String[]{name}),
                 Description = description,
                 IsReminderSet = true,
                 ReminderDateTime = System.now(),
-                ActivityDate = Date.today(),      // Due Date
-                WhoId = lead.Id);                     // Name
+                ActivityDate = Date.today(), 			// Due Date
+                WhoId = lead.Id); 	    	            // Name
         return t;
+    }
+    
+    private static String escapeSingleQuoteForStringFormat(String stringToEscape){
+        return stringToEscape.replace('\'', '\'\'');
     }
 }

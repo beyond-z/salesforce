@@ -28,7 +28,7 @@ private class BZ_BulkEmailer_TEST {
         String et2DeveloperName='TestEmailTemplateToSend2';
 
         List<Task> tasksToInsert = new List<Task>();
-        Task t1 = new Task(Subject='Test Send Email Task1', OwnerId=sender.Id, WhoId=recipient.Id, WhatId=campaign.Id, EmailTemplate__c=et1DeveloperName);
+        Task t1 = new Task(Subject='It\'s A Test Send Email Task1', OwnerId=sender.Id, WhoId=recipient.Id, WhatId=campaign.Id, EmailTemplate__c=et1DeveloperName);
         tasksToInsert.add(t1);
         Task t2 = new Task(Subject='Test Send Email Task2', OwnerId=sender.Id, WhoId=recipient.Id, WhatId=campaign.Id, EmailTemplate__c=et2DeveloperName);
         tasksToInsert.add(t2);
