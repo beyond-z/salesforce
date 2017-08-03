@@ -67,16 +67,16 @@ public class BZ_TaskFactory {
         for (CampaignMember cm : cms)
         {
             Task t = new Task(
-                OwnerId = campaignMap.get(cm.CampaignId).OwnerId,					// Assigned To
+                OwnerId = campaignMap.get(cm.CampaignId).OwnerId,         // Assigned To
                 Subject = 'Email: ' + taskSubjectPrefix + ' To ' + contactMap.get(cm.ContactId).Name,
                 Description = description,
                 Interaction_Type__c = 'Email',
                 IsReminderSet = true,
                 ReminderDateTime = System.now(),
-                ActivityDate = Date.today(), 			// Due Date
-                WhoId = cm.ContactId, 						// Name
-                WhatId = cm.CampaignId,					// Related To
-                EmailTemplate__c = emailTemplateMap.get(cm.CampaignId),		// Email Template To Send
+                ActivityDate = Date.today(),      // Due Date
+                WhoId = cm.ContactId,             // Name
+                WhatId = cm.CampaignId,         // Related To
+                EmailTemplate__c = emailTemplateMap.get(cm.CampaignId),   // Email Template To Send
                 CampaignMemberId__c = cm.Id);
 
             tasks.add(t);
@@ -144,20 +144,28 @@ public class BZ_TaskFactory {
                 String escapedSubject = escapeSingleQuoteForStringFormat(taskSubjectPattern);
                 String escapedDescription = escapeSingleQuoteForStringFormat(descriptionPattern);
                 Task t = new Task(
-                        OwnerId = campaign.OwnerId,						// Assigned To
+                        OwnerId = campaign.OwnerId,           // Assigned To
                         Subject = System.String.format(escapedSubject, new String[]{contact.Name}),
                         Description = System.String.format(escapedDescription, new String[]{contact.Name}),
                         IsReminderSet = true,
                         ReminderDateTime = System.now(),
-                        ActivityDate = Date.today(), 			// Due Date
-                        WhoId = contactId, 						// Name
-                        WhatId = campaignId,		                // Related To
+                        ActivityDate = Date.today(),      // Due Date
+                        WhoId = contactId,            // Name
+                        WhatId = campaignId,                    // Related To
                         CampaignMemberId__c = cm.Id);
                 
                 tasksToAdd.add(t);
             }
         }
         return tasksToAdd;
+    }
+    
+    /**
+     * See createTasks(Contact[], Campaign, String, String, String, boolean) for more info
+     */
+    public static List<Task> createTasks(Contact[] contacts, String taskSubjectPattern, String status) 
+    {
+        return createTasks(contacts, null, taskSubjectPattern, '', status, false);
     }
     
     /**
@@ -206,15 +214,20 @@ public class BZ_TaskFactory {
             String escapedSubject = escapeSingleQuoteForStringFormat(taskSubjectPattern);
             String escapedDescription = escapeSingleQuoteForStringFormat(descriptionPattern);
             Task t = new Task(
-                        OwnerId = campaign.OwnerId,						// Assigned To
                         Subject = System.String.format(escapedSubject, new String[]{c.Name}),
                         Description = System.String.format(escapedDescription, new String[]{c.Name}),
                         IsReminderSet = setReminder,
                         Status = status,
-                        ActivityDate = Date.today(), 			    // Due Date
-                        WhoId = c.Id, 						        // Name
-                        WhatId = campaign.Id		                // Related To
+                        ActivityDate = Date.today(),          // Due Date
+                        WhoId = c.Id                    // Name
                         );
+            if (campaign != null) {
+                t.OwnerId = campaign.OwnerId;           // Assigned To
+                t.WhatId = campaign.Id;                             // Related To
+            }
+            else {
+                t.OwnerId = userInfo.getUserId();                   // Assgined To current running user
+            }
             
             if (setReminder)
             {
@@ -245,13 +258,13 @@ public class BZ_TaskFactory {
         // https://developer.salesforce.com/forums/?id=906F00000008yzsIAA
         String escapedSubject = escapeSingleQuoteForStringFormat(taskSubjectPattern);
         Task t = new Task(
-                OwnerId = lead.OwnerId,						// Assigned To
+                OwnerId = lead.OwnerId,           // Assigned To
                 Subject = System.String.format(escapedSubject, new String[]{name}),
                 Description = description,
                 IsReminderSet = true,
                 ReminderDateTime = System.now(),
-                ActivityDate = Date.today(), 			// Due Date
-                WhoId = lead.Id); 	    	            // Name
+                ActivityDate = Date.today(),      // Due Date
+                WhoId = lead.Id);                     // Name
         return t;
     }
     

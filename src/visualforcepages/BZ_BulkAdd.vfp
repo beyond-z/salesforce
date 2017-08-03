@@ -1,0 +1,87 @@
+<!-- Page that handles the "Bulk Add" button on a Contact list view. -->
+<apex:page standardController="Contact" extensions="BZ_BulkAddController"
+    title="Bulk Add Contacts"
+    id="contactBulkAddPage"
+    recordSetVar="contacts"
+    showHeader="true">
+  <apex:form >
+    <apex:pageMessages id="messages"/>
+    <apex:pageBlock id="uploadSection" rendered="{!hasStarted==false}">
+        <apex:pageMessage severity="confirm" 
+                          title="Upload a .csv file of user information to add as Contacts"
+                          summary="" />
+        <font color="red"> <b>Note: </b></font> the .csv should have 6 columns with the info below.
+        Please use <a href="https://drive.google.com/a/beyondz.org/file/d/0BxkyYmQz77njdHdpRk9IeXRlLVk/view?usp=sharing" target="_blank"> this template </a>.
+        <br/> <br/>
+        <table border="1">
+            <tr>
+            <td style="padding:0 10px 0 10px;">First Name</td>
+            <td style="padding:0 10px 0 10px;">Last Name</td>
+            <td style="padding:0 10px 0 10px;">Email</td>
+            <td style="padding:0 10px 0 10px;">Phone</td>
+            <td style="padding:0 10px 0 10px;">InteractionType</td>
+            <td style="padding:0 10px 0 10px;">InteractionDescription</td>
+            </tr>
+        </table>
+        <br/><br/>
+        The value of the InteractionType MUST exactly match the available values for a <a href="https://na17.salesforce.com/00No0000008PVQD?setupid=ActivityFields">Task or Activity</a>.
+        At the time of writing, the possible values for InteractionType are following (but that could change):
+        <ul>
+            <li>Email</li>
+            <li>Phone Call</li>
+            <li>Voicemail</li>
+            <li>Text Message</li>
+            <li>Camera to Camera Virtual Meeting</li>
+            <li>1:1 In-Person Meeting</li>
+            <li>Small Group In-Person Meeting</li>
+            <li>Interaction at Larger Function</li>
+            <li>Attended BZ Function</li>
+        </ul>
+        <em>Notes:</em>
+        <ul>
+            <li>The InteractionDescription is also used to set the Initial Connection on the Contact record</li>
+        </ul>
+        <!--  Component to allow user to upload file from local machine -->
+        <div style="border:2px solid red; padding:15px">
+        <apex:inputFile value="{!contentFile}" filename="{!nameFile}" />
+        <apex:commandButton action="{!ReadFile}" value="Invite Them!" id="uploadButton" style="width:150px;"/>
+        </div>
+    </apex:pageBlock>
+    <apex:pageBlock id="processStatus" rendered="{!hasStarted}">
+        <apex:outputText value="Bulk Add is running.  It may take a minute or two.  The status will be shown when it finishes.<br/><br/>" escape="false" rendered="{!hasStarted&&hasCompleted==false}"/>
+        <apex:outputText value="{!progressString}" id="progress" escape="false"/>
+        <apex:actionPoller enabled="{!hasStarted&&hasCompleted==false}" action="{!checkComplete}" interval="5" reRender="processStatus,progress,resultSection"/>
+    </apex:pageBlock>
+    <apex:outputPanel id="resultSection" style="display:block;width:100%;"> <!-- Needed to rerender child on button press.  Cant do it directly. -->
+    <apex:pageBlock rendered="{!contactsLoaded==true && hasCompleted==true}">
+        <apex:pageBlockSection columns="1" rendered="{!haveContactsBeenAdded}">
+            <strong>The following Contacts have been added.</strong>
+            <br/>
+            <apex:pageBlockSectionItem >
+                <apex:outputText id="previewContactsToAdd" value="{!contactsToAddDisplay}" escape="false">
+                </apex:outputText>
+            </apex:pageBlockSectionItem>
+        </apex:pageBlockSection>
+        <apex:pageBlockSection columns="1" rendered="{!haveContactsBeenAdded==false}">
+            <strong>No contacts were found that could be added.</strong>
+            <br/>
+        </apex:pageBlockSection>
+        <apex:pageBlockSection columns="1" rendered="{!haveContactsBeenSkipped}">
+            <strong>The following contacts were skipped because they have either already been added to Salesforce or they signed up on their own.</strong>
+            <br/>
+            <apex:pageBlockSectionItem >
+                <apex:outputText value="{!contactsSkippedDisplay}" escape="false">
+                </apex:outputText>
+            </apex:pageBlockSectionItem>
+        </apex:pageBlockSection>
+    </apex:pageBlock>
+    </apex:outputPanel>
+    <apex:outputPanel id="resultmessages">
+        <apex:outputPanel >
+            {!resultMessage}
+            <br/>
+            <apex:commandButton action="{!cancel}" value="Ok" rendered="{!haveContactsBeenAdded==true}" />
+        </apex:outputPanel>
+    </apex:outputPanel>
+    </apex:form>
+</apex:page>

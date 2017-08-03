@@ -168,12 +168,16 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
     }
     
      public PageReference checkComplete(){
-        AsyncApexJob job = [SELECT Status, NumberOfErrors, ExtendedStatus FROM AsyncApexJob WHERE Id=:m_jobId];
+        List<AsyncApexJob> jobs = [SELECT Status, NumberOfErrors, ExtendedStatus FROM AsyncApexJob WHERE Id=:m_jobId];
+        AsyncApexJob job = null;
+        if (jobs != null && jobs.size() == 1){
+            job = jobs[0];
+        }
         System.debug('BZ_BulkInviteController.checkComplete(): job status = '+job);         
-        if (job.Status == 'Completed'){
+        if (job != null && job.Status == 'Completed'){
             hasCompleted = true;
             progressString = 'Success!';
-        } else if (job.Status == 'Failed'){
+        } else if (job != null && job.Status == 'Failed'){
             progressString = 'Uh oh, something went wrong!  Here is the error: <br/><br/>' + job.ExtendedStatus;
             hasCompleted = true;
             ApexPages.Message errormsg = new ApexPages.Message(ApexPages.severity.ERROR,'The Bulk Invite operation failed.  Please contact your system administrator.');

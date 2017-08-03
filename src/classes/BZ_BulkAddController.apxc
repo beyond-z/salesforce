@@ -1,0 +1,235 @@
+/**
+ * Controller to handle adding users to Salesforce in bulk, handling duplicates.
+ * DOES NOT queue up an INVITE email or text message.
+ */
+public class BZ_BulkAddController extends BZ_CsvBulkInviteUploader {
+    // This is true when the Bulk Add logic is running
+    public static Boolean IsBulkAddRunning {get; set;}
+    static {
+        IsBulkAddRunning = false;
+    }
+    
+    // Set this true to cause an exception to be thrown when inserting the contacts in 
+    // order to Unit Test this class. Do this AFTER constructing an instance since that
+    // will reset the value.
+    public static Boolean ThrowExceptionOnInsert {get; set;}
+    static {
+        ThrowExceptionOnInsert = false;
+    }
+    
+    private ApexPages.StandardSetController m_controller {get; set;}
+    List<Contact> m_contactsToBulkAdd;
+    private String m_resultMessage;
+    private String m_contactsToAddDisplay;
+    private String m_contactsSkippedDisplay;
+    private boolean m_contactsLoaded;
+    private ID m_jobId;
+    private BZ_BulkAddControllerQueueable m_queueableController;
+
+    public BZ_BulkAddController(ApexPages.StandardSetController controller) {
+        ThrowExceptionOnInsert = false; // Make sure a previous run didn't leave this set.
+        System.debug('BZ_BulkAddController(): begin');
+        this.m_controller = controller;
+        this.m_contactsToBulkAdd = new List<Contact>();
+        this.m_contactsLoaded = false;
+        this.m_resultMessage = '';
+        hasCompleted = false;
+        hasStarted = false;
+        progressString = '. . .';
+    }
+
+    /**
+     * Called when the file contents are done being read and ProcessRow has been
+     * called for each row.
+     */
+    private void finishRead(){
+        System.debug('BZ_BulkAddController: finishRead() begin');
+        m_resultMessage = ''; // Need to reset previous errors.
+
+        List<Contact> contacts = getContacts();
+        if (contacts.size() > 0)
+        {
+            Map<String, Contact> contactsToAdd = new Map<String, Contact>();
+            for (Contact c : contacts)
+            {
+                contactsToAdd.put(c.Email.toLowerCase(), c);
+            }
+
+            List<String> existingContactEmails = new List<String>();
+            Map<Id, Contact> existingContacts = new Map<Id, Contact>(
+                [SELECT Id, Name, FirstName, LastName, Email, Phone
+                FROM Contact 
+                WHERE Email in :contactsToAdd.keySet()]);
+
+            if (existingContacts.size() > 0)
+            {
+                // When we throw events and gather contact info, we blindly 
+                // upload them to SF, but some may already have Contact records
+                // in SF, so we exclude those.
+                m_contactsSkippedDisplay = '<table border="1"><tr><td style="padding:0 15px 0 15px;"><strong>Name</strong></td><td style="padding:0 15px 0 15px;"><strong>Email</strong></td><td style="padding:0 15px 0 15px;"><strong>Phone</strong></td></tr>';
+                for (Contact c : existingContacts.values())
+                {
+                    System.debug('BZ_BulkAddController.finishRead(): removing '+c+' from contactsToAdd b/c they already are in SF.');
+                    m_contactsSkippedDisplay += '<tr><td style="padding:0 15px 0 15px;">' + c.FirstName + ' ' + c.LastName + '</td><td style="padding:0 15px 0 15px;">' + c.Email + '</td><td style="padding:0 15px 0 15px;">' + c.Phone + '</td></tr>';
+                    contactsToAdd.remove(c.Email.toLowerCase());
+                }
+                m_contactsSkippedDisplay += '</table>';
+                System.debug('BZ_BulkAddController.finishRead(): m_contactsSkippedDisplay = '+m_contactsSkippedDisplay);
+            }
+            
+            m_contactsToBulkAdd = new List<Contact>(contactsToAdd.values());
+            System.debug('BZ_BulkInviteController.finishRead(): m_contactsToBulkAdd = '+m_contactsToBulkAdd);
+            Map<String, String[]> interactionInfoMap = getInteractionInfoMap();
+            if (m_contactsToBulkAdd.size() > 0){
+                m_contactsToAddDisplay = '<table border="1"><tr><td style="padding:0 15px 0 15px;"><strong>Name</strong></td><td style="padding:0 15px 0 15px;"><strong>Email</strong></td><td style="padding:0 15px 0 15px;"><strong>Phone</strong></td></tr>';
+                for (Contact c : m_contactsToBulkAdd)
+                {
+                    m_contactsToAddDisplay += '<tr><td style="padding:0 15px 0 15px;">' + c.FirstName + ' ' + c.LastName + '</td><td style="padding:0 15px 0 15px;">' + c.Email + '</td><td style="padding:0 15px 0 15px;">' + c.Phone + '</td></tr>';
+                    String[] interactionInfo = interactionInfoMap.get(c.Email.toLowerCase());
+                    if (interactionInfo != null){
+                        c.Initial_Connection__c = interactionInfo[1];
+                    }
+                    else {
+                        throw new BZ_BulkAddException('No Interaction Info found for "'+c.Email+'".  Please make sure to set the Interaction Info for everyone -- Bulk Add failed!');
+                    }
+                }
+                m_contactsToAddDisplay += '</table>';
+            }
+            m_contactsLoaded = true;
+            
+            m_queueableController = new BZ_BulkAddControllerQueueable(
+                m_contactsToBulkAdd, interactionInfoMap);
+            
+            m_jobId = System.enqueueJob(m_queueableController);
+            hasStarted = true;
+        }
+        else
+        {
+            System.debug('BZ_BulkAddController.finishRead(): BZ_CsvContactsUploader.getContacts() returned 0');
+            m_resultMessage = 'There are no Contacts to invite.  Double check the spreadsheet?';
+        }
+        System.debug('BZ_BulkAddController: finishRead() end');
+    }
+    
+    // Polled by the VisualForce page to update status.
+    public PageReference checkComplete(){
+        List<AsyncApexJob> jobs = [SELECT Status, NumberOfErrors, ExtendedStatus FROM AsyncApexJob WHERE Id=:m_jobId];
+        AsyncApexJob job = null;
+        if (jobs != null && jobs.size() == 1){
+            job = jobs[0];
+        }
+        System.debug('BZ_BulkAddController.checkComplete(): job status = '+job);         
+        if (job != null && job.Status == 'Completed'){
+            hasCompleted = true;
+            progressString = 'Success!';
+        } else if (job != null && job.Status == 'Failed'){
+            progressString = 'Uh oh, something went wrong!  Here is the error: <br/><br/>' + job.ExtendedStatus;
+            hasCompleted = true;
+            ApexPages.Message errormsg = new ApexPages.Message(ApexPages.severity.ERROR,'The Bulk Add operation failed.  Please contact your system administrator.');
+            ApexPages.addMessage(errormsg);
+            m_resultMessage = 'Failed adding the specified users.  Details: ' + job.ExtendedStatus;
+        }
+        else {
+            progressString += ' .';
+            hasCompleted = false;
+        }
+        return null;
+    }
+
+    public String getResultMessage(){
+        return m_resultMessage;
+    }
+
+    public boolean getContactsLoaded(){
+        return m_contactsLoaded;
+    }
+
+    public String getContactsToAddDisplay(){
+        return m_contactsToAddDisplay;
+    }
+    
+    public Boolean getHaveContactsBeenAdded(){
+        return !String.isEmpty(m_contactsToAddDisplay);
+    }
+    
+    public String getContactsSkippedDisplay(){
+        return m_contactsSkippedDisplay;
+    }
+    
+    public Boolean getHaveContactsBeenSkipped(){
+        return !String.isEmpty(m_contactsSkippedDisplay);
+    }
+                                        
+    /*
+     * Starts off false and set to true when the operation is complete.
+     */    
+    public Boolean hasCompleted { get; set; }
+    
+    /*
+     * Starts off false and set to true when the operation is queued up.
+     */    
+    public Boolean hasStarted { get; set; }
+    
+    /*
+     * Displays progress as we poll the status of the job.
+     */
+    public String progressString { get; set; }
+    
+    public class BZ_BulkAddException extends Exception {}
+    
+    private class BZ_BulkAddControllerQueueable implements Queueable, Database.AllowsCallouts {
+    
+        List<Contact> m_contactsToAdd;
+        Map<String, String[]> m_interactionInfoMap;
+        
+        public BZ_BulkAddControllerQueueable(List<Contact> contactsToAdd,
+                                                Map<String, String[]> interactionInfoMap)
+        {
+            m_contactsToAdd = contactsToAdd;
+            m_interactionInfoMap = interactionInfoMap;
+        }
+        
+        public void execute(QueueableContext context)
+        {
+            System.Debug('BZ_BulkAddControllerQueueable.execute(): begin');
+            Savepoint sp = Database.setSavepoint();
+            IsBulkAddRunning = true;
+            try 
+            {
+                System.debug('BZ_BulkAddControllerQueueable.finishRead(): inserting the following new contacts: ' + m_contactsToAdd);
+                insert m_contactsToAdd;
+                Map<Id, Contact> contactsToCreateInteractionInfoFor = new Map<Id, Contact>();
+                for (Contact c : m_contactsToAdd){
+                    contactsToCreateInteractionInfoFor.put(c.Id, c);
+                }
+                // Need to re-query to get the Name field which SF sets automatically when we inserted.
+                m_contactsToAdd = [SELECT FirstName, LastName, Name, Email, Phone, Initial_Connection__c
+                                  FROM Contact WHERE Id in :contactsToCreateInteractionInfoFor.keySet()];
+                List<Task> interactionTasksToAdd = BZ_TaskFactory.createTasks(m_contactsToAdd, 'Interaction: How We Met {0}', 'Completed');
+                for (Task t : interactionTasksToAdd){
+                    Contact c = contactsToCreateInteractionInfoFor.get(t.WhoId);
+                    // Note: an interactionInfo is gauranteed to exist b/c we already checked in the
+                    // finishRead method.
+                    String[] interactionInfo = m_interactionInfoMap.get(c.Email.toLowerCase());
+                    t.Interaction_Type__c = interactionInfo[0];
+                    t.Description = interactionInfo[1];
+                    t.Status = 'Completed';
+                    t.IsReminderSet = false;
+                }
+                if (ThrowExceptionOnInsert) {
+                    throw new BZ_BulkAddException('Running a unit test that indicates this should fail.');
+                }
+                insert interactionTasksToAdd;
+            } catch (Exception e){
+                // roll everything back in case of error
+                Database.rollback(sp);
+                System.Debug('BZ_BulkAddControllerQueueable.execute(): Exception = ' + e);
+                throw e;
+            }
+            finally {
+                IsBulkAddRunning = false;
+            }
+            System.Debug('BZ_BulkAddControllerQueueable.execute(): end');
+        }
+    }
+}
