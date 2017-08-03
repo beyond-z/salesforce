@@ -46,6 +46,7 @@
 		Undergrad University
 		Undergraduate Year
 		Major
+    High School
 		Self-reported GPA
 		Grad University
 		Graduate Year
@@ -70,6 +71,7 @@
     College Enrollment Semester
     Anticipated Graduation
     Anticipated Graduation Semester
+    Is Graduate Student
 		Eligible
 		GPA Circumstances
 		Other Commitments
@@ -124,6 +126,7 @@
 		Grad Degree
 		Anticipated Graduation 
     Anticipated Graduation Semester
+    Is_Graduate_Student__c
 		BZ Region
 		BZ User Id 
 		Came From to Visit Site
@@ -170,6 +173,7 @@
     Anticipated Graduation Semester
 		College Enrollment Year
     College Enrollment Semester
+    Is Graduate Student
 		Interested in opening BZ
 		BZ Region
 		Keep Informed

@@ -7,3 +7,4 @@ CAMPAIGN
 
 CONTACT LIST VIEW
   Mass Text
+  Bulk Add

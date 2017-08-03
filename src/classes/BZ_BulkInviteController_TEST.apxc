@@ -84,7 +84,10 @@ private class BZ_BulkInviteController_TEST {
         
         Test.startTest();
         PageReference result = controller.ProcessFile(csvContents);
+        controller.checkComplete(); // Call the method during the run to mimic VisualForce page
         Test.stopTest(); // Force the queued background worker process to complete
+        controller.checkComplete(); // Call the method after the run to mimic VisualForce page
+        
         String textMessageBody = controller.getTextMessageBody();
         controller.setTextMessageBody(textMessageBody + 'SLIGHTLY CHANGED!');
         if (controller.getContactsLoaded() && !String.isEmpty(controller.getContactsToInviteDisplay()))
@@ -94,6 +97,8 @@ private class BZ_BulkInviteController_TEST {
         
         System.assertEquals(false, BZ_BulkInviteController.IsBulkInviteRunning);
         System.assert(controller.getTextMessagesSent(), 'Text messages not sent!');
+        System.assert(controller.getHaveContactsBeenInvited(), 'Expected contacts to have been invited');
+        System.assert(controller.getHaveContactsBeenSkipped(), 'Expected contacts to have been skipped');
         List<Contact> duplicateExsitingContacts = [SELECT Id FROM Contact WHERE Email = :existingEmail1];
         System.assert(duplicateExsitingContacts.size() == 1, 'Expected 1 contact with email: ' + existingEmail1 + '.  Found: ' + duplicateExsitingContacts.size());
         Set<Id> contactIdsWithInitialConnectionSet = new Set<Id>();

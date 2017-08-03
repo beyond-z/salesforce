@@ -1,0 +1,251 @@
+@isTest 
+private class BZ_BulkAddController_TEST {
+    static testMethod void validateSuccess() {
+        System.debug('BZ_BulkAddController_TEST.validateSuccess() - begin');
+        List<Contact> contactsToInsert = new List<Contact>();
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(campaignOwner);
+        String existingEmail1 = 'brian.testexisting1@example.com';
+        Contact existingContact1 = new Contact(FirstName='Brian', LastName='xTestExisting1', Email=existingEmail1, OwnerId=userInfo.getUserId());
+        contactsToInsert.add(existingContact1);
+        String existingEmailInactiveCampaign1 = 'brian.testexistinginactivecampaign1@example.com';
+        Contact existingContactInactiveCampaign1 = new Contact(FirstName='Brian', LastName='xTestExistingInactiveCampaign1', Email=existingEmailInactiveCampaign1, OwnerId=userInfo.getUserId());
+        contactsToInsert.add(existingContactInactiveCampaign1);
+        String existingEmailActiveCampaign1 = 'brian.testexistingactivecampaign1@example.com';
+        Contact existingContactActiveCampaign1 = new Contact(FirstName='Brian', LastName='xTestExistingActiveCampaign1', Email=existingEmailActiveCampaign1, OwnerId=userInfo.getUserId());
+        contactsToInsert.add(existingContactActiveCampaign1);
+        insert contactsToInsert;
+
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        List<Campaign> campaignsToInsert = new List<Campaign>();        
+        Campaign inactiveCampaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
+        inactiveCampaign.IsActive = false;
+        inactiveCampaign.Name = 'inactiveCampaign';
+        campaignsToInsert.add(inactiveCampaign);
+        
+        Campaign activeCampaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        activeCampaign.IsActive = true;
+        activeCampaign.Name = 'activeCampaign';
+        campaignsToInsert.add(activeCampaign);
+        
+        insert campaignsToInsert;
+        
+        List<CampaignMember> existingCampaignMembersToInsert = new List<CampaignMember>();
+        CampaignMember existingInactiveCm = new CampaignMember();
+        existingInactiveCm.CampaignId=inactiveCampaign.Id;
+        existingInactiveCm.ContactId=existingContactInactiveCampaign1.Id;
+        existingCampaignMembersToInsert.add(existingInactiveCm);
+        
+        CampaignMember existingActiveCm = new CampaignMember();
+        existingActiveCm.CampaignId=activeCampaign.Id;
+        existingActiveCm.ContactId=existingContactActiveCampaign1.Id;
+        existingCampaignMembersToInsert.add(existingActiveCm);
+                
+        insert existingCampaignMembersToInsert;
+
+        BZ_SettingsFactory_TEST.setSettings();
+        System.assert(BZ_Settings__c.getInstance('bz') != null, 'BZ_Settings__c is null');
+
+        ApexPages.StandardSetController sc = new ApexPages.StandardSetController(contactsToInsert);
+        sc.setSelected(contactsToInsert);
+        PageReference pageRef = Page.BZ_BulkAdd;
+        Test.setCurrentPage(pageRef);
+
+        String interactionDescription = 'Description of phone call';
+        BZ_BulkAddController controller = new BZ_BulkAddController(sc);
+        
+        // Note: we do a toUpperCase on the existing email b/c we want to make sure that bulk invite
+        // doesn't create a duplicate contact if the case changes since SF stores emails in all lower.
+        String contactToAddEmail1 = 'brian.test1@example.com';
+        String contactToAddEmail2 = 'Brian.Test2@example.com';
+        String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
+            'Brian,xTest1,'+contactToAddEmail1+',5554443333,Phone Call,'+interactionDescription+'\n'+
+            'Brian,xTest2,'+contactToAddEmail2+',,Phone Call,'+interactionDescription+'\n'+
+            'Brian,xTestExisting1,'+existingEmail1.toUpperCase()+',5554443334,Phone Call,'+interactionDescription+'\n'+
+            'Brian,xTestExistingInactiveCamapign1,'+existingEmailInactiveCampaign1+',5554443334,Phone Call,'+interactionDescription+'\n'+
+            'Brian,xTestExistingActiveCampaign1,'+existingEmailActiveCampaign1+',5554443334,Phone Call,'+interactionDescription+'\n';
+        
+        Test.startTest();
+        PageReference result = controller.ProcessFile(csvContents);
+        controller.checkComplete(); // Call the method during the run to mimic VisualForce page
+        Test.stopTest(); // Force the queued background worker process to complete
+        controller.checkComplete(); // Call the method after the run to mimic VisualForce page
+        
+        System.assertEquals(false, BZ_BulkAddController.IsBulkAddRunning);
+        System.assert(String.isBlank(controller.getResultMessage()), 'Expected the result message to be blank, not: ' + controller.getResultMessage());
+        System.assert(controller.getContactsLoaded(), 'Expected contacts to be loaded');
+        System.assert(controller.getHaveContactsBeenAdded(), 'Expected contacts to have been added');
+        System.assert(controller.getHaveContactsBeenSkipped(), 'Expected contacts to have been skipped');
+        System.assert(controller.getContactsToAddDisplay().contains(contactToAddEmail1), 'Expected the contacts to add display to contain: ' + contactToAddEmail1 + ' , but instead, it is set to: '+controller.getContactsToAddDisplay());
+        List<String> existingEmails = new List<String>{existingEmail1, existingEmailInactiveCampaign1, existingEmailActiveCampaign1};
+        List<Contact> duplicateExsitingContacts = [SELECT Id FROM Contact WHERE Email in :existingEmails];
+        System.assert(duplicateExsitingContacts.size() == 3, 'Expected 3 existing contacts.  Found: ' + duplicateExsitingContacts.size() + '. duplicateExsitingContacts = ' + duplicateExsitingContacts);
+        String skippedContactsDisplay = controller.getContactsSkippedDisplay();
+        for (String email : existingEmails){
+            System.assert(skippedContactsDisplay.contains(email), 'Expected existing contact to be skipped.  Here are the ones skipped: ' + skippedContactsDisplay + ' -- which doesnt contain: ' + email);
+        }
+        List<Contact> newContactsAdded = [SELECT Id, Email, FirstName, LastName, Phone, Initial_Connection__c FROM Contact WHERE Email = :contactToAddEmail1 OR Email = :contactToAddEmail2];
+        System.assert(newContactsAdded.size() == 2, 'Expected 2 new contacts added.  Found: '+newContactsAdded.size());
+        Set<Id> newContactIdsAdded = new Set<Id>();
+        for (Contact c : newContactsAdded){
+            newContactIdsAdded.add(c.Id);
+            System.assert(c.FirstName == 'Brian', 'Contact with First Name found not in list of expected contacts: FirstName = ' + c.FirstName);
+            System.assert(c.LastName.startsWith('xTest'), 'Contact with Last Name found not in list of expected contacts: LastName = ' + c.LastName);
+            System.assert(c.Phone == null || c.Phone == '' || c.Phone == '5554443333', 
+                          'Contact with Phone found not in list of expected contacts: Phone = ' + c.Phone);
+            System.assert(c.Initial_Connection__c == interactionDescription, 'Unrecognized Initial Connection.  Expected '+interactionDescription+'. Found c.Initial_Connection__c = ' + c.Initial_Connection__c);
+            
+        }
+        Set<Id> contactIdsWithInitialConnectionSet = new Set<Id>();
+        List<Task> tasks = [SELECT Id, Subject, WhoId, WhatId, Status, Interaction_Type__c, Description, EmailTemplate__c FROM Task WHERE WhoId in :newContactIdsAdded];
+        for (Task t : tasks){
+            System.debug('Found task: '+t);
+        }
+        System.Assert(tasks.size() == 2, 'Expected 2 Interation tasks for the two contacts added. Found '+tasks.size()+' total tasks');
+        for (Task t : tasks)
+        {
+            if (t.Subject.startsWith('Interaction:'))
+            {
+                System.assert(newContactIdsAdded.contains(t.WhoId), 
+                              'Task with WhoId found not in list of expected tasks: t.WhoId = ' + t.WhoId);
+                System.assert(t.Status == 'Completed', 'Task with Status found not in list of expected tasks: Status = ' + t.Status);
+                System.assert(t.Interaction_Type__c == 'Phone Call', 'Task with Interaction_Type__c found not in list of expected tasks: Interaction_Type__c = ' + t.Interaction_Type__c + ' t = ' + t);
+                System.assert(t.Description == interactionDescription, 'Task with Description found not in list of expected tasks: Description = ' + t.Description + ' t = ' + t);
+            }
+            else
+            {
+                System.assert(false, 'Task found with unrecognized subject = ' + t.Subject);
+            }
+        }
+    }
+
+    static testMethod void validateFailed() {
+        System.debug('BZ_BulkAddController_TEST.validateFailed() - begin');
+        List<Contact> contactsToInsert = new List<Contact>();
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(campaignOwner);
+        insert contactsToInsert;
+
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        insert campaign;
+
+        BZ_SettingsFactory_TEST.setSettings();
+        System.assert(BZ_Settings__c.getInstance('bz') != null, 'BZ_Settings__c is null');
+
+        ApexPages.StandardSetController sc = new ApexPages.StandardSetController(contactsToInsert);
+        sc.setSelected(contactsToInsert);
+        PageReference pageRef = Page.BZ_BulkInvite;
+        Test.setCurrentPage(pageRef);
+
+      BZ_BulkAddController controller = new BZ_BulkAddController(sc);
+        String email1 = 'email@email.com';
+        String email2 = 'brian.test2@example.com';
+        String email3 = 'brian.test3@example.com';
+        String email4 = 'badEmail';
+        List<String> emailsToAdd = new List<String>{email1, email2, email3, email4};
+        String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
+            'Brian,xTest1,,5554443333,Phone Call,Description of phone call\n'+
+            'Brian,xTest5,'+email1+',badPhone,Phone Call,Description of phone call\n'+
+            'Brian,,'+email2+',,Phone Call,Description of phone call\n'+
+            ',,'+email3+',,Phone Call,Description of phone call\n';
+
+        Boolean exceptionCaught = false;
+        Test.startTest();
+        try {
+            BZ_BulkAddController.ThrowExceptionOnInsert = true;
+            PageReference result = controller.ProcessFile(csvContents);
+            controller.checkComplete(); // Call the method during the run to mimic VisualForce page
+            Test.stopTest(); // Forces the Queueable logic to run.
+            controller.checkComplete(); // Call the method after it's complete to mimic VisualForce page
+        } catch(Exception e){
+            exceptionCaught = true;
+        }
+
+        System.assertEquals(false, BZ_BulkAddController.IsBulkAddRunning);
+        System.AssertEquals(true, exceptionCaught);
+
+        List<Contact> contacts = [SELECT Id, Name, FirstName, LastName, Email, Phone FROM Contact WHERE Email in :emailsToAdd];
+        System.Assert(contacts.size() == 0, 'Expected 0 Contacts. Found '+contacts.size());
+    }
+    
+    static testMethod void validateFailedNoInteractionInfo() {
+        System.debug('BZ_BulkAddController_TEST.validateFailedNoInteractionInfo() - begin');
+        List<Contact> contactsToInsert = new List<Contact>();
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(campaignOwner);
+        insert contactsToInsert;
+
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        insert campaign;
+
+        BZ_SettingsFactory_TEST.setSettings();
+        System.assert(BZ_Settings__c.getInstance('bz') != null, 'BZ_Settings__c is null');
+
+        ApexPages.StandardSetController sc = new ApexPages.StandardSetController(contactsToInsert);
+        sc.setSelected(contactsToInsert);
+        PageReference pageRef = Page.BZ_BulkInvite;
+        Test.setCurrentPage(pageRef);
+
+      BZ_BulkAddController controller = new BZ_BulkAddController(sc);
+        String email1 = 'email@email.com';
+        String email2 = 'brian.test2@example.com';
+        List<String> emailsToAdd = new List<String>{email1, email2};
+        String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
+            'Brian,xTest1,'+email1+',5554443333,Phone Call,Description of phone call\n'+
+            'Brian,xTest5,'+email2+',5554443333,,\n';
+
+        Boolean exceptionCaught = false;
+        Test.startTest();
+        try {
+            PageReference result = controller.ProcessFile(csvContents);
+            Test.stopTest();            
+        } catch(BZ_BulkAddController.BZ_BulkAddException e){
+            exceptionCaught = true;
+        }
+
+        System.assertEquals(false, BZ_BulkAddController.IsBulkAddRunning);
+        System.AssertEquals(true, exceptionCaught);
+
+        List<Contact> contacts = [SELECT Id, Name, FirstName, LastName, Email, Phone FROM Contact WHERE Email in :emailsToAdd];
+        System.Assert(contacts.size() == 0, 'Expected 0 Contacts. Found '+contacts.size());
+    }
+    
+    static testMethod void validateBadCsv() {
+        System.debug('BZ_BulkAddController_TEST.validateBadCsv() - begin');
+        List<Contact> contactsToInsert = new List<Contact>();
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(campaignOwner);
+        insert contactsToInsert;
+
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        insert campaign;
+
+        BZ_SettingsFactory_TEST.setSettings();
+        System.assert(BZ_Settings__c.getInstance('bz') != null, 'BZ_Settings__c is null');
+
+        ApexPages.StandardSetController sc = new ApexPages.StandardSetController(contactsToInsert);
+        sc.setSelected(contactsToInsert);
+        PageReference pageRef = Page.BZ_BulkInvite;
+        Test.setCurrentPage(pageRef);
+
+      BZ_BulkAddController controller = new BZ_BulkAddController(sc);
+        String email1 = 'email@email.com';
+        String email2 = 'brian.test2@example.com';
+        List<String> emailsToAdd = new List<String>{email1, email2};
+        String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n';
+
+        Boolean exceptionCaught = false;
+        Test.startTest();
+        PageReference result = controller.ProcessFile(csvContents);
+        Test.stopTest(); 
+
+        System.assertEquals(false, BZ_BulkAddController.IsBulkAddRunning);
+        System.assert(controller.getResultMessage().contains('There are no Contacts to invite'), 'Expected result message to say there are no contacts to add. Instead, it says: ' + controller.getResultMessage());
+
+        List<Contact> contacts = [SELECT Id, Name, FirstName, LastName, Email, Phone FROM Contact WHERE Email in :emailsToAdd];
+        System.Assert(contacts.size() == 0, 'Expected 0 Contacts. Found '+contacts.size());
+    }
+}
