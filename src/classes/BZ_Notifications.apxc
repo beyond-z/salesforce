@@ -43,20 +43,47 @@ global class BZ_Notifications {
      */
     @future (callout=true) 
     public static void disableOSQAEmailNotifications(String urlEncodedEmails) { 
-        System.debug('disableOSQAEmailNotifications: begin.');
+        System.debug('BZ_Notifications.disableOSQAEmailNotifications: begin.');
         BZ_Settings__c settings = BZ_Settings__c.getInstance('bz');
-        if(Test.isRunningTest()) {
-            return;
+        String base_url = settings.base_url__c; 
+        String magic_token = settings.magic_token__c; 
+        String requestUrlPrefix = base_url + '/salesforce/disable_osqa_notification_emails?magic_token='+magic_token+'&emails=';
+        List<String> requestUrls = new List<String>();
+        Integer maxEmailParameterLength = 2000 - requestUrlPrefix.length();
+        if (urlEncodedEmails.length() > maxEmailParameterLength){
+            // Our OSQA server can't handle URI's longer than Ruby 1.9.3's MAX_URI_LENGTH = 2083
+            // See: https://stackoverflow.com/questions/8333158/webrick-requesturitoolarge-should-i-update-or-use-a-different-server
+            // Need to chunk it up.
+            // NOTE: i tested a request with 2010 characters and it worked. So a cutoff of 2000 should be safe.
+            List<String> emails = urlEncodedEmails.split(',');
+            String currentEmailChunk = emails[0];
+            emails.remove(0);
+            for (String email : emails){
+                if (email.length() + currentEmailChunk.length() <= maxEmailParameterLength){
+                    currentEmailChunk += ',' + email;
+                }
+                else {
+                    System.debug('BZ_Notifications.disableOSQAEmailNotifications: starting new chunk of emails to put in request. Chunk filled = ' + currentEmailChunk);
+                    requestUrls.add(requestUrlPrefix + currentEmailChunk);
+                    currentEmailChunk = email;
+                }
+            }
+            System.debug('BZ_Notifications.disableOSQAEmailNotifications: adding last chunk of emails to put in request. Chunk filled = ' + currentEmailChunk);
+            requestUrls.add(requestUrlPrefix + currentEmailChunk);
         } else {
-            String base_url = settings.base_url__c; 
-            String magic_token = settings.magic_token__c; 
+            requestUrls.add(requestUrlPrefix + urlEncodedEmails);
+        }
+        
+        for (String requestUrl : requestUrls){
             Http http = new Http(); 
             HttpRequest request = new HttpRequest();
-            request.setEndpoint(base_url + '/salesforce/disable_osqa_notification_emails?magic_token='+magic_token+'&emails=' + urlEncodedEmails);
+            request.setEndpoint(requestUrl);
             request.setMethod('GET');
             System.debug('BZ_Notifications.disableOSQAEmailNotifications: calling ' + request);
-            HttpResponse response = http.send(request);
-            System.debug('BZ_Notifications.disableOSQAEmailNotifications returned: ' + response.getStatusCode() + ': ' + response.getStatus() + '\n' + response.getBody());
+            if(!Test.isRunningTest()) {
+                HttpResponse response = http.send(request);
+                System.debug('BZ_Notifications.disableOSQAEmailNotifications returned: ' + response.getStatusCode() + ': ' + response.getStatus() + '\n' + response.getBody());
+            }            
         }
     } 
     
@@ -110,7 +137,8 @@ global class BZ_Notifications {
         contactIdsString = contactIdsString.substring(1);
         System.Debug('BZ_Notifications.changeCampaigns(): calling change_campaigns with contactIds = ' + contactIdsString);
         request.setEndpoint(base_url + '/salesforce/change_campaigns');
-	request.setBody('magic_token='+magic_token+'&contactIds=' + contactIdsString +'&oldCampaignId=' + oldCampaignId + '&newCampaignId=' + newCampaignId); 
+        request.setBody('magic_token='+magic_token+'&contactIds=' + contactIdsString +'&oldCampaignId=' + oldCampaignId + '&newCampaignId=' + newCampaignId); 
+        //request.setCompressed(true); // The ruby side throws an invalid UTF-8 byte sequence error.
         request.setMethod('POST'); 
         HttpResponse response = http.send(request); 
         String responseBody = response.getBody();
