@@ -2,6 +2,8 @@
 private class BZ_CampaignCompleted_TEST {
     static testMethod void validate() {
         System.debug('BZ_CampaignCompleted_TEST.validate - begin');
+        BZ_SettingsFactory_TEST.setSettings();
+        System.assert(BZ_Settings__c.getInstance('bz') != null, 'BZ_Settings__c is null');
         List<Contact> contactsToInsert = new List<Contact>();
         Contact fellowContact1 = new Contact(FirstName='Test', LastName='Fellow1', Email='testfellow1@bebraven.org', Participant_Information__c='Participant Pipeline');
         contactsToInsert.add(fellowContact1);
