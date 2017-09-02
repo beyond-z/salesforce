@@ -160,6 +160,85 @@ private class BZ_BulkInviteController_TEST {
             System.assert(c.npsp__Primary_Affiliation__c == primaryAffiliationId, 'Expected Primary Affiliation to be set to: ' + primaryAffiliationName + '.  Found: ' + [SELECT Name FROM Account WHERE Id = :c.npsp__Primary_Affiliation__c] + ' instead.');
         }
     }
+    
+    static testMethod void validateInviteDuplicateContacts() {
+        System.debug('BZ_BulkInviteController_TEST.validateInviteDuplicateContacts() - begin');
+        List<Contact> contactsToInsert = new List<Contact>();
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(campaignOwner);
+        String existingEmail1 = 'brian.testexisting1@example.com';
+        Contact existingContact1 = new Contact(FirstName='Brian', LastName='xTestExisting1', Email=existingEmail1, OwnerId=userInfo.getUserId());
+        contactsToInsert.add(existingContact1);
+        Contact existingContact2 = new Contact(FirstName='Brian', LastName='xTestExisting1', Email=existingEmail1, OwnerId=userInfo.getUserId());
+        contactsToInsert.add(existingContact2);
+        insert contactsToInsert;
+
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        List<Campaign> campaignsToInsert = new List<Campaign>();
+        Campaign campaignToInviteTo = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
+        campaignToInviteTo.Invite_Email_Template__c = 'BZ INVITE: test template';
+        campaignToInviteTo.Name = 'campaignToInviteTo';
+        campaignToInviteTo.IsActive = true;
+        campaignsToInsert.add(campaignToInviteTo);
+        insert campaignsToInsert;
+
+        BZ_SettingsFactory_TEST.setSettings();
+        System.assert(BZ_Settings__c.getInstance('bz') != null, 'BZ_Settings__c is null');
+
+        ApexPages.StandardController sc = new ApexPages.standardController(campaignToInviteTo);
+        PageReference pageRef = Page.BZ_BulkInvite;
+        Test.setCurrentPage(pageRef);
+
+        String interactionDescription = 'Description of phone call';
+        BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
+        
+        String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
+            'Brian,xTestExisting1,'+existingEmail1+',5554443334,Phone Call,'+interactionDescription+'\n';
+
+        Test.startTest();
+        PageReference result = controller.ProcessFile(csvContents);
+        controller.checkComplete(); // Call the method during the run to mimic VisualForce page
+        Test.stopTest(); // Force the queued background worker process to complete
+        controller.checkComplete(); // Call the method after the run to mimic VisualForce page        
+        
+        System.assertEquals(false, BZ_BulkInviteController.IsBulkInviteRunning);
+        System.assert(controller.getHaveContactsBeenInvited(), 'Expected contacts to have been invited');
+        List<Contact> duplicateExsitingContacts = [SELECT Id FROM Contact WHERE Email = :existingEmail1];
+        System.assert(duplicateExsitingContacts.size() == 2, 'Expected 2 contacts with email: ' + existingEmail1 + '.  Found: ' + duplicateExsitingContacts.size());
+        List<CampaignMember> campaignMembers = [SELECT Id, Name, FirstName, LastName, Email, Phone, ContactId, Undergrad_University__c FROM CampaignMember WHERE CampaignId = :campaignToInviteTo.Id];
+        System.Assert(campaignMembers.size() == 1, 'Expected 1 CampaignMembers. Found '+campaignMembers.size());
+        for (CampaignMember cm : campaignMembers)
+        {
+            System.assert(cm.FirstName == 'Brian', 'CampaignMember with First Name found not in list of expected members: FirstName = ' + cm.FirstName);
+            System.assert(cm.LastName.startsWith('xTest'), 'CampaignMember with Last Name found not in list of expected members: LastName = ' + cm.LastName);
+            System.assert(cm.Email == existingEmail1, 'CampaignMember with Email found not in list of expected members: Email = ' + cm.Email);                        
+        }
+        List<Task> tasks = [SELECT Id, Subject, WhoId, WhatId, Status, Interaction_Type__c, Description, EmailTemplate__c FROM Task WHERE WhatId = :campaignToInviteTo.Id];
+        for (Task t : tasks){
+            System.debug('Found task: '+t);
+        }
+        System.Assert(tasks.size() == 2, 'Expected 1 INVITE Tasks and 1 Interaction task. Found '+tasks.size()+' total tasks');
+        for (Task t : tasks)
+        {
+            if (t.Subject.startsWith('Email:')){
+                System.assert(t.EmailTemplate__c.startsWith('BZ INVITE:'), 'Expected BZ INVITE: email template.  Found EmailTemplate__c = ' + t.EmailTemplate__c);
+            }
+            else if (t.Subject.startsWith('Interaction:'))
+            {
+                System.assert(t.WhoId == campaignMembers[0].ContactId, 
+                              'Task with WhoId found not in list of expected tasks: Interaction_Type__c = ' + t.WhoId);
+                System.assert(t.WhatId == campaignToInviteTo.Id, 'Task with WhatId found not in list of expected tasks: WhatId = ' + t.WhatId);
+                System.assert(t.Status == 'Completed', 'Task with Status found not in list of expected tasks: Status = ' + t.Status);
+                System.assert(t.Interaction_Type__c == 'Phone Call', 'Task with Interaction_Type__c found not in list of expected tasks: Interaction_Type__c = ' + t.Interaction_Type__c + ' t = ' + t);
+                System.assert(t.Description == interactionDescription, 'Task with Description found not in list of expected tasks: Description = ' + t.Description + ' t = ' + t);
+
+            }
+            else
+            {
+                System.assert(false, 'Task found with unrecognized subject = ' + t.Subject);
+            }
+        }
+    }
 
     static testMethod void validateFailed() {
         System.debug('BZ_BulkInviteController_TEST.validateFailed() - begin');
@@ -180,8 +259,8 @@ private class BZ_BulkInviteController_TEST {
         PageReference pageRef = Page.BZ_BulkInvite;
         Test.setCurrentPage(pageRef);
 
-      BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
-        String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
+    BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
+        String csvContentsContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
             'Brian,xTest1,,5554443333,Phone Call,Description of phone call\n'+
             'Brian,xTest5,email@email.com,badPhone,Phone Call,Description of phone call\n'+
             'Brian,,brian.test2@example.com,,Phone Call,Description of phone call\n'+
@@ -226,7 +305,7 @@ private class BZ_BulkInviteController_TEST {
         PageReference pageRef = Page.BZ_BulkInvite;
         Test.setCurrentPage(pageRef);
 
-      BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
+    BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
         String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
             'Brian,xTest1,email1@email.com,5554443333,Phone Call,Description of phone call\n'+
             'Brian,xTest5,email2@email.com,5554443333,,\n';
@@ -306,7 +385,7 @@ private class BZ_BulkInviteController_TEST {
         PageReference pageRef = Page.BZ_BulkInvite;
         Test.setCurrentPage(pageRef);
 
-      BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
+    BZ_BulkInviteController controller = neww BZ_BulkInviteController(sc);
         String csvContents = '';
 
         Test.startTest();
