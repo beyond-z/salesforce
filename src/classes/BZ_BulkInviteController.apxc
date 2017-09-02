@@ -95,26 +95,41 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
             Map<String, Contact> contactsToAdd = new Map<String, Contact>();
             for (Contact c : contacts)
             {
+                System.debug('BZ_BulkInviteController.finishRead(): contactsToAdd.put('+c.Email.toLowerCase()+', '+c+')'); 
                 contactsToAdd.put(c.Email.toLowerCase(), c);
             }
 
-            List<String> existingContactEmails = new List<String>();
+            Map<String, Contact> existingContactEmailToContactMap = new Map<String, Contact>();
             Map<Id, Contact> existingContacts = new Map<Id, Contact>(
                 [SELECT Id, Firstname, LastName, Email, Phone, npsp__Primary_Affiliation__c, Undergrad_University__c  
                 FROM Contact 
                 WHERE Email in :contactsToAdd.keySet()]);
 
+            Set<Id> duplicateContactsToRemove = new Set<Id>();
             if (existingContacts.size() > 0)
             {
                 for (Contact c : existingContacts.values())
                 {
-                    System.debug('BZ_BulkInviteController.finishRead(): removing '+c+' from contactsToAdd b/c they already are in SF.');
-                    Contact updatedContact = contactsToAdd.get(c.Email.toLowerCase());
-                    c.FirstName = updatedContact.FirstName;
-                    c.LastName = updatedContact.LastName;
-                    c.Phone = updatedContact.Phone;
-                    contactsToAdd.remove(c.Email.toLowerCase());
-                    existingContactEmails.add(c.Email.toLowerCase());
+                    if (!existingContactEmailToContactMap.containsKey(c.Email.toLowerCase())){
+                        System.debug('BZ_BulkInviteController.finishRead(): removing '+c+' from contactsToAdd b/c they already are in SF.');
+                        Contact updatedContact = contactsToAdd.get(c.Email.toLowerCase());
+                        c.FirstName = updatedContact.FirstName;
+                        c.LastName = updatedContact.LastName;
+                        c.Phone = updatedContact.Phone;
+                        contactsToAdd.remove(c.Email.toLowerCase());
+                        existingContactEmailToContactMap.put(c.Email.toLowerCase(), c);
+                    }
+                    else {
+                        // This contact has duplicate records in Salesforce with the same email
+                        // Just skip it since we already removed it from contactsToAdd and added it
+                        // to existingContactEmails
+                        System.debug('BZ_BulkInviteController.finishRead(): skipping contact = '+c+' because we already found another Salesforce Contact with that email address, existing contact = '+existingContactEmailToContactMap.get(c.Email.toLowerCase()));
+                        duplicateContactsToRemove.add(c.Id);
+                    }
+                }
+                
+                for (Id cId : duplicateContactsToRemove){
+                    existingContacts.remove(cId);
                 }
                 
                 // When we table on campus to get contact info, we give them a flyer.  Some 
@@ -123,7 +138,7 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
                 // campaign members.
                 List<CampaignMember> existingCampaignMembers = 
                     [SELECT Id, FirstName, LastName, ContactId, Email, Phone FROM CampaignMember
-                     WHERE CampaignId = :m_campaign.Id AND Email in :existingContactEmails];
+                     WHERE CampaignId = :m_campaign.Id AND Email in :existingContactEmailToContactMap.keySet()];
                 if (existingCampaignMembers.size() > 0){
                     m_contactsSkippedDisplay = '<table border="1"><tr><td style="padding:0 15px 0 15px;"><strong>Name</strong></td><td style="padding:0 15px 0 15px;"><strong>Email</strong></td><td style="padding:0 15px 0 15px;"><strong>Phone</strong></td></tr>';
                     for (CampaignMember cm : existingCampaignMembers){
