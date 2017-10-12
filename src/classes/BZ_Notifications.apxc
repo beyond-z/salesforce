@@ -79,10 +79,19 @@ global class BZ_Notifications {
             HttpRequest request = new HttpRequest();
             request.setEndpoint(requestUrl);
             request.setMethod('GET');
+            request.setTimeout(45000);
             System.debug('BZ_Notifications.disableOSQAEmailNotifications: calling ' + request);
             if(!Test.isRunningTest()) {
-                HttpResponse response = http.send(request);
-                System.debug('BZ_Notifications.disableOSQAEmailNotifications returned: ' + response.getStatusCode() + ': ' + response.getStatus() + '\n' + response.getBody());
+                try {
+                    HttpResponse response = http.send(request);
+                    System.debug('BZ_Notifications.disableOSQAEmailNotifications returned: ' + response.getStatusCode() + ': ' + response.getStatus() + '\n' + response.getBody());
+                } catch (Exception e){
+                    // This could be a "System.CalloutException: Read timed out" exception,
+                    // at least it was before calling setTimeout(). Either way, the call could
+                    // have worked on the other end, so continue on and let all
+                    // chunks get a try.
+                    System.debug(LoggingLevel.ERROR, 'BZ_Notifications.disableOSQAEmailNotifications exception thrown: e = ' + e);
+                }
             }            
         }
     } 
