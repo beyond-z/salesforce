@@ -8,6 +8,7 @@
     Interation Type
 
 	CAMPAIGN
+    Default Timezone
 		Intro Email Template
 		Target Course ID In LMS # NOTE: this is "Student Course ID" on the UI, just still called Target_Course_ID_In_LMS__c in the API for legacy compatibility.
 		Coach Course ID # for the coach playbook
@@ -46,6 +47,7 @@
 		Undergrad University
 		Undergraduate Year
 		Major
+    Major2
     High School
 		Self-reported GPA
 		Grad University
