@@ -9,7 +9,7 @@ trigger BZ_LeadCreated on Lead (after insert) { // Needs to be "after insert" b/
     {   
         // For undergrads and volunteers, we auto convert them and add them to a campaign
         // if their signup options are mapped so that they can immediately access the application.
-        if (lead.User_Type__c <> 'Undergrad' && lead.User_Type__c <> 'Volunteer' && lead.User_Type__c <> 'Temp Volunteer')
+        if (lead.User_Type__c <> 'Undergrad' && lead.User_Type__c <> 'Leadership Coach' && lead.User_Type__c <> 'Event Volunteer')
         {
             System.debug('BZ_LeadCreated: lead.Id=' + lead.Id);
             System.debug('BZ_LeadCreated: lead.FirstName=' + lead.FirstName);
@@ -19,11 +19,11 @@ trigger BZ_LeadCreated on Lead (after insert) { // Needs to be "after insert" b/
             Task t = BZ_TaskFactory.createTask(lead, 'New Website Signup: {0} -- decide next steps', 'Click on the Name of the new Lead.  Research and fill out the missing Lead fields. Then convert the Lead to a Contact and assign them to appropriate Campaign(s). If this person is someone that we don\'t want to clutter the system, mark the Lead Status as Unqualified.');
             if (t!=null)
             {
-                tasksToAdd.add(t);  
+                tasksToAdd.add(t); 	
                 System.debug('BZ_LeadCreated: Adding new Task: '+ t);
             }
         }
-        // Only do this for Volunteers and Students
+        // Only do this for Volunteer and Student
         else if (lead.Account_Activated__c == true)
         {
             System.debug('BZ_LeadCreated: lead.Id=' + lead.Id);

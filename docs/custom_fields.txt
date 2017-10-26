@@ -159,7 +159,10 @@
 		Company
 		Hometown 
 		Participant Information
-		Volunteer Information
+		Leadershp Coach Information (note: old field was Volunteer Information, and API name is still Volunteer_Information__c)
+		Event Volunteer Information
+    Champion Information
+    Mentor Information
     Student Registration Code
     Last Interaction Date
     Cultivation Level

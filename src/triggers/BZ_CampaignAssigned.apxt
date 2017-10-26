@@ -8,7 +8,7 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
     if (BZ_CloseRecruitmentController.IsCloseRecruitmentRunning)
     {
         // NOOP: we're snapshotting the campaign but we don't want to actively 
-        // queue up tasks to take action, adjust the Participant or Volunteer Info, or set
+        // queue up tasks to take action, adjust the Participant or Leadership Coach Info, or set
         // their Is In Active Recruitment Campaign flag (which the CampaignActive trigger will take care of).
         // When we close large campaigns, all the trigger logic causes Apex CPU time limit exceptions.
         System.Debug('BZ_CampaignAssigned: NOOP because were running BZ_CloseRecruitmentController.IsCloseRecruitmentRunning');
@@ -60,7 +60,7 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
         
         boolean isApplicableCampaign = false;
         boolean hasSignedUpOnWebsite = (contact.BZ_User_Id__c != null && contact.Signup_Date__c != null);
-        // Temp Volunteers get an email through calendly, so we exempt them from getting an Intro email from Salesforce
+        // Event Volunteers get an email through calendly, so we exempt them from getting an Intro email from Salesforce
         boolean contactTypeThatGetsIntroEmail = true;
         boolean hasCourseCompleted = (campaign.IsActive == false && campaign.Status == 'Completed');
         System.debug('BZ_CampaignAssigned: hasCourseCompleted = '+hasCourseCompleted +', campaign.IsActive='+campaign.IsActive+', campaign.Status='+campaign.Status);
@@ -90,8 +90,14 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
             }
             isApplicableCampaign = true;
         } else if (campaign.Type == 'Volunteer'){
-            // Ditto on above comment
-            contact.Volunteer_Information__c = 'Temp Volunteer';
+            // Ditto on above comment.
+            if (cm.Candidate_Status__c == 'Confirmed')
+                contact.Event_Volunteer_Information__c = 'Confirmed';
+            else if (cm.Candidate_Status__c == 'Opted Out')
+                contact.Event_Volunteer_Information__c = 'Opted Out';
+            else
+                contact.Event_Volunteer_Information__c = 'Prospect';
+            
             if (campaign.IsActive){ // If InActive, they may in other Active campaigns, so NOOP
                 contact.Is_In_Active_Recruitment_Campaign__c = true;
             }
