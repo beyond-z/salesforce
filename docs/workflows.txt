@@ -3,7 +3,7 @@ Rules:
 #####
 CONTACT
 		BZ_TranslateUndergradUserType
-		BZ_TranslateVolunteerUserType
+		BZ_TranslateLeadershipCoachUserType
 		BZ_TranslateEmployerUserType
 		BZ_TranslateUniversityUserType
 
@@ -29,7 +29,7 @@ CONTACT
     BZ_TranslateEmployerUserType
     BZ_TranslateSchoolUserType
     BZ_TranslateUndergrad
-    BZ_TranslateVolunteerUserType
+    BZ_TranslateLeadershipCoachUserType
 
 #####
 Tasks

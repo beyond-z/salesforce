@@ -7,7 +7,7 @@ private class BZ_CampaignAssigned_TEST {
         String anticipatedGraduationSemester = 'Spring';
         String startedCollege = '1999';
         String collegeEnrollmentSemester = 'Fall';
-        Lead l = new Lead(OwnerId=UserInfo.getUserId(), User_Type__c='Volunteer', Signup_Date__c=signupDate, Anticipated_Graduation__c=anticipatedGraduation, Anticipated_Graduation_Semester__c=anticipatedGraduationSemester, Started_College__c=startedCollege, Enrollment_Semester__c=collegeEnrollmentSemester, BZ_User_Id__c=1234, Account_Activated__c=true, LeadSource='Website Signup', FirstName='Someone', LastName='New', Company='Someone New (individual)', Status='Open');
+        Lead l = new Lead(OwnerId=UserInfo.getUserId(), User_Type__c='Leadership Coach', Signup_Date__c=signupDate, Anticipated_Graduation__c=anticipatedGraduation, Anticipated_Graduation_Semester__c=anticipatedGraduationSemester, Started_College__c=startedCollege, Enrollment_Semester__c=collegeEnrollmentSemester, BZ_User_Id__c=1234, Account_Activated__c=true, LeadSource='Website Signup', FirstName='Someone', LastName='New', Company='Someone New (individual)', Status='Open');
         insert l;
         
         // THis happens automatically now on lead insertion above.
@@ -47,7 +47,7 @@ private class BZ_CampaignAssigned_TEST {
         
         CampaignMember updatedCm = [SELECT Id, ContactId, CampaignId, Signup_Date__c, Anticipated_Graduation__c, Anticipated_Graduation_Semester__c, Started_College__c, Enrollment_Semester__c FROM CampaignMember WHERE Id=:cm.Id];
         Contact updatedContact = [SELECT Id, Volunteer_Information__c, Signup_Date__c, Anticipated_Graduation__c, Anticipated_Graduation_Semester__c, Started_College__c, Enrollment_Semester__c FROM Contact WHERE Id=:updatedCm.ContactId];
-        System.assert(updatedContact.Volunteer_Information__c == 'LC Pipeline', 'When a Contact is added to an LC Campaign, their Volunteer Information should be set.');
+        System.assert(updatedContact.Volunteer_Information__c == 'LC Pipeline', 'When a Contact is added to an LC Campaign, their Leadership Coach Information should be set.');
 
         // Not sure why this isn't working but the BZ_Copy_Contact_Info_To_Campaign_Member flow in the
         // Process Builder should have copied over these values.
