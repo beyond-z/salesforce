@@ -259,14 +259,14 @@ private class BZ_BulkInviteController_TEST {
         PageReference pageRef = Page.BZ_BulkInvite;
         Test.setCurrentPage(pageRef);
 
-    BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
-        String csvContentsContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
+      BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
+        String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
             'Brian,xTest1,,5554443333,Phone Call,Description of phone call\n'+
             'Brian,xTest5,email@email.com,badPhone,Phone Call,Description of phone call\n'+
             'Brian,,brian.test2@example.com,,Phone Call,Description of phone call\n'+
             ',,brian.test3@example.com,,Phone Call,Description of phone call\n'+
             'Brian,xTest3\n'+
-            'Brian,xTest4,badEmail,badPhone,,,,\n'+
+            'Brian,xTest4,badEmail,badPhone,,\n'+
             'badRow\n';
 
         Boolean exceptionCaught = false;
@@ -305,7 +305,7 @@ private class BZ_BulkInviteController_TEST {
         PageReference pageRef = Page.BZ_BulkInvite;
         Test.setCurrentPage(pageRef);
 
-    BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
+      BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
         String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
             'Brian,xTest1,email1@email.com,5554443333,Phone Call,Description of phone call\n'+
             'Brian,xTest5,email2@email.com,5554443333,,\n';
@@ -385,7 +385,7 @@ private class BZ_BulkInviteController_TEST {
         PageReference pageRef = Page.BZ_BulkInvite;
         Test.setCurrentPage(pageRef);
 
-    BZ_BulkInviteController controller = neww BZ_BulkInviteController(sc);
+      BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
         String csvContents = '';
 
         Test.startTest();

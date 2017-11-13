@@ -1,37 +1,52 @@
 @isTest 
 private class BZ_CampaignActive_TEST {
     static testMethod void validateCampaignActive() {
+        System.debug('BZ_CampaignActive_TEST.validateCampaignActive - begin');
+        List<Contact> contactsToInsert = new List<Contact>();
         Contact contact1 = new Contact(FirstName='Test', LastName='User1');
-        insert contact1;
+        contactsToInsert.add(contact1);
         Contact contact2 = new Contact(FirstName='Test', LastName='User2');
-        insert contact2;
+        contactsToInsert.add(contact2);
+        System.debug('BZ_CampaignActive_TEST.validateCampaignActive - inserting contacts');
+        insert contactsToInsert;
+        System.debug('BZ_CampaignActive_TEST.validateCampaignActive - DONE inserting contacts');
         
         String appOpenEmailTemplate = 'Sample App Open Email Template';
         Campaign campaign = BZ_CampaignFactory_TEST.create();
         campaign.IsActive = false;
         campaign.App_Open_Email_Template__c = appOpenEmailTemplate;
+        System.debug('BZ_CampaignActive_TEST.validateCampaignActive - inserting campaign');
         insert campaign;
+        System.debug('BZ_CampaignActive_TEST.validateCampaignActive - done inserting campaign = ' + campaign);
         
+        List<CampaignMember> cmsToInsert = new List<CampaignMember>();
         CampaignMember cm1 = new CampaignMember();
         cm1.CampaignId=campaign.Id;
         cm1.ContactId=contact1.Id;
         cm1.Apply_Button_Enabled__c=FALSE;
-        insert cm1;
+        cmsToInsert.add(cm1);
         
         CampaignMember cm2 = new CampaignMember();
         cm2.CampaignId=campaign.Id;
         cm2.ContactId=contact2.Id;
         cm2.Apply_Button_Enabled__c=FALSE;
-        insert cm2;
+        cmsToInsert.add(cm2);
+        System.debug('BZ_CampaignActive_TEST.validateCampaignActive - inserting campaign memebers');
+        insert cmsToInsert;
+        System.debug('BZ_CampaignActive_TEST.validateCampaignActive - DONE inserting campaign memebers');
         
         // Fires the trigger we're testing.
+        System.debug('BZ_CampaignActive_TEST.validateCampaignActive - updating campaign to be Active');
         campaign.IsActive = TRUE;
         update campaign;
-    
+        System.debug('BZ_CampaignActive_TEST.validateCampaignActive - DONE updating campaign');
+		
         CampaignMember cm1_updated = [SELECT Id, ContactId, Apply_Button_Enabled__c FROM CampaignMember WHERE Id = :cm1.Id];
+        System.debug('BZ_CampaignActive_TEST.validateCampaignActive - retrieved cm1_updated = ' + cm1_updated);
         System.assertEquals(cm1_updated.Apply_Button_Enabled__c, TRUE);
         CampaignMember cm2_updated = [SELECT Id, ContactId, Apply_Button_Enabled__c FROM CampaignMember WHERE Id = :cm2.Id];
-    System.assertEquals(cm2_updated.Apply_Button_Enabled__c, TRUE);
+        System.debug('BZ_CampaignActive_TEST.validateCampaignActive - retrieved cm2_updated = ' + cm2_updated);
+		System.assertEquals(cm2_updated.Apply_Button_Enabled__c, TRUE);
         
         List<Task> resultingTasks = [SELECT Id, WhoId, WhatId, EmailTemplate__c FROM Task
                                      WHERE (WhoId=:cm1_updated.ContactId OR WhoId=:cm2_updated.ContactId) AND
@@ -39,5 +54,41 @@ private class BZ_CampaignActive_TEST {
                                            EmailTemplate__c = :appOpenEmailTemplate AND
                                            Subject LIKE '%Send App Open Email%'];
         System.assert(resultingTasks.size()==2, resultingTasks.size()+' Tasks found.  Expected 2 to be created to Send App Open Email to existing Campaign Members');
+    }
+    
+    static testMethod void validateIsInActiveRecruitmentCampaign() {
+        System.debug('BZ_CampaignActive_TEST.validateIsInActiveRecruitmentCampaign - begin');
+        Contact contact1 = new Contact(FirstName='Test', LastName='User1');
+        insert contact1;
+        
+        List<Campaign> campaignsToInsert = new List<Campaign>();
+        Campaign recruitmentCampaign = BZ_CampaignFactory_TEST.create(userInfo.getUserId(), 'Program Participants');
+        recruitmentCampaign.IsActive = true;
+        campaignsToInsert.add(recruitmentCampaign);
+        
+        Campaign mailChimpCampaign = BZ_CampaignFactory_TEST.create(userInfo.getUserId(), 'Mailchimp July 2016 Newsletter');
+        mailChimpCampaign.IsActive = true;
+        campaignsToInsert.add(mailChimpCampaign);
+        insert campaignsToInsert;
+        
+        List<CampaignMember> cmsToInsert = new List<CampaignMember>();
+        CampaignMember cmRecruitment1 = new CampaignMember();
+        cmRecruitment1.CampaignId=recruitmentCampaign.Id;
+        cmRecruitment1.ContactId=contact1.Id;
+        cmsToInsert.add(cmRecruitment1);
+        
+        CampaignMember cmMailChimp1 = new CampaignMember();
+        cmMailChimp1.CampaignId=mailChimpCampaign.Id;
+        cmMailChimp1.ContactId=contact1.Id;
+        cmsToInsert.add(cmMailChimp1);
+        
+        insert cmsToInsert;
+        
+        // Fires the trigger we're testing.
+        recruitmentCampaign.IsActive = false;
+        update recruitmentCampaign;
+		
+        Contact updated_contact = [SELECT Id, Is_In_Active_Recruitment_Campaign__c FROM Contact WHERE Id = :contact1.Id];
+        System.assert(updated_contact.Is_In_Active_Recruitment_Campaign__c == false, 'Expected updated_contact.Is_In_Active_Recruitment_Campaign__c to be false, but it was true');
     }
 }

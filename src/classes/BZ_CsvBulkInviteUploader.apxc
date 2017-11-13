@@ -16,7 +16,7 @@ public abstract class BZ_CsvBulkInviteUploader extends BZ_CsvContactsUploader {
     /**
      * Called for each row in the uploaded CSV so subclasses can process them.
      */
-    protected override boolean ProcessRow(String[] rowValues){
+    protected virtual override boolean ProcessRow(String[] rowValues){
         try
         {
             super.ProcessRow(rowValues);

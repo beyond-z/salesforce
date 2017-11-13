@@ -1,0 +1,14 @@
+@isTest 
+private class BZ_ContactInserted_TEST {
+    static testMethod void validateNewsletterSignup() {
+        List<Contact> contactsToInsert = new List<Contact>();
+        Contact contactToInsert = new Contact(FirstName='TestContact', LastName='NewsletterSignup', Email='TestContact.NewsletterSignup@bz.org', IsNewsletterSignup__c = true);
+        contactsToInsert.add(contactToInsert);
+
+        // Fires the trigger
+        insert contactsToInsert;
+        
+        Contact updatedContact = [SELECT Id, BZ_Region__c FROM Contact WHERE Id = :contactToInsert.Id];
+        System.assertEquals('National', updatedContact.BZ_Region__c, 'New Newsletter Signups should have their BZ_Region set to National');
+    }
+}

@@ -1,0 +1,42 @@
+/**
+ * Reads a CSV file of Contacts in the format: 
+ * FirstName, LastName, Email, Phone, InteractionType, InteractionDescription, BZRegion
+ * Phone is the only optional value.
+ */
+public abstract class BZ_CsvBulkAddUploader extends BZ_CsvBulkInviteUploader {
+
+    abstract void finishRead();
+
+    public BZ_CsvBulkAddUploader(){
+    }
+
+    /**
+     * Called for each row in the uploaded CSV so subclasses can process them.
+     */
+    protected override boolean ProcessRow(String[] rowValues){
+        try
+        {
+            super.ProcessRow(rowValues);
+            if (rowValues.size() >= 7)
+            {
+                System.debug('BZ_CsvBulkAddUploader.ProcessRow(rowValues=['+rowValues+'])');
+                if(!String.isEmpty(rowValues[6].trim()))
+                {
+                    return true;
+                }
+                else {
+                    System.debug('BZ_CsvBulkAddUploader.ProcessRow(rowValues=['+rowValues+']) -- SKIPPING because BZRegion is not set.');
+                }
+            }
+            else
+            {
+                System.debug('BZ_CsvBulkAddUploader.ProcessRow(rowValues=['+rowValues+']) -- SKIPPING because there are not 7 columns');
+            }
+            return false;
+        } catch (Exception e){
+            ApexPages.Message errormsg = new ApexPages.Message(ApexPages.severity.ERROR,'An error has occured reading the CSV file.  Format expected is FirstName, LastName, Email, Phone, InteractionType, Interaction Description, BZRegion where phone is the only optional value: '+e.getMessage());
+            ApexPages.addMessage(errormsg);
+            return false;
+        }
+    }    
+}

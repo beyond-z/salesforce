@@ -1,0 +1,70 @@
+// Note: this is here to split up tests for BZ_CopyCampaignMemberController
+// into separate runnable files since console logs are limited in size and these 
+// tests produce enough log info that you can't see what you need.
+@isTest 
+public class BZ_CopyCampaignMemberController_TEST4 {
+    
+    static testMethod void validateCopyToSameCampaign() {
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner4', OwnerId=userInfo.getUserId());
+        insert campaignOwner;
+        Contact contact = new Contact(FirstName='Test', LastName='User1004');
+        insert contact;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaignFrom = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
+        String reinviteEmailTemplateNameTo = 'reinviteEmailTemplateFrom';
+        campaignFrom.Previous_Candidate_New_Invite__c = reinviteEmailTemplateNameTo;
+        insert campaignFrom;
+        
+        CampaignMember cm = new CampaignMember(CampaignId=campaignFrom.Id, ContactId=contact.Id);
+        cm.Candidate_Status__c = 'Waitlisted';
+        cm.Application_Status__c = 'Submitted';
+        insert cm;
+                
+      ApexPages.StandardController sc = new ApexPages.standardController(cm);
+            
+        PageReference pageRef = Page.BZ_CloseRecruitment;
+        Test.setCurrentPage(pageRef);
+        
+      BZ_CopyCampaignMemberController controller = new BZ_CopyCampaignMemberController(sc);
+        controller.newCampaignLookup.CampaignId = campaignFrom.Id;
+        PageReference result = controller.run();
+        
+        System.Assert(result == null, 'controller.run() should return null');
+        System.Assert(ApexPages.hasMessages(), 'An error message should be added to the page');
+    }
+    
+    static testMethod void validateCampaignTypesMatch() {
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner5', OwnerId=userInfo.getUserId());
+        insert campaignOwner;
+        Contact contact = new Contact(FirstName='Test', LastName='User1005');
+        insert contact;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaignFrom = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Program Participants');
+        insert campaignFrom;
+        
+        CampaignMember cm = new CampaignMember(CampaignId=campaignFrom.Id, ContactId=contact.Id);
+        cm.Candidate_Status__c = 'Waitlisted';
+        cm.Application_Status__c = 'Submitted';
+        insert cm;
+        
+        Campaign campaignTo = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        String reinviteEmailTemplateNameTo = 'reinviteEmailTemplateTo';
+        campaignTo.Previous_Candidate_New_Invite__c = reinviteEmailTemplateNameTo;
+        campaignTo.IsActive = true;
+        insert campaignTo;
+                
+      ApexPages.StandardController sc = new ApexPages.standardController(cm);
+            
+        PageReference pageRef = Page.BZ_CloseRecruitment;
+        Test.setCurrentPage(pageRef);
+        
+      BZ_CopyCampaignMemberController controller = new BZ_CopyCampaignMemberController(sc);
+        controller.newCampaignLookup.CampaignId = campaignTo.Id;
+        PageReference result = controller.run();
+        
+        System.Assert(result == null, 'controller.run() should return null');
+        System.Assert(ApexPages.hasMessages(), 'An error message should be added to the page');
+    }
+}

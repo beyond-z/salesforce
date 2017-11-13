@@ -1,0 +1,11 @@
+trigger BZ_ContactInserted on Contact (before insert) {
+    System.Debug('BZ_ContactInserted: begin trigger');
+    for (Contact contact : Trigger.new){
+        if (contact.IsNewsletterSignup__c == true){
+            if (contact.BZ_Region__c == null || contact.BZ_Region__c == '')
+            {
+                contact.BZ_Region__c = 'National';
+            }
+        }
+    }
+}

@@ -32,8 +32,8 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
         //System.Debug('BZ_CampaignAssigned: adding CampaignId='+cm.CampaignId + ' to campaignIds ' + campaignIds);
         campaignIds.add(cm.CampaignId);
     }
-    Map<Id, Contact> contactMap = new Map<Id, Contact>([SELECT Id, Volunteer_Information__c, Participant_Information__c, User_Type__c, Signup_Date__c, BZ_User_Id__c FROM Contact WHERE Id in :contactIds]);
-    Map<Id, Campaign> campaignMap = new Map<Id, Campaign>([SELECT Id, Type, IsActive, Status FROM Campaign WHERE Id in :campaignIds]);
+    Map<Id, Contact> contactMap = new Map<Id, Contact>([SELECT Id, Volunteer_Information__c, Participant_Information__c, User_Type__c, Signup_Date__c, BZ_User_Id__c, BZ_Region__c FROM Contact WHERE Id in :contactIds]);
+    Map<Id, Campaign> campaignMap = new Map<Id, Campaign>([SELECT Id, Type, IsActive, Status, BZ_Region__c FROM Campaign WHERE Id in :campaignIds]);
     //System.Debug('BZ_CampaignAssigned: contactMap='+contactMap);
     //System.Debug('BZ_CampaignAssigned: campaignMap='+campaignMap);
                  
@@ -59,12 +59,20 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
         }
         
         boolean isApplicableCampaign = false;
+        boolean isBZRegionChanged = false;
         boolean hasSignedUpOnWebsite = (contact.BZ_User_Id__c != null && contact.Signup_Date__c != null);
         // Event Volunteers get an email through calendly, so we exempt them from getting an Intro email from Salesforce
         boolean contactTypeThatGetsIntroEmail = true;
         boolean hasCourseCompleted = (campaign.IsActive == false && campaign.Status == 'Completed');
         System.debug('BZ_CampaignAssigned: hasCourseCompleted = '+hasCourseCompleted +', campaign.IsActive='+campaign.IsActive+', campaign.Status='+campaign.Status);
         System.debug('BZ_CampaignAssigned: cm.Candidate_Status__c = '+cm.Candidate_Status__c +', cm='+cm);
+        if (contact.BZ_Region__c == null || contact.BZ_Region__c == '' || 
+              (contact.BZ_Region__c == 'National' && campaign.BZ_Region__c != 'National') // Update to more specific value
+           ){
+            contact.BZ_Region__c = campaign.BZ_Region__c;
+            isBZRegionChanged = true;
+        }
+        
         if (campaign.Type == 'Leadership Coaches') {
             // Note: this is also set in a Workflow when the Lead is converted, 
             // but they may signup as one type but then we determine that they are really 
@@ -117,12 +125,14 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
             isApplicableCampaign = true;
         }
         
-        if (isApplicableCampaign)
-        {   
+        if (isApplicableCampaign || isBZRegionChanged){
             if (contactsToUpdate.containsKey(contact.Id) == false){
                 contactsToUpdate.put(contact.Id, contact);
             }
-            
+        }
+        
+        if (isApplicableCampaign)
+        {
             if (hasSignedUpOnWebsite)
             {
                 contactIdsOfTasksToClose.add(contact.Id);

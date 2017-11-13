@@ -1,15 +1,24 @@
 /**
- * Reads a CSV file of Contacts in the format: FirstName, LastName, Email, Phone
- * Phone is the only optional value.
+ * Reads a CSV file of Contacts in the format: 
+ * FirstName, LastName, Email, Phone, InteractionType, InteractionDescription, BZRegion
+ * Only FirstName, LastName, Email are required.
  */
 public abstract class BZ_CsvContactsUploader extends BZ_CsvUploaderBase {
 
     private List<Contact> m_contactsToBulkInvite;
+    private Set<String> m_bzregions;
 
     abstract void finishRead();
 
     public BZ_CsvContactsUploader(){
         m_contactsToBulkInvite = new List<Contact>();
+        m_bzregions = new Set<String>();
+        Schema.DescribeFieldResult fieldResult = Contact.BZ_Region__c.getDescribe();
+        List<Schema.PicklistEntry> ple = fieldResult.getPicklistValues();
+        for( Schema.PicklistEntry f : ple)
+        {
+            m_bzregions.add(f.getValue());
+        }
     }
 
     /**
@@ -47,7 +56,20 @@ public abstract class BZ_CsvContactsUploader extends BZ_CsvUploaderBase {
                 {
                     c.Phone = rowValues[3].trim();
                 }
+                
+                if (rowValues.size() >= 7)
+                {
+                    String bz_region = rowValues[6].trim();
+                    if (m_bzregions.contains(bz_region)){
+                        c.BZ_Region__c = bz_region;
+                    }
+                    else{
+                        System.debug('BZ_CsvContactsUploader.ProcessRow(rowValues=['+rowValues+']) -- SKIPPING because the 7th column does not contain a BZ Region');
+                        return false;
+                    }
+                }
 
+                System.debug('BZ_CsvContactsUploader.ProcessRow: adding c = '+c+' to m_contactsToBulkInvite');
                 m_contactsToBulkInvite.add(c);
                 return true;
             }

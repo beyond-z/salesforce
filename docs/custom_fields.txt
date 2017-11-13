@@ -23,6 +23,7 @@
 		App Interview Requested Email Template
 		Application Type # coach or student. Which application form to show 
 		#Application Reminder Interval
+    BZ Region
 		Program Title
 		Program Site
 		Request Availability # checkbox, if set, MeetingTimes must be present

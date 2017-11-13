@@ -10,8 +10,8 @@
         <apex:pageMessage severity="confirm" 
                           title="Upload a .csv file of user information to add as Contacts"
                           summary="" />
-        <font color="red"> <b>Note: </b></font> the .csv should have 6 columns with the info below.
-        Please use <a href="https://drive.google.com/a/beyondz.org/file/d/0BxkyYmQz77njdHdpRk9IeXRlLVk/view?usp=sharing" target="_blank"> this template </a>.
+        <font color="red"> <b>Note: </b></font> the .csv should have 7 columns with the info below.
+        Please use <a href="https://www.dropbox.com/s/2ume9xcpfpcpb5a/BulkAddTemplate.csv?dl=0" target="_blank"> this template </a>.
         <br/> <br/>
         <table border="1">
             <tr>
@@ -21,6 +21,7 @@
             <td style="padding:0 10px 0 10px;">Phone</td>
             <td style="padding:0 10px 0 10px;">InteractionType</td>
             <td style="padding:0 10px 0 10px;">InteractionDescription</td>
+            <td style="padding:0 10px 0 10px;">BZ Region</td>
             </tr>
         </table>
         <br/><br/>
@@ -36,6 +37,17 @@
             <li>Small Group In-Person Meeting</li>
             <li>Interaction at Larger Function</li>
             <li>Attended BZ Function</li>
+        </ul>
+        <br/><br/>
+        The value of the BZ Region MUST exactly match the available values for a Contact <a href="https://na74.salesforce.com/00No000000ARSLT?setupid=ContactFields">BZ Region</a>.
+        At the time of writing, the possible values are following (but that could change):
+        <ul>
+            <li>San Francisco Bay Area, San Jose</li>
+            <li>Chicago </li>
+            <li>Voicemail</li>
+            <li>New York City</li>
+            <li>Newark, NJ</li>
+            <li>National </li>
         </ul>
         <em>Notes:</em>
         <ul>
