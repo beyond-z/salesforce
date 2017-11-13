@@ -2,7 +2,7 @@
  * Controller to handle adding users to Salesforce in bulk, handling duplicates.
  * DOES NOT queue up an INVITE email or text message.
  */
-public class BZ_BulkAddController extends BZ_CsvBulkInviteUploader {
+public class BZ_BulkAddController extends BZ_CsvBulkAddUploader {
     // This is true when the Bulk Add logic is running
     public static Boolean IsBulkAddRunning {get; set;}
     static {

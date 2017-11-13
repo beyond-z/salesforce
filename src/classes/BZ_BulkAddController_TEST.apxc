@@ -58,12 +58,12 @@ private class BZ_BulkAddController_TEST {
         // doesn't create a duplicate contact if the case changes since SF stores emails in all lower.
         String contactToAddEmail1 = 'brian.test1@example.com';
         String contactToAddEmail2 = 'Brian.Test2@example.com';
-        String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
-            'Brian,xTest1,'+contactToAddEmail1+',5554443333,Phone Call,'+interactionDescription+'\n'+
-            'Brian,xTest2,'+contactToAddEmail2+',,Phone Call,'+interactionDescription+'\n'+
-            'Brian,xTestExisting1,'+existingEmail1.toUpperCase()+',5554443334,Phone Call,'+interactionDescription+'\n'+
-            'Brian,xTestExistingInactiveCamapign1,'+existingEmailInactiveCampaign1+',5554443334,Phone Call,'+interactionDescription+'\n'+
-            'Brian,xTestExistingActiveCampaign1,'+existingEmailActiveCampaign1+',5554443334,Phone Call,'+interactionDescription+'\n';
+        String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription,BZRegion\n'+
+            'Brian,xTest1,'+contactToAddEmail1+',5554443333,Phone Call,'+interactionDescription+',"Newark, NJ"\n'+
+            'Brian,xTest2,'+contactToAddEmail2+',,Phone Call,'+interactionDescription+',"Newark, NJ"\n'+
+            'Brian,xTestExisting1,'+existingEmail1.toUpperCase()+',5554443334,Phone Call,'+interactionDescription+',"Newark, NJ"\n'+
+            'Brian,xTestExistingInactiveCamapign1,'+existingEmailInactiveCampaign1+',5554443334,Phone Call,'+interactionDescription+',"Newark, NJ"\n'+
+            'Brian,xTestExistingActiveCampaign1,'+existingEmailActiveCampaign1+',5554443334,Phone Call,'+interactionDescription+',"Newark, NJ"\n';
         
         Test.startTest();
         PageReference result = controller.ProcessFile(csvContents);
@@ -84,7 +84,7 @@ private class BZ_BulkAddController_TEST {
         for (String email : existingEmails){
             System.assert(skippedContactsDisplay.contains(email), 'Expected existing contact to be skipped.  Here are the ones skipped: ' + skippedContactsDisplay + ' -- which doesnt contain: ' + email);
         }
-        List<Contact> newContactsAdded = [SELECT Id, Email, FirstName, LastName, Phone, Initial_Connection__c FROM Contact WHERE Email = :contactToAddEmail1 OR Email = :contactToAddEmail2];
+        List<Contact> newContactsAdded = [SELECT Id, Email, FirstName, LastName, Phone, Initial_Connection__c, BZ_Region__c FROM Contact WHERE Email = :contactToAddEmail1 OR Email = :contactToAddEmail2];
         System.assert(newContactsAdded.size() == 2, 'Expected 2 new contacts added.  Found: '+newContactsAdded.size());
         Set<Id> newContactIdsAdded = new Set<Id>();
         for (Contact c : newContactsAdded){
@@ -94,7 +94,7 @@ private class BZ_BulkAddController_TEST {
             System.assert(c.Phone == null || c.Phone == '' || c.Phone == '5554443333', 
                           'Contact with Phone found not in list of expected contacts: Phone = ' + c.Phone);
             System.assert(c.Initial_Connection__c == interactionDescription, 'Unrecognized Initial Connection.  Expected '+interactionDescription+'. Found c.Initial_Connection__c = ' + c.Initial_Connection__c);
-            
+            System.assertEquals('Newark, NJ', c.BZ_Region__c, 'Contact should have been added with BZ Region set to value in CSV');
         }
         Set<Id> contactIdsWithInitialConnectionSet = new Set<Id>();
         List<Task> tasks = [SELECT Id, Subject, WhoId, WhatId, Status, Interaction_Type__c, Description, EmailTemplate__c FROM Task WHERE WhoId in :newContactIdsAdded];
@@ -138,17 +138,19 @@ private class BZ_BulkAddController_TEST {
         PageReference pageRef = Page.BZ_BulkInvite;
         Test.setCurrentPage(pageRef);
 
-    BZ_BulkAddController_TESToller controller = new BZ_BulkAddController(sc);
+      BZ_BulkAddController controller = new BZ_BulkAddController(sc);
         String email1 = 'email@email.com';
         String email2 = 'brian.test2@example.com';
         String email3 = 'brian.test3@example.com';
         String email4 = 'badEmail';
-        List<String> emailsToAdd = new List<String>{email1, email2, email3, email4};
-        String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
-            'Brian,xTest1,,5554443333,Phone Call,Description of phone call\n'+
-            'Brian,xTest5,'+email1+',badPhone,Phone Call,Description of phone call\n'+
-            'Brian,,'+email2+',,Phone Call,Description of phone call\n'+
-            ',,'+email3+',,Phone Call,Description of phone call\n';
+        String email5 = 'email2@email.com';
+        List<String> emailsToAdd = new List<String>{email1, email2, email3, email4, email5};
+        String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription,BZRegion\n'+
+            'Brian,xTest1,,5554443333,Phone Call,Description of phone call,"Newark, NJ"\n'+
+            'Brian,xTest5,'+email1+',badPhone,Phone Call,Description of phone call,"Newark, NJ"\n'+
+            'Brian,,'+email2+',,Phone Call,Description of phone call,"Newark, NJ"\n'+
+            ',,'+email3+',,Phone Call,Description of phone call,"Newark, NJ"\n'+
+            'Brian,xTest6,'+email5+',5554443333,Phone Call,Description of phone call,"Newark, BADNJ"\n';
 
         Boolean exceptionCaught = false;
         Test.startTest();
@@ -188,13 +190,13 @@ private class BZ_BulkAddController_TEST {
         PageReference pageRef = Page.BZ_BulkInvite;
         Test.setCurrentPage(pageRef);
 
-    BZ_BulkAddController controller = new BZ_BulkAddControllerddController(sc);
+      BZ_BulkAddController controller = new BZ_BulkAddController(sc);
         String email1 = 'email@email.com';
         String email2 = 'brian.test2@example.com';
         List<String> emailsToAdd = new List<String>{email1, email2};
-        String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
-            'Brian,xTest1,'+email1+',5554443333,Phone Call,Description of phone call\n'+
-            'Brian,xTest5,'+email2+',5554443333,,\n';
+        String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription,BZRegion\n'+
+            'Brian,xTest1,'+email1+',5554443333,Phone Call,Description of phone call,"Newark, NJ"\n'+
+            'Brian,xTest5,'+email2+',5554443333,,,"Newark, NJ"\n';
 
         Boolean exceptionCaught = false;
         Test.startTest();
@@ -231,11 +233,11 @@ private class BZ_BulkAddController_TEST {
         PageReference pageRef = Page.BZ_BulkInvite;
         Test.setCurrentPage(pageRef);
 
-    BZ_BulkAddController controller = new BZ_BulkAddControllerontroller(sc);
+      BZ_BulkAddController controller = new BZ_BulkAddController(sc);
         String email1 = 'email@email.com';
         String email2 = 'brian.test2@example.com';
         List<String> emailsToAdd = new List<String>{email1, email2};
-        String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n';
+        String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription,BZRegion\n';
 
         Boolean exceptionCaught = false;
         Test.startTest();
