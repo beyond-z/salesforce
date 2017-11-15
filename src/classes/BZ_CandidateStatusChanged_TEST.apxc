@@ -270,4 +270,75 @@ private class BZ_CandidateStatusChanged_TEST {
 
         Test.stopTest();
     }
+    
+    static testMethod void validateEventInfo() {
+        List<Contact> contactsToInsert = new List<Contact>();
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_ev1', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(campaignOwner);
+        Contact contact = new Contact(FirstName='Test', LastName='ev1');
+        contactsToInsert.add(contact);
+        insert contactsToInsert;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Volunteer');
+        campaign.Volunteer_Opportunities__c = 'Some opp:5'; // This is actually obsolete now. Need to do another project to clean this up.
+        insert campaign;
+        
+        CampaignMember cm = new CampaignMember();
+        cm.CampaignId=campaign.Id;
+        cm.ContactId=contact.Id;
+       
+        insert cm;
+        
+        // This fires the trigger we're testing.
+        cm.Candidate_Status__c = 'Confirmed';
+        update cm;
+    
+        Contact updatedContact = [SELECT Id, Event_Volunteer_Information__c, Candidate_Status__c FROM Contact WHERE Id=:cm.ContactId];
+        System.assert(updatedContact.Event_Volunteer_Information__c == 'Current', 'When a Contact is Confirmed, their Event_Volunteer_Information__c should be set.');
+        System.assert(updatedContact.Candidate_Status__c == 'Confirmed', 'When a Contact is Confirmed, their Candidate Status should be set.');
+        
+        cm.Candidate_Status__c = 'Opted Out';
+        cm.Opted_Out_Reason__c = 'No Time';
+        update cm;
+            
+        updatedContact = [SELECT Id, Event_Volunteer_Information__c, Candidate_Status__c FROM Contact WHERE Id=:cm.ContactId];
+        System.assert(updatedContact.Event_Volunteer_Information__c == 'Opted Out', 'When a Contact is Opted Out, their Event_Volunteer_Information__c should be set.');
+        System.assert(updatedContact.Candidate_Status__c == 'Opted Out', 'When a Contact is Opted Out, their Candidate Status should be set.');
+    }
+    
+    static testMethod void validateMentorInfo() {
+        List<Contact> contactsToInsert = new List<Contact>();
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner_mi1', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(campaignOwner);
+        Contact contact = new Contact(FirstName='Test', LastName='mi1');
+        contactsToInsert.add(contact);
+        insert contactsToInsert;
+        
+        // Note: the Campaign.OwnerId refers to the User, so we need to use campaignOwner.OwnerId instead of Id.  See the child relationship of the User object.
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Mentor');
+        insert campaign;
+        
+        CampaignMember cm = new CampaignMember();
+        cm.CampaignId=campaign.Id;
+        cm.ContactId=contact.Id;
+       
+        insert cm;
+        
+        // This fires the trigger we're testing.
+        cm.Candidate_Status__c = 'Confirmed';
+        update cm;
+    
+        Contact updatedContact = [SELECT Id, Mentor_Information__c, Candidate_Status__c FROM Contact WHERE Id=:cm.ContactId];
+        System.assert(updatedContact.Mentor_Information__c == 'Current', 'When a Contact is Confirmed, their Mentor_Information__c should be set.');
+        System.assert(updatedContact.Candidate_Status__c == 'Confirmed', 'When a Contact is Confirmed, their Candidate Status should be set.');
+        
+        cm.Candidate_Status__c = 'Opted Out';
+        cm.Opted_Out_Reason__c = 'No Time';
+        update cm;
+            
+        updatedContact = [SELECT Id, Mentor_Information__c, Candidate_Status__c FROM Contact WHERE Id=:cm.ContactId];
+        System.assert(updatedContact.Mentor_Information__c == 'Opted Out', 'When a Contact is Opted Out, their Mentor_Information__c should be set.');
+        System.assert(updatedContact.Candidate_Status__c == 'Opted Out', 'When a Contact is Opted Out, their Candidate Status should be set.');
+    } 
 }

@@ -12,7 +12,9 @@ trigger BZ_CampaignCompleted on Campaign (before update) {
             currentCampaign.IsActive == false &&
                (
                currentCampaign.Type == 'Leadership Coaches' ||
-               currentCampaign.Type == 'Program Participants'
+               currentCampaign.Type == 'Program Participants' ||
+               currentCampaign.Type == 'Volunteer' ||
+               currentCampaign.Type == 'Mentor'
                )
            )
         {
@@ -28,18 +30,26 @@ trigger BZ_CampaignCompleted on Campaign (before update) {
                 }
             }
             
-            List<Contact> contactsToUpdate = [SELECT Id, Email, Volunteer_Information__c, Participant_Information__c
+            List<Contact> contactsToUpdate = [SELECT Id, Email, Volunteer_Information__c, Participant_Information__c, Mentor_Information__c, Event_Volunteer_Information__c
                                              FROM Contact WHERE Id in :contactIdsToUpdate];
-            String urlEncodedEmails = '';
+            String urlEncodedEmailsToDisableBravenHelp = '';
             if (currentCampaign.Type == 'Leadership Coaches'){
                 for (Contact c : contactsToUpdate){
                     c.Volunteer_Information__c = 'Former LC';
-                    urlEncodedEmails += System.EncodingUtil.urlEncode(c.Email, 'UTF-8') + ',';
+                    urlEncodedEmailsToDisableBravenHelp += System.EncodingUtil.urlEncode(c.Email, 'UTF-8') + ',';
                 }
             } else if (currentCampaign.Type == 'Program Participants'){
                 for (Contact c : contactsToUpdate){
                     c.Participant_Information__c = 'Program Alum';
-                    urlEncodedEmails += System.EncodingUtil.urlEncode(c.Email, 'UTF-8') + ',';
+                    urlEncodedEmailsToDisableBravenHelp += System.EncodingUtil.urlEncode(c.Email, 'UTF-8') + ',';
+                }
+            } else if (currentCampaign.Type == 'Volunteer'){
+                for (Contact c : contactsToUpdate){
+                    c.Event_Volunteer_Information__c = 'Former';
+                }
+            } else if (currentCampaign.Type == 'Mentor'){
+                for (Contact c : contactsToUpdate){
+                    c.Mentor_Information__c = 'Former';
                 }
             }
             update contactsToUpdate;
@@ -47,10 +57,10 @@ trigger BZ_CampaignCompleted on Campaign (before update) {
             // Now that these people are Alumni, turn of their email notifications on Braven
             // Help so that they don't mark us as spam when a new semester launches and people
             // start asking tactical questions about the course
-            if (contactsToUpdate.size() > 0){
-                urlEncodedEmails = urlEncodedEmails.removeEnd(',');
-                System.debug('BZ_CampaignCompleted: disabling email notifications on Braven Help for: ' + urlEncodedEmails);
-                BZ_Notifications.disableOSQAEmailNotifications(urlEncodedEmails);
+            if (contactsToUpdate.size() > 0 && String.isNotBlank(urlEncodedEmailsToDisableBravenHelp)){
+                urlEncodedEmailsToDisableBravenHelp = urlEncodedEmailsToDisableBravenHelp.removeEnd(',');
+                System.debug('BZ_CampaignCompleted: disabling email notifications on Braven Help for: ' + urlEncodedEmailsToDisableBravenHelp);
+                BZ_Notifications.disableOSQAEmailNotifications(urlEncodedEmailsToDisableBravenHelp);
             }
         }
     }
