@@ -1,7 +1,7 @@
 @isTest 
 private class BZ_CampaignCompleted_TEST {
-    static testMethod void validate() {
-        System.debug('BZ_CampaignCompleted_TEST.validate - begin');
+    static testMethod void validateFellowAndLC() {
+        System.debug('BZ_CampaignCompleted_TEST.validateFellowAndLC - begin');
         BZ_SettingsFactory_TEST.setSettings();
         System.assert(BZ_Settings__c.getInstance('bz') != null, 'BZ_Settings__c is null');
         List<Contact> contactsToInsert = new List<Contact>();
@@ -73,6 +73,79 @@ private class BZ_CampaignCompleted_TEST {
         
         Contact updatedAcceptedFellow = [SELECT Id, Participant_Information__c FROM Contact WHERE Id = :fellowContact2.Id];
         System.Assert(updatedAcceptedFellow.Participant_Information__c == 'Participant Pipeline', 'When a Campaign is marked Completed, Accepted members should stay in the pipeline');
+    }
+    
+    static testMethod void validateMentorAndVolunteer() {
+        System.debug('BZ_CampaignCompleted_TEST.validateMentorAndVolunteer - begin');
+        BZ_SettingsFactory_TEST.setSettings();
+        System.assert(BZ_Settings__c.getInstance('bz') != null, 'BZ_Settings__c is null');
+        List<Contact> contactsToInsert = new List<Contact>();
+        Contact eventVolunteerProspectContact1 = new Contact(FirstName='Test', LastName='EV1', Email='testev1@bebraven.org', Event_Volunteer_Information__c='Prospect');
+        contactsToInsert.add(eventVolunteerProspectContact1);
+        Contact eventVolunteerCurrentContact2 = new Contact(FirstName='Test', LastName='EV2', Email='testev2@bebraven.org', Participant_Information__c='Current');
+        contactsToInsert.add(eventVolunteerCurrentContact2);
+        Contact mentorProspectContact1 = new Contact(FirstName='Test', LastName='M1', Email='testm1@bebraven.org', Mentor_Information__c='Prospect');
+        contactsToInsert.add(mentorProspectContact1);
+        Contact mentorCurrentContact2 = new Contact(FirstName='Test', LastName='M2', Email='testm2@bebraven.org', Mentor_Information__c='Current');
+        contactsToInsert.add(mentorCurrentContact2);
+
+        insert contactsToInsert;
         
+        List<Campaign> campaignsToInsert = new List<Campaign>();
+        Campaign mentorCampaign = BZ_CampaignFactory_TEST.create(userInfo.getUserId(), 'Mentor');
+        mentorCampaign.IsActive = false;
+        mentorCampaign.Status = 'In Progress';
+        campaignsToInsert.add(mentorCampaign);
+        
+        Campaign eventVolunteerCampaign = BZ_CampaignFactory_TEST.create(userInfo.getUserId(), 'Volunteer');
+        eventVolunteerCampaign.IsActive = false;
+        eventVolunteerCampaign.Status = 'In Progress';
+        eventVolunteerCampaign.Volunteer_Opportunities__c = 'Opp1\nOpp2';
+        campaignsToInsert.add(eventVolunteerCampaign);
+
+        insert campaignsToInsert;
+        
+        List<CampaignMember> campaignMembersToInsert = new List<CampaignMember>();
+        CampaignMember evCurrentCm1 = new CampaignMember();
+        evCurrentCm1.CampaignId=eventVolunteerCampaign.Id;
+        evCurrentCm1.ContactId=eventVolunteerCurrentContact2.Id;
+        evCurrentCm1.Candidate_Status__c = 'Confirmed';
+        campaignMembersToInsert.add(evCurrentCm1);
+        
+        CampaignMember evProspectCm2 = new CampaignMember();
+        evProspectCm2.CampaignId=eventVolunteerCampaign.Id;
+        evProspectCm2.ContactId=eventVolunteerProspectContact1.Id;
+        campaignMembersToInsert.add(evProspectCm2);
+
+        CampaignMember mentorProspectCm1 = new CampaignMember();
+        mentorProspectCm1.CampaignId=mentorCampaign.Id;
+        mentorProspectCm1.ContactId=mentorProspectContact1.Id;
+        campaignMembersToInsert.add(mentorProspectCm1);
+        
+        CampaignMember mentorCurrentCm2 = new CampaignMember();
+        mentorCurrentCm2.CampaignId=mentorCampaign.Id;
+        mentorCurrentCm2.ContactId=mentorCurrentContact2.Id;
+        mentorCurrentCm2.Candidate_Status__c = 'Confirmed';
+        campaignMembersToInsert.add(mentorCurrentCm2);
+
+        insert campaignMembersToInsert;
+                
+        // Fires the trigger we're testing.
+        eventVolunteerCampaign.Status = 'Completed';
+        update eventVolunteerCampaign;
+        mentorCampaign.Status = 'Completed';
+        update mentorCampaign;
+        
+        Contact updatedProspectMentor = [SELECT Id, Mentor_Information__c FROM Contact WHERE Id = :mentorProspectContact1.Id];
+        System.Assert(updatedProspectMentor.Mentor_Information__c == 'Prospect', 'When a Mentor Campaign is marked Completed, Prospect members should stay as they are');
+        
+        Contact updatedCurrentMentor = [SELECT Id, Mentor_Information__c FROM Contact WHERE Id = :mentorCurrentContact2.Id];
+        System.Assert(updatedCurrentMentor.Mentor_Information__c == 'Former', 'When a Mentor Campaign is marked Completed, Confirmed Mentors should become Former');
+
+        Contact updatedProspectEventVolunteer = [SELECT Id, Event_Volunteer_Information__c FROM Contact WHERE Id = :eventVolunteerProspectContact1.Id];
+        System.Assert(updatedProspectEventVolunteer.Event_Volunteer_Information__c == 'Prospect', 'When a Event Volunteer Campaign is marked Completed, Prospects should stay Prospects');
+        
+        Contact updatedCurrentEventVolunteer = [SELECT Id, Event_Volunteer_Information__c FROM Contact WHERE Id = :eventVolunteerCurrentContact2.Id];
+        System.Assert(updatedCurrentEventVolunteer.Event_Volunteer_Information__c == 'Former', 'When a Event Volunteer Campaign is marked Completed, Confirmed members should become Former');
     }
 }

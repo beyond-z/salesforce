@@ -89,7 +89,9 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
                 } else if (campaign.Type == 'Program Participants'){
                     contact.Participant_Information__c = 'Participant';
                 } else if (campaign.Type == 'Volunteer'){
-                    contact.Event_Volunteer_Information__c = 'Confirmed';
+                    contact.Event_Volunteer_Information__c = 'Current';
+                } else if (campaign.Type == 'Mentor'){
+                    contact.Mentor_Information__c = 'Current';
                 }
             }
             else if (cm.Candidate_Status__c == 'Opted Out') {
@@ -104,6 +106,8 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
                     contact.Participant_Information__c = 'Participant Pipeline';
                 } else if (campaign.Type == 'Volunteer'){ // A little different for volunteers, just record it.
                     contact.Event_Volunteer_Information__c = 'Opted Out';
+                } else if (campaign.Type == 'Mentor'){ // A little different for mentors, just record it.
+                    contact.Mentor_Information__c = 'Opted Out';
                 }
             } 
             

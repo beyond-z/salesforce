@@ -32,7 +32,7 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
         //System.Debug('BZ_CampaignAssigned: adding CampaignId='+cm.CampaignId + ' to campaignIds ' + campaignIds);
         campaignIds.add(cm.CampaignId);
     }
-    Map<Id, Contact> contactMap = new Map<Id, Contact>([SELECT Id, Volunteer_Information__c, Participant_Information__c, User_Type__c, Signup_Date__c, BZ_User_Id__c, BZ_Region__c FROM Contact WHERE Id in :contactIds]);
+    Map<Id, Contact> contactMap = new Map<Id, Contact>([SELECT Id, Volunteer_Information__c, Participant_Information__c, Event_Volunteer_Information__c, Mentor_Information__c, User_Type__c, Signup_Date__c, BZ_User_Id__c, BZ_Region__c FROM Contact WHERE Id in :contactIds]);
     Map<Id, Campaign> campaignMap = new Map<Id, Campaign>([SELECT Id, Type, IsActive, Status, BZ_Region__c FROM Campaign WHERE Id in :campaignIds]);
     //System.Debug('BZ_CampaignAssigned: contactMap='+contactMap);
     //System.Debug('BZ_CampaignAssigned: campaignMap='+campaignMap);
@@ -100,7 +100,14 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
         } else if (campaign.Type == 'Volunteer'){
             // Ditto on above comment.
             if (cm.Candidate_Status__c == 'Confirmed')
-                contact.Event_Volunteer_Information__c = 'Confirmed';
+            {
+                if (hasCourseCompleted)
+                {
+                    contact.Event_Volunteer_Information__c = 'Former';
+                } else {
+                    contact.Event_Volunteer_Information__c = 'Current';
+                }
+            }
             else if (cm.Candidate_Status__c == 'Opted Out')
                 contact.Event_Volunteer_Information__c = 'Opted Out';
             else
@@ -110,7 +117,43 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
                 contact.Is_In_Active_Recruitment_Campaign__c = true;
             }
             isApplicableCampaign = true;
-            contactTypeThatGetsIntroEmail = false;
+            contactTypeThatGetsIntroEmail = false; // Invites and other emails happen through Mailchimp and Calendly.
+        } else if (campaign.Type == 'Mentor'){
+            // Ditto on above comment.
+            if (cm.Candidate_Status__c == 'Confirmed')
+            {
+                if (hasCourseCompleted)
+                {
+                    contact.Mentor_Information__c = 'Former';
+                } else {
+                    contact.Mentor_Information__c = 'Current';
+                }
+            }
+            else if (cm.Candidate_Status__c == 'Opted Out')
+                contact.Mentor_Information__c = 'Opted Out';
+            else
+                contact.Mentor_Information__c = 'Prospect';
+            
+            if (campaign.IsActive){ // If InActive, they may in other Active campaigns, so NOOP
+                contact.Is_In_Active_Recruitment_Campaign__c = true;
+            }
+            isApplicableCampaign = true;
+            contactTypeThatGetsIntroEmail = false; // Invites and other emails happen through Mailchimp and Calendly.
+        } else if (campaign.Type == 'Champion'){
+            // Ditto on above comment.
+            if (cm.Candidate_Status__c == 'Confirmed')
+            {
+                // Note: at this point, we don't have the concept of a Former Champion
+                // They are either Current or Opted out once they become one.
+                contact.Champion_Information__c = 'Current'; // This is actually set by the Join server when added, but this is a failsafe for if you enter them manually.
+            }
+            else if (cm.Candidate_Status__c == 'Opted Out')
+                contact.Champion_Information__c = 'Opted Out';
+            else
+                contact.Champion_Information__c = 'Prospect';
+            
+            isApplicableCampaign = true;
+            contactTypeThatGetsIntroEmail = false; // Invites and other emails happen through Mailchimp and the Join server.
         } else if (campaign.Type == 'Partners')
         {
             // Website signup as employer partner or university partner
@@ -152,20 +195,21 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
             } 
             else
             {
-                if (hasSignedUpOnWebsite)
-                {
-                    if (BZ_BulkInviteController.IsBulkInviteRunning){
-                        campaignMembersToCreateReinviteTasksFor.add(cm);
-                        System.Debug('BZ_CampaignAssigned: queuing up Reinvite email for '+cm+' because they already have an account and are being Bulk Invited to a new Campaign.');
-                    } else if (contactTypeThatGetsIntroEmail){
-            	        campaignMembersToCreateIntroTasksFor.add(cm);
-                        System.Debug('BZ_CampaignAssigned: queuing up Intro email for '+cm);
+                if (contactTypeThatGetsIntroEmail){ // We don't manage Champions, Mentors, or Event Volunteer emails through Salesforce
+                    if (hasSignedUpOnWebsite)
+                    {
+                        if (BZ_BulkInviteController.IsBulkInviteRunning){
+                            campaignMembersToCreateReinviteTasksFor.add(cm);
+                            System.Debug('BZ_CampaignAssigned: queuing up Reinvite email for '+cm+' because they already have an account and are being Bulk Invited to a new Campaign.');
+                        } else {
+                            campaignMembersToCreateIntroTasksFor.add(cm);
+                            System.Debug('BZ_CampaignAssigned: queuing up Intro email for '+cm);
+                        }
                     }
-                }
-                else
-                {
-                    campaignMembersToCreateInviteTasksFor.add(cm);
-                    System.Debug('BZ_CampaignAssigned: queuing up Invite email for '+cm);
+                    else {
+                        campaignMembersToCreateInviteTasksFor.add(cm);
+                        System.Debug('BZ_CampaignAssigned: queuing up Invite email for '+cm);
+                    }
                 }
             }
         }
