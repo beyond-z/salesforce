@@ -3,10 +3,16 @@ public class BZ_LeadConvertedState {
     public String company {get;set;}
     public String industry {get;set;}
     public String phone {get;set;}
+    public Boolean isNewsletterSignup {get;set;}
     public BZ_LeadConvertedState(String company, String industry, String phone)
+    {
+        this(company, industry, phone, false);
+    }
+    public BZ_LeadConvertedState(String company, String industry, String phone, Boolean isNewsletterSignup)
     {
         this.company = company;
         this.industry = industry;
         this.phone = phone;
+        this.isNewsletterSignup = isNewsletterSignup;
     }
 }
