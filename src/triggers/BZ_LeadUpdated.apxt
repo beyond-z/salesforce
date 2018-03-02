@@ -2,9 +2,10 @@ trigger BZ_LeadUpdated on Lead (after update) {
     System.Debug('BZ_LeadUpdated: begin trigger');
     for (Lead lead : Trigger.new)
     {
-        if (lead.Account_Activated__c == true &&
+        if ((lead.Account_Activated__c == true || lead.LeadSource == 'BeBraven.org') &&
             lead.IsConverted == false &&
-            (lead.User_Type__c == 'Undergrad' || lead.User_Type__c == 'Volunteer' || lead.User_Type__c == 'Temp Volunteer'))
+            (lead.User_Type__c == 'Undergrad' || lead.User_Type__c == 'Leadership Coach' || 
+             lead.User_Type__c == 'Event Volunteer' || lead.LeadSource == 'BeBraven.org'))
         {
             System.debug('BZ_LeadUpdated: lead.Id=' + lead.Id);
             System.debug('BZ_LeadUpdated: lead.FirstName=' + lead.FirstName);

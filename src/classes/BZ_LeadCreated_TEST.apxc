@@ -30,4 +30,22 @@ private class BZ_LeadCreated_TEST {
         List<Contact> convertedLeads = [SELECT Id FROM Contact WHERE Id = :updatedLead.ConvertedContactId];
         System.assert(convertedLeads.size()==1, 'Expected Undergrad leads to be auto converted when their account is activated.');
     }
+    
+    static testMethod void validateNewsletterSignupLead() {
+        User owner = [SELECT Id FROM User Where Id = :System.UserInfo.getUserId()];
+        Lead l = new Lead(OwnerId=owner.Id, LeadSource='BeBraven.org', FirstName='Someone', LastName='New', Company='Someone New (individual)', Status='Open');
+
+        // This fires the trigger we're testing.
+        insert l;
+        
+        List<Task> resultingTasks = [SELECT Id, WhoId FROM Task
+                                     WHERE WhoId=:l.Id AND
+                                           Subject LIKE '%New Website Signup:%'];
+        System.assert(resultingTasks.size()==0, 'Expected Newsletter signup leads to be autoconverted.');
+       
+        Lead updatedLead = [SELECT Id, ConvertedContactId FROM Lead WHERE Id = :l.Id];
+        List<Contact> convertedLeads = [SELECT Id, IsNewsletterSignup__c FROM Contact WHERE Id = :updatedLead.ConvertedContactId];
+        System.assert(convertedLeads.size()==1, 'Expected Newsletter signup leads to be auto converted.');
+        System.assert(convertedLeads[0].IsNewsletterSignup__c == true, 'Expected Newsletter signup leads to have IsNewsletterSignup__c set.');
+    }
 }
