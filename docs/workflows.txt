@@ -43,3 +43,6 @@ Process Builder
 MC Unsubscribe - Sets the Contact's Email Opt Out field when MC_Subscriber__c.MemberStatus is set to Unsubscribed.
 MC Bounce - Sets the Contact's Email Bounced Reason and Date when MC_Subscriber__c.MemberStatus is set to Cleaned (aka Bounced)
 BZ Copy Contact Info To Campaign Member - self explanatory
+BZ Set Preferred First Name - when first name is set, set preferred first name
+BZ Set IsNewsletterSignup - when IsNewsletterSignup is checked off, set the display version for use in export / import into Mailchimp
+Set 'All BZ Regions' - when Contact's Preferred BZ Region is set, add it to All BZ Regions too.
