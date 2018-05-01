@@ -83,6 +83,7 @@
 		Summer
 		Post Grad
 		Why BZ
+    Want Grow Professionally
 		Community Connection
 		Passions / Expertise
 		Meaningful Activity
@@ -120,7 +121,8 @@
     Volunteer Event Signups
 
 	CONTACT
-		Middle Name
+		Preferred_First_Name
+    Middle Name
 		Accepts Text 
     Candidate Status
 		Undergrad University 
@@ -130,7 +132,8 @@
 		Anticipated Graduation 
     Anticipated Graduation Semester
     Is_Graduate_Student__c
-		BZ Region
+		Preferred BZ Region (API name: BZ_Region__c)
+    All BZ Regions
 		BZ User Id 
 		Came From to Visit Site
 		Interested in opening BZ 
@@ -167,6 +170,13 @@
     Student Registration Code
     Last Interaction Date
     Cultivation Level
+    Funder_Information
+    National Board Member Information
+    Local Board Member Information
+    Employer_Partner_Information
+    University_Partner_Information
+    Media_Information
+
 		
 	LEAD
 		Account Activated?
@@ -185,3 +195,13 @@
 		Keep Informed
 		Interested In
 		Comments Or Questions
+
+#######
+Global Picklist Sets
+#######
+Pipeline_Phases
+BZ Region
+Candidate Statuses
+Seasons
+
+

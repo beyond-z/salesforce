@@ -2,6 +2,7 @@ public class BZ_CloseRecruitmentController {
 
     private static final String NEW_CAMPAIGN_NAME_PROMPT = '<Please enter new Campaign Name>';
     private final List<SelectOption> m_emailTemplateOptions;
+    private final List<SelectOption> m_programSemesterOptions;
     private ApexPages.StandardController m_controller {get; set;}
     public Campaign m_campaign {get;set;} // Active campaign
     public Campaign m_campaignSnapshot {get;set;} // Cloned Snapshot campaign
@@ -18,6 +19,8 @@ public class BZ_CloseRecruitmentController {
     
     public String newCampaignName {get; set;}
     public String newAvailableMeetingTimes {get; set;}
+    public String newProgramSemester {get; set;}
+        
     /**
      * The selected Previous Candidate New Invite email template.
      */
@@ -46,15 +49,35 @@ public class BZ_CloseRecruitmentController {
      */
     public List<SelectOption> getEmailTemplates(){
         return m_emailTemplateOptions;
-  }
+	}
+    
+     /**
+     * Returns the list of Program Semester options.
+     */
+    public List<SelectOption> getProgramSemesters(){
+        return m_programSemesterOptions;
+	}
+    
+    private static List<SelectOption> populateProgramSemesters(){
+        List<SelectOption> options= new List<SelectOption>();
+        Schema.DescribeFieldResult fieldResult = Campaign.Program_Semester__c.getDescribe();
+        List<Schema.PicklistEntry> ple = fieldResult.getPicklistValues();
+        for( Schema.PicklistEntry f : ple)
+        {
+            options.add(new SelectOption(f.getLabel(), f.getValue()));
+        }
+		return options;
+    }
     
     public BZ_CloseRecruitmentController(ApexPages.StandardController controller) {
         this.m_controller = controller;
         m_campaign = (Campaign)m_controller.getRecord();
         m_emailTemplateOptions = BZ_EmailTemplateProvider.getEmailTemplates();
+        m_programSemesterOptions = populateProgramSemesters();
         newCampaignName = NEW_CAMPAIGN_NAME_PROMPT; // campaign snapshot
         newAvailableMeetingTimes = m_campaign.Meeting_Times__c;
         prevCandidateEmailTemplate = m_campaign.Previous_Candidate_New_Invite__c;
+        newProgramSemester = m_campaign.Program_Semester__c;
         m_oldStartDate = m_campaign.StartDate;
         m_oldEndDate = m_campaign.EndDate;
         hasCompleted = false;
@@ -70,7 +93,8 @@ public class BZ_CloseRecruitmentController {
         
         
         m_jobId = System.enqueueJob(new BZ_CloseRecruitmentControllerQueueable(m_campaign, m_oldStartDate, m_oldEndDate, 
-                                                                                newCampaignName, newAvailableMeetingTimes, prevCandidateEmailTemplate));
+                                                                               newCampaignName, newAvailableMeetingTimes, 
+                                                                               prevCandidateEmailTemplate, newProgramSemester));
         hasStarted = true;
         return null;
     }
@@ -105,11 +129,12 @@ public class BZ_CloseRecruitmentController {
         private String m_newCampaignName;
         private String m_newAvailableMeetingTimes;
         private String m_prevCandidateEmailTemplate;
+        private String m_newProgramSemester;
         private ID m_jobId;
         
         public BZ_CloseRecruitmentControllerQueueable(Campaign campaign, Date oldStartDate, Date oldEndDate, 
                                                       String newCampaignName, String newAvailableMeetingTimes, 
-                                                      String prevCandidateEmailTemplate)
+                                                      String prevCandidateEmailTemplate, String newProgramSemester)
         {
             m_campaign = campaign;
             m_oldStartDate = oldStartDate;
@@ -117,6 +142,7 @@ public class BZ_CloseRecruitmentController {
             m_newCampaignName = newCampaignName;
             m_newAvailableMeetingTimes = newAvailableMeetingTimes;
             m_prevCandidateEmailTemplate = prevCandidateEmailTemplate;
+            m_newProgramSemester = newProgramSemester;
         }
         
         public void execute(QueueableContext context)
@@ -155,6 +181,7 @@ public class BZ_CloseRecruitmentController {
                 m_campaign.Name = m_newCampaignName;
                 m_campaign.Meeting_Times__c = m_newAvailableMeetingTimes;
                 m_campaign.Previous_Candidate_New_Invite__c = m_prevCandidateEmailTemplate;
+                m_campaign.Program_Semester__c = m_newProgramSemester;
                 m_campaign.Status = 'In Progress';
                 m_campaign.ParentId = m_campaignSnapshot.Id;
                 update m_campaign;
