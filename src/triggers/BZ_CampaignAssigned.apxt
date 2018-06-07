@@ -97,6 +97,17 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
                 contact.Is_In_Active_Recruitment_Campaign__c = campaign.IsActive;
             }
             isApplicableCampaign = true;
+        } else if (campaign.Type == 'Pre-Accelerator Participants'){
+            // Ditto on above comment
+            if (hasCourseCompleted && cm.Candidate_Status__c == 'Confirmed'){
+                contact.Participant_Information__c = 'Former: Pre-Accelerator Participant';
+            } else {
+                contact.Participant_Information__c = 'Prospect: Pre-Accelerator Participant';
+            }
+            if (campaign.IsActive){ // If InActive, they may in other Active campaigns, so NOOP
+                contact.Is_In_Active_Recruitment_Campaign__c = campaign.IsActive;
+            }
+            isApplicableCampaign = true;
         } else if (campaign.Type == 'Volunteer'){
             // Ditto on above comment.
             if (cm.Candidate_Status__c == 'Confirmed')

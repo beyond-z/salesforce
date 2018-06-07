@@ -18,6 +18,7 @@ trigger BZ_CampaignActive on Campaign (before update) {
                (
                currentCampaign.Type == 'Leadership Coaches' ||
                currentCampaign.Type == 'Program Participants' ||
+               currentCampaign.Type == 'Pre-Accelerator Participants' ||
                currentCampaign.Type == 'Volunteer'
                )
            )
@@ -88,6 +89,7 @@ trigger BZ_CampaignActive on Campaign (before update) {
                            (
                            campaign.Type == 'Leadership Coaches' ||
                            campaign.Type == 'Program Participants' ||
+                           campaign.Type == 'Pre-Accelerator Participants' ||
                            campaign.Type == 'Volunteer'
                            )
                        )
