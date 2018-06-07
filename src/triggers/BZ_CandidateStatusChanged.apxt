@@ -88,6 +88,8 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
                     contact.Volunteer_Information__c = 'Current LC';
                 } else if (campaign.Type == 'Program Participants'){
                     contact.Participant_Information__c = 'Participant';
+                } else if (campaign.Type == 'Pre-Accelerator Participants'){
+                    contact.Participant_Information__c = 'Current: Pre-Accelerator Participant';
                 } else if (campaign.Type == 'Volunteer'){
                     contact.Event_Volunteer_Information__c = 'Current';
                 } else if (campaign.Type == 'Mentor'){
@@ -104,6 +106,8 @@ trigger BZ_CandidateStatusChanged on CampaignMember (before update) {
                     contact.Volunteer_Information__c = 'LC Pipeline';
                 } else if (campaign.Type == 'Program Participants'){
                     contact.Participant_Information__c = 'Participant Pipeline';
+                } else if (campaign.Type == 'Pre-Accelerator Participants'){
+                    contact.Participant_Information__c = 'Prospect: Pre-Accelerator Participant';
                 } else if (campaign.Type == 'Volunteer'){ // A little different for volunteers, just record it.
                     contact.Event_Volunteer_Information__c = 'Opted Out';
                 } else if (campaign.Type == 'Mentor'){ // A little different for mentors, just record it.

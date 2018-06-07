@@ -13,6 +13,7 @@ trigger BZ_CampaignCompleted on Campaign (before update) {
                (
                currentCampaign.Type == 'Leadership Coaches' ||
                currentCampaign.Type == 'Program Participants' ||
+               currentCampaign.Type == 'Pre-Accelerator Participants' ||
                currentCampaign.Type == 'Volunteer' ||
                currentCampaign.Type == 'Mentor'
                )
@@ -41,6 +42,11 @@ trigger BZ_CampaignCompleted on Campaign (before update) {
             } else if (currentCampaign.Type == 'Program Participants'){
                 for (Contact c : contactsToUpdate){
                     c.Participant_Information__c = 'Program Alum';
+                    urlEncodedEmailsToDisableBravenHelp += System.EncodingUtil.urlEncode(c.Email, 'UTF-8') + ',';
+                }
+            } else if (currentCampaign.Type == 'Pre-Accelerator Participants'){
+                for (Contact c : contactsToUpdate){
+                    c.Participant_Information__c = 'Former: Pre-Accelerator Participant';
                     urlEncodedEmailsToDisableBravenHelp += System.EncodingUtil.urlEncode(c.Email, 'UTF-8') + ',';
                 }
             } else if (currentCampaign.Type == 'Volunteer'){

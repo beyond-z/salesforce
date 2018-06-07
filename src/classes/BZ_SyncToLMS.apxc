@@ -11,12 +11,18 @@ public class BZ_SyncToLMS {
     private string m_membersToSyncDisplayList;
     
     public BZ_SyncToLMS(ApexPages.StandardController controller){
-        controller.addFields(new List<String>{'IsActive'}); // Avoid error: "SObject row was retrieved via SOQL without querying the requested field"
+        controller.addFields(new List<String>{'IsActive', 'Type'}); // Avoid error: "SObject row was retrieved via SOQL without querying the requested field"
         m_campaign = (Campaign)controller.getRecord();
         if (!m_campaign.IsActive)
         {
             m_hasRun = true;
             m_resultMessage = 'The campaign is Inactive.  You can only use Sync To LMS with Active campaigns.';
+            return;
+        }
+        
+        if (m_campaign.Type != 'Leadership Coaches' && m_campaign.Type != 'Program Participants'){
+            m_hasRun = true;
+            m_resultMessage = 'You can only use Sync To LMS with campaigns of Type: \'Program Participants\' or \'Leadership Coaches\'';
             return;
         }
         
