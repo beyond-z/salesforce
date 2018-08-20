@@ -54,9 +54,21 @@ public abstract class BZ_ChangeCampaignMemberBase {
              }
              
              if (oldCampaign.Type != newCampaign.Type){
-                 throw new BZ_ChangeCampaignException('The specified campaign is not of the same type. The source \''+ oldCampaign.Name + 
+                 // Allow Pre-Accel and Fellows be changed to each other since it's a common
+                 // mistake and there is no difference between the two applications.
+                 if ((oldCampaign.Type == 'Pre-Accelerator Participants' || oldCampaign.Type == 'Program Participants') 
+                     &&
+                     (newCampaign.Type == 'Pre-Accelerator Participants' || newCampaign.Type == 'Program Participants')
+                    )
+                 {
+                        System.debug('BZ_ChangeCampaignMemberBase: Allowing Move operation between Fellow and Pre-Accelerator Fellow Campaigns bc the apps are the same and this happens by accident a good amount.');
+                 }
+                 else
+                 {
+                    throw new BZ_ChangeCampaignException('The specified campaign is not of the same type. The source \''+ oldCampaign.Name + 
                                                       '\' campaign is of Type=\''+oldCampaign.Type + '\'. The target \''+newCampaign.Name + 
                                                       '\' campaign is of Type=\''+newCampaign.Type);
+                 }
              }
                               
              validateNewCampaign(oldCampaign, newCampaign);

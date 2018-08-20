@@ -15,6 +15,7 @@ public class BZ_CampaignFactory_TEST {
         return new Campaign(Name='Test Campaign', OwnerId=ownerId, 
                             Invite_Email_Template__c='BZ_Test Invite Email Template',
                             Intro_Email_Template__c='BZ_Test Intro Email Template', 
+                            Previous_Candidate_New_Invite__c = 'BZ_Test Reinvite Email Template',
                             Type=type, 
                             Application_Type__c='student', 
                             Program_Title__c='Blah', 

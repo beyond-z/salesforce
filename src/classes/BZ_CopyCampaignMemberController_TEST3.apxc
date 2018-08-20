@@ -25,16 +25,16 @@ public class BZ_CopyCampaignMemberController_TEST3 {
         campaignTo.IsActive = true;
         insert campaignTo;
                 
-      ApexPages.StandardController sc = new ApexPages.standardController(cm);
+    	ApexPages.StandardController sc = new ApexPages.standardController(cm);
             
         PageReference pageRef = Page.BZ_CloseRecruitment;
         Test.setCurrentPage(pageRef);
         
-      BZ_CopyCampaignMemberController controller = new BZ_CopyCampaignMemberController(sc);
+    	BZ_CopyCampaignMemberController controller = new BZ_CopyCampaignMemberController(sc);
         controller.newCampaignLookup.CampaignId = campaignTo.Id;
         PageReference result = controller.run();
         
-        System.Assert(result == null, 'controller.run() should return null');
+        System.Assert(result == null, 'controller.run() should return null bc you cant copy from an Active campaign to another. Only one can be Active at a time');
         System.Assert(ApexPages.hasMessages(), 'An error message should be added to the page');
     }
 }
