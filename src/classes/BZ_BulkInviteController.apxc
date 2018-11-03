@@ -299,13 +299,14 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
                 update m_existingContactsToUpdate;
                 
                 List<CampaignMember> cms = new List<CampaignMember>();
+                DateTime bulkInviteDateTime = DateTime.now();
                 for (Contact c : m_contactsToBulkInvite)
                 {
                     CampaignMember cm;
                     if (m_campaign.Type == 'Program Participants' || m_campaign.Type == 'Pre-Accelerator Participants'){
-                        cm = new CampaignMember(ContactId=c.Id, campaignId=m_campaign.Id, Undergrad_University__c=m_campaign.Program_Site__c);
+                        cm = new CampaignMember(ContactId=c.Id, campaignId=m_campaign.Id, Undergrad_University__c=m_campaign.Program_Site__c, Bulk_Invite_Date__c =bulkInviteDateTime);
                     } else {
-                        cm = new CampaignMember(ContactId=c.Id, campaignId=m_campaign.Id);
+                        cm = new CampaignMember(ContactId=c.Id, campaignId=m_campaign.Id, Bulk_Invite_Date__c =bulkInviteDateTime);
                     }
                     cms.add(cm);
                     System.debug('BZ_BulkInviteControllerQueueable.execute(): Added the following CampaignMember: '+cm);

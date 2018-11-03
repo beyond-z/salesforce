@@ -35,6 +35,7 @@
 
 	CAMPAIGN MEMBER
 		Date App Submitted
+    Bulk Invite Date
 		Selected Timeslot
 		Company
 		Industry
@@ -115,6 +116,7 @@
 		Reference 2 How Long Known
 		Reference 2 Phone
 		Reference 2 Email
+    Registration Instructions
     Opted Out Reason
     Cultivation Level
     Last Interaction Date
