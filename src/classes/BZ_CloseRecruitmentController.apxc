@@ -1,6 +1,5 @@
 public class BZ_CloseRecruitmentController {
 
-    System.debug('Merging Changes');
     private static final String NEW_CAMPAIGN_NAME_PROMPT = '<Please enter new Campaign Name>';
     private final List<SelectOption> m_emailTemplateOptions;
     private final List<SelectOption> m_programSemesterOptions;
