@@ -1,63 +1,64 @@
 /**
- * Handles CloseRecruitment actions of Salesforce related actions.
- */
+* Handles CloseRecruitment actions of Salesforce related actions.
+*/
 public class BZ_CloseRecruitmentController {
-
+    
     private static final String NEW_CAMPAIGN_NAME_PROMPT = '<Please enter new Campaign Name>';
     private final List<SelectOption> m_emailTemplateOptions;
     private final List<SelectOption> m_programSemesterOptions;
-    public String newCampaignName {get; set;}
-    public String newAvailableMeetingTimes {get; set;}
-    public String newProgramSemester {get; set;}
+    public String m_newCampaignName {get; set;}
+    public String m_newAvailableMeetingTimes {get; set;}
+    public String m_newProgramSemester {get; set;}
     public Campaign m_campaign = new Campaign();
     public Campaign m_campaignSnapshot = new Campaign();
-    // This is true when the Close Recruitment logic is running
-    public static Boolean IsCloseRecruitmentRunning {get; set;}
+    private ApexPages.StandardController m_controller {get; set;}
     
+    // This is true when the Close Recruitment logic is running
+    public static Boolean IsCloseRecruitmentRunning {get; set;}    
     static {
         IsCloseRecruitmentRunning = false;
     }
     
     
     /**
-     * The selected Previous Candidate New Invite email template.
-     */
-    public string prevCandidateEmailTemplate {
+* The selected Previous Candidate New Invite email template.
+*/
+    public string m_prevCandidateEmailTemplate {
         get; set;
     }
-
+    
     /*
-     * Starts off false and set to true when the operation is complete.
-     */    
+* Starts off false and set to true when the operation is complete.
+*/    
     public Boolean hasCompleted { get; set; }
     
     /*
-     * Starts off false and set to true when the operation is queued up.
-     */    
+* Starts off false and set to true when the operation is queued up.
+*/    
     public Boolean hasStarted { get; set; }
     
     /*
-     * Displays progress as we poll the status of the job.
-     */
+* Displays progress as we poll the status of the job.
+*/
     public String progressString { get; set; }
-
+    
     /**
-     * Returns the list of all Beyond Z email templates, determined if they are prefixed
-     * with "BZ"
-     */
+* Returns the list of all Beyond Z email templates, determined if they are prefixed
+* with "BZ"
+*/
     public List<SelectOption> getEmailTemplates(){
         return m_emailTemplateOptions;
     }
     
-     /**
-     * Returns the list of Program Semester options.
-     */
+    /**
+* Returns the list of Program Semester options.
+*/
     public List<SelectOption> getProgramSemesters(){
         return m_programSemesterOptions;
     }
     /**
-     * Constructs the Program_Semester__c picklist of Program Semester options.
-     */
+* Constructs the Program_Semester__c picklist of Program Semester options.
+*/
     private static List<SelectOption> populateProgramSemesters(){
         List<SelectOption> options= new List<SelectOption>();
         options.add(new SelectOption('','--None--'));
@@ -70,59 +71,56 @@ public class BZ_CloseRecruitmentController {
         return options;
     }
     /**
-     * Initialize the controller for use with a VisualForce page.
-     */
+* Initialize the controller for use with a VisualForce page.
+*/
     public BZ_CloseRecruitmentController(ApexPages.StandardController controller) {
-        m_campaign = (Campaign)controller.getRecord();     
+        this.m_controller = controller;
+        m_campaign = (Campaign)m_controller.getRecord();     
         m_emailTemplateOptions = BZ_EmailTemplateProvider.getEmailTemplates();
         m_programSemesterOptions = populateProgramSemesters();
-        newCampaignName = NEW_CAMPAIGN_NAME_PROMPT; 
-        newAvailableMeetingTimes = m_campaign.Meeting_Times__c;
-        prevCandidateEmailTemplate = m_campaign.Previous_Candidate_New_Invite__c;
-        newProgramSemester = m_campaign.Program_Semester__c;
+        m_newCampaignName = NEW_CAMPAIGN_NAME_PROMPT; 
+        //m_newAvailableMeetingTimes = m_campaign.Meeting_Times__c;
+        m_prevCandidateEmailTemplate = m_campaign.Previous_Candidate_New_Invite__c;
+        m_newProgramSemester = m_campaign.Program_Semester__c;
         hasCompleted = false;
         hasStarted = false;
         progressString = '. . .';
         
     }
-
+    
     /**
-     * method called from the VF's action attribute to close recruitment for this campaign.
-     */
-     public PageReference run() {
-        if (newCampaignName == NEW_CAMPAIGN_NAME_PROMPT){
+* method called from the VF's action attribute to close recruitment for this campaign.
+*/
+    public PageReference run() {
+        if (m_newCampaignName == NEW_CAMPAIGN_NAME_PROMPT){
             throw new BZ_CloseRecruitmentException('Please enter a \'New Campaign Name\'');
         }
         else{
-       		System.Debug('BZ_CloseRecruitment.execute(): begin');
+            System.Debug('BZ_CloseRecruitment.run(): begin');
             Savepoint sp = Database.setSavepoint();
             //IsCloseRecruitmentRunning = true;
             BZ_Notifications.disableNotifyApplyNow = true;
             m_campaign.IsActive = false;
-        try{
-            	System.Debug('BZ_CloseRecruitmentController execute(): about m_campaign = ' + m_campaign);
-            
-                //Creating New Campaign with the existing campaign details
-              	Campaign newCampaignSnapshot=createNewCampaign(m_campaign); 
-            
-                System.Debug('BZ_CloseRecruitmentController execute(): about to create new newCampaignSnapshot = ' + newCampaignSnapshot);
-                System.Debug('BZ_CloseRecruitmentController execute(): about to clone m_campaign = ' + m_campaign);
-            if(newCampaignSnapshot!=null && newCampaignSnapshot.Id!=null)
-            {
-                hasCompleted = true;
-            	PageReference pr = new PageReference('/' + newCampaignSnapshot.Id);
-            	progressString = 'Campaign was created successfully! <a href="' + pr.getUrl() + '">Click here to go to the new campaign</a>';
-            }else if(newCampaignSnapshot==null)
-            {
-                progressString = 'An error was encountered: <br/><br/>';
-            	hasCompleted = true;
-            	ApexPages.Message errormsg = new ApexPages.Message(ApexPages.severity.ERROR,'The Close Recruitment operation failed.  Please contact your system administrator.');
-            	ApexPages.addMessage(errormsg);
-            }else {
-            progressString += ' .';
-            hasCompleted = false;
-        }
-        } catch (Exception e){
+            try{
+                System.Debug('BZ_CloseRecruitmentController.run(): about m_campaign = ' + m_campaign);
+                
+                //Creating New Campaign
+                createNewCampaign();
+                
+                if(m_campaignSnapshot!=null && m_campaignSnapshot.Id!=null) {
+                    hasCompleted = true;
+                    PageReference pr = new PageReference('/' + m_campaignSnapshot.Id);
+                    progressString = 'Campaign was created successfully! <a href="' + pr.getUrl() + '">Click here to go to the new campaign</a>';
+                } else if(m_campaignSnapshot==null) {
+                    progressString = 'An error was encountered: <br/><br/>';
+                    hasCompleted = true;
+                    ApexPages.Message errormsg = new ApexPages.Message(ApexPages.severity.ERROR,'The Close Recruitment operation failed.  Please contact your system administrator.');
+                    ApexPages.addMessage(errormsg);
+                } else {
+                    progressString += ' .';
+                    hasCompleted = false;
+                }
+            } catch (Exception e){
                 // roll everything back in case of error
                 Database.rollback(sp);
                 throw e;
@@ -131,70 +129,40 @@ public class BZ_CloseRecruitmentController {
                 IsCloseRecruitmentRunning = false;
             }
             
-            System.Debug('BZ_CloseRecruitment.execute(): end');}
+        System.Debug('BZ_CloseRecruitment.run(): end');}
         hasStarted = true;
-        //m_jobId=null;
         return null;
     }
     
     /**
-     * Creating New Campaign with the existing campaign details.
-     */
-     public Campaign createNewCampaign(Campaign m_campaign)
-        {
-            m_campaignSnapshot = new Campaign();
-            try{
-            if(m_campaign!=null)
-            {
-            // Campaign Details Section
-            m_campaignSnapshot.Name = newCampaignName;
-            m_campaignSnapshot.Status = 'In Progress';
-            m_campaignSnapshot.ParentId = m_campaign.Id;
-            m_campaignSnapshot.Type = m_campaign.Type;
-            m_campaignSnapshot.BZ_Region__c = m_campaign.BZ_Region__c;
-            m_campaignSnapshot.StartDate =m_campaign.StartDate; 
-            m_campaignSnapshot.EndDate = m_campaign.EndDate;                    
-            //Program Information Fields Section
-            m_campaignSnapshot.Program_Title__c=m_campaign.Program_Title__c;
-            m_campaignSnapshot.Program_Site__c=m_campaign.Program_Site__c;
-            m_campaignSnapshot.Application_Type__c = m_campaign.Application_Type__c;
-            m_campaignSnapshot.Program_Semester__c = newProgramSemester;
-            m_campaignSnapshot.Coach_Course_ID__c=m_campaign.Coach_Course_ID__c;
-            m_campaignSnapshot.Target_Course_ID_In_LMS__c=m_campaign.Target_Course_ID_In_LMS__c;
-            m_campaignSnapshot.Meeting_Times__c = newAvailableMeetingTimes;
-            m_campaignSnapshot.Section_Name_Site_Prefix__c=m_campaign.Section_Name_Site_Prefix__c;
-            m_campaignSnapshot.Section_Name_in_LMS_Coach_Course__c=m_campaign.Section_Name_in_LMS_Coach_Course__c;
-            m_campaignSnapshot.Volunteer_Opportunities__c=m_campaign.Volunteer_Opportunities__c;
-            m_campaignSnapshot.Sourcing_Info_Options__c=m_campaign.Sourcing_Info_Options__c;
-            //End of the Program Information Fields
-            //Email Fields section
-            m_campaignSnapshot.Invite_Email_Template__c=m_campaign.Invite_Email_Template__c;
-            m_campaignSnapshot.Intro_Email_Template__c=m_campaign.Intro_Email_Template__c;
-            m_campaignSnapshot.App_Open_Email_Template__c=m_campaign.App_Open_Email_Template__c;
-            m_campaignSnapshot.App_Rejected_Email_Template__c=m_campaign.App_Rejected_Email_Template__c;
-            m_campaignSnapshot.App_Submit_Reminder_Template__c=m_campaign.App_Submit_Reminder_Template__c;
-            m_campaignSnapshot.App_Waitlisted_Email_Template__c=m_campaign.App_Waitlisted_Email_Template__c;
-            m_campaignSnapshot.App_Not_Accepted_Email_Template__c=m_campaign.App_Not_Accepted_Email_Template__c;
-            m_campaignSnapshot.App_Interview_Requested_Email_Template__c=m_campaign.App_Interview_Requested_Email_Template__c;
-            m_campaignSnapshot.App_Accepted_Email_Template__c=m_campaign.App_Accepted_Email_Template__c;
-            m_campaignSnapshot.Previous_Candidate_New_Invite__c = prevCandidateEmailTemplate;
-            m_campaignSnapshot.Recruitment_Closed__c=True;
-            m_campaignSnapshot.ProcessType__c='Create';
-            //End of the Email Fields
-            // Check if Campaign is null or not  
-            if(m_campaignSnapshot!=null & m_campaign!=null)
-            {	//Inserting new campaign with the old campaign details
-                insert m_campaignSnapshot;
-                //Updating the old campaign details
-            	update m_campaign;
-            }
-            }
-            }
-            catch(Exception ex)
-            {
-                throw ex;
-            }
-            return m_campaignSnapshot;
-        }
+* Creating New Campaign with the existing campaign details.
+*/
+    public void createNewCampaign() {
+        
+        System.Debug('BZ_CloseRecruitmentController.createNewCampaign(): start');
+        BZ_ClonePlusController cloneController = new BZ_ClonePlusController(m_campaign.Id, new Set<String>{'CampaignMember', 'Task'});
+        
+        System.Debug('BZ_CloseRecruitmentController.createNewCampaign(): getParentClone()');
+        m_campaignSnapshot = (Campaign)cloneController.getParentClone();
+        m_campaignSnapshot.Name = m_newCampaignName;
+        m_campaignSnapshot.ParentId = m_campaign.Id;
+        m_campaignSnapshot.Previous_Candidate_New_Invite__c = m_prevCandidateEmailTemplate;
+        m_campaignSnapshot.Program_Semester__c = m_newProgramSemester;
+        m_campaignSnapshot.StartDate = m_campaign.StartDate; 
+        m_campaignSnapshot.EndDate = m_campaign.EndDate;
+        m_campaignSnapshot.Target_Course_ID_In_LMS__c = m_campaign.Target_Course_ID_In_LMS__c;
+        m_campaignSnapshot.Coach_Course_ID__c = m_campaign.Coach_Course_ID__c;
+        m_campaignSnapshot.Meeting_Times__c = m_newAvailableMeetingTimes;
+        m_campaignSnapshot.Status = 'In Progress';
+        m_campaignSnapshot.Recruitment_Closed__c=True;
+        m_campaignSnapshot.ProcessType__c = 'Create';
+        insert m_campaignSnapshot;
+        
+        m_campaign.IsActive = false;
+        update m_campaign;
+        
+        System.Debug('BZ_CloseRecruitmentController.createNewCampaign(): end');
+    }
+    
     public class BZ_CloseRecruitmentException extends Exception {}
 }
