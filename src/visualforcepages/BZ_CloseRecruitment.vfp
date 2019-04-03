@@ -41,7 +41,7 @@
                 </apex:pageBlockSectionItem>
                 <apex:pageBlockSectionItem >
                     <apex:outputLabel value="New Campaign Name" for="newCampaignNameField"/>
-                    <apex:inputText id="newCampaignNameField" required="true" value="{!newCampaignName}" size="50"/> 
+                    <apex:inputText id="newCampaignNameField" required="true" value="{!m_newCampaignName}" size="50"/> 
                 </apex:pageBlockSectionItem>
                 <apex:pageBlockSectionItem >
                     <apex:outputPanel >
@@ -78,7 +78,7 @@
                     <apex:outputLabel value="Email Template To Queue Up" styleClass="noWrap"/>
                     <apex:outputPanel layout="block">
 						<apex:outputPanel layout="block"/>
-                        <apex:selectList size="1" value="{!prevCandidateEmailTemplate}">
+                        <apex:selectList size="1" value="{!m_prevCandidateEmailTemplate}">
                             <apex:selectoptions value="{!EmailTemplates}"/>
                         </apex:selectList>
                     </apex:outputPanel>
@@ -87,7 +87,7 @@
                     <apex:outputLabel value="Program Semester" styleClass="noWrap"/>
                     <apex:outputPanel layout="block">
 						<apex:outputPanel layout="block"/>
-                        <apex:selectList size="1" value="{!newProgramSemester}">
+                        <apex:selectList size="1" value="{!m_newProgramSemester}">
                             <apex:selectoptions value="{!ProgramSemesters}"/>
                         </apex:selectList>
                     </apex:outputPanel>
@@ -114,7 +114,7 @@
                 </apex:pageBlockSectionItem>
                 <apex:pageBlockSectionItem >
                     <apex:outputLabel value="Available Meeting Times" for="newCampaignAvailMeetingTimesField"/>
-                    <apex:inputTextArea id="newCampaignAvailMeetingTimesField" required="true" value="{!newAvailableMeetingTimes}" cols="50" rows="5"/>
+                    <apex:inputTextArea id="newCampaignAvailMeetingTimesField" required="true" value="{!m_newAvailableMeetingTimes}" cols="50" rows="5"/>
                 </apex:pageBlockSectionItem>
                 <apex:pageBlockSectionItem >                
                     <apex:commandButton action="{!run}" value="Run"/>
