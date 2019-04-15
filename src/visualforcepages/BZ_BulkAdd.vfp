@@ -37,6 +37,8 @@
             <li>Small Group In-Person Meeting</li>
             <li>Interaction at Larger Function</li>
             <li>Attended BZ Function</li>
+            <li>Classroom Presentation</li>
+            <li>Student Org Presentation</li>
         </ul>
         <br/><br/>
         The value of the BZ Region MUST exactly match the available values for a Contact <a href="https://na74.salesforce.com/00No000000ARSLT?setupid=ContactFields">BZ Region</a>.
