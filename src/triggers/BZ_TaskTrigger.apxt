@@ -1,0 +1,10 @@
+/*
+ * When a task is created or updated, all campaign members related to the Contact (Relate to) 
+ * should be updated according to the task.
+ * 
+ * Created By: MST
+ * 
+ */
+trigger BZ_TaskTrigger on Task (before insert, before update) {
+  BZ_TaskTriggerHelper.updateCampaignMember(Trigger.new);
+}

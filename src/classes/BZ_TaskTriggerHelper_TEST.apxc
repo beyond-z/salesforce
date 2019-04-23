@@ -1,0 +1,44 @@
+/*
+ * Test class for BZ_TaskTriggerHelper
+ * 
+ * Created By: MST
+ * 
+ */
+@isTest
+public class BZ_TaskTriggerHelper_TEST {
+
+    public static testmethod void updateCampaignMemberTest() {
+        
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
+        insert campaignOwner;
+        
+        Campaign closedCampaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        String campaignBeingClosedName = 'New Campaign';
+        closedCampaign.name=campaignBeingClosedName;
+        String reinviteEmailTemplateName = 'reinviteEmailTemplate';
+        closedCampaign.Previous_Candidate_New_Invite__c = reinviteEmailTemplateName;
+        closedCampaign.StartDate=Date.today();
+        closedCampaign.EndDate=Date.today();
+        insert closedCampaign;
+        
+        CampaignMember cmWaitlist = new CampaignMember();
+        cmWaitlist.CampaignId=closedCampaign.Id;
+        cmWaitlist.ContactId=campaignOwner.Id;
+        cmWaitlist.Candidate_Status__c = 'Waitlisted';
+        cmWaitlist.Application_Status__c = 'Submitted';
+        insert cmWaitlist;
+        
+        List<Task> taskToTest = new List<Task>();
+        Task tWaitlist = new Task(Subject='Test CampaignWaitlist', CampaignMemberId__c=cmWaitlist.Id, WhoId=campaignOwner.Id, WhatId=closedCampaign.Id,
+                                 Likelihood_to_Apply__c = 'Likely', Barriers__c = 'Test Barrier');        
+        taskToTest.add(tWaitlist);
+        
+        Test.startTest();
+        BZ_TaskTriggerHelper.updateCampaignMember(taskToTest);
+        Test.stopTest();
+        
+        List<CampaignMember> campaignMemberList = [SELECT Id, Likelihood_to_Apply__c, Opt_out_Reason__c FROM CampaignMember WHERE Id =: cmWaitlist.Id];
+        System.assertEquals(tWaitlist.Likelihood_to_Apply__c, campaignMemberList[0].Likelihood_to_Apply__c);
+        System.assertEquals(tWaitlist.Barriers__c, campaignMemberList[0].Opt_out_Reason__c);
+    }
+}

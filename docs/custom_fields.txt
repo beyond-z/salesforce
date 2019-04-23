@@ -7,6 +7,79 @@
     CampaignMember Id
     Interation Type
 
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fields>
+        <fullName>Barriers__c</fullName>
+        <externalId>false</externalId>
+        <label>Barriers</label>
+        <required>false</required>
+        <type>TextArea</type>
+    </fields>
+    <fields>
+        <fullName>Likelihood_to_Apply__c</fullName>
+        <description>Likelihood a fellow will apply</description>
+        <externalId>false</externalId>
+        <label>Likelihood to Apply</label>
+        <required>false</required>
+        <type>Picklist</type>
+        <valueSet>
+            <restricted>true</restricted>
+            <valueSetDefinition>
+                <sorted>false</sorted>
+                <value>
+                    <fullName>Won’t apply</fullName>
+                    <default>false</default>
+                    <label>Won’t apply</label>
+                </value>
+                <value>
+                    <fullName>Unlikely</fullName>
+                    <default>false</default>
+                    <label>Unlikely</label>
+                </value>
+                <value>
+                    <fullName>Maybe</fullName>
+                    <default>false</default>
+                    <label>Maybe</label>
+                </value>
+                <value>
+                    <fullName>Likely</fullName>
+                    <default>false</default>
+                    <label>Likely</label>
+                </value>
+                <value>
+                    <fullName>Will Apply</fullName>
+                    <default>false</default>
+                    <label>Will Apply</label>
+                </value>
+            </valueSetDefinition>
+        </valueSet>
+    </fields>
+    <fields>
+        <fullName>Meeting_Date__c</fullName>
+        <externalId>false</externalId>
+        <label>Meeting Date</label>
+        <required>false</required>
+        <type>Date</type>
+    </fields>
+    <fields>
+        <fullName>Motivation__c</fullName>
+        <description>To measure motivation of Fellow.</description>
+        <externalId>false</externalId>
+        <label>Motivation</label>
+        <required>false</required>
+        <type>TextArea</type>
+    </fields>
+    <fields>
+        <fullName>Next_Steps__c</fullName>
+        <externalId>false</externalId>
+        <label>Next Steps</label>
+        <required>false</required>
+        <type>TextArea</type>
+    </fields>
+</CustomObject>
+
+
 	CAMPAIGN
     Default Timezone
 		Intro Email Template
@@ -121,6 +194,84 @@
     Cultivation Level
     Last Interaction Date
     Volunteer Event Signups
+
+
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fields>
+        <fullName>Likelihood_to_Apply_Notes__c</fullName>
+        <description>Used to write notes about the person's interest in applying (motivations, barriers, etc) and we can pull this info into our reports to aid with cultivation.</description>
+        <externalId>false</externalId>
+        <inlineHelpText>Used to write notes about the person's interest in applying (motivations, barriers, etc) and we can pull this info into our reports to aid with cultivation.</inlineHelpText>
+        <label>Historical Likelihood to Apply Notes</label>
+        <length>1000</length>
+        <type>LongTextArea</type>
+        <visibleLines>2</visibleLines>
+    </fields>
+    <fields>
+        <fullName>Likelihood_to_Apply__c</fullName>
+        <externalId>false</externalId>
+        <label>Likelihood to Apply</label>
+        <required>false</required>
+        <type>Picklist</type>
+        <valueSet>
+            <restricted>true</restricted>
+            <valueSetDefinition>
+                <sorted>false</sorted>
+                <value>
+                    <fullName>Likely</fullName>
+                    <default>false</default>
+                    <label>Likely</label>
+                </value>
+                <value>
+                    <fullName>Maybe</fullName>
+                    <default>false</default>
+                    <label>Maybe</label>
+                </value>
+                <value>
+                    <fullName>Unlikely</fullName>
+                    <default>false</default>
+                    <label>Unlikely</label>
+                </value>
+                <value>
+                    <fullName>Will Apply</fullName>
+                    <default>false</default>
+                    <label>Will Apply</label>
+                </value>
+                <value>
+                    <fullName>Won’t Apply</fullName>
+                    <default>false</default>
+                    <label>Won’t Apply</label>
+                </value>
+            </valueSetDefinition>
+        </valueSet>
+    </fields>
+    <fields>
+        <fullName>Opt_out_Reason__c</fullName>
+        <description>Opt-out reason if "Likelihood to apply" is marked as "Won't apply" or "Unlikely"</description>
+        <externalId>false</externalId>
+        <inlineHelpText>Opt-out reason if "Likelihood to apply" is marked as "Won't apply" or "Unlikely"</inlineHelpText>
+        <label>Barriers</label>
+        <required>false</required>
+        <type>TextArea</type>
+    </fields>
+    <validationRules>
+        <fullName>BZ_RequiredOptReasonForLikeli</fullName>
+        <active>true</active>
+        <description>When "Likelihood to apply" is set to "Won't apply" or "Unlikely" in student recruitment, a reason must be specified.</description>
+        <errorConditionFormula>AND(
+ ISBLANK( Opt_out_Reason__c ),
+OR(
+ ISPICKVAL( Likelihood_to_Apply__c , 'Won’t Apply'),
+ ISPICKVAL( Likelihood_to_Apply__c , 'Unlikely')),
+OR(
+ ISPICKVAL( Campaign.Type , 'Pre-Accelerator Participants'),
+ ISPICKVAL( Campaign.Type , 'Program Participants') ) )</errorConditionFormula>
+        <errorMessage>When setting Likelihood to Apply to "Won't Apply" or "Unlikely", a reason must be specified.</errorMessage>
+    </validationRules>
+</CustomObject>
+
+
 
 	CONTACT
 		Preferred_First_Name
