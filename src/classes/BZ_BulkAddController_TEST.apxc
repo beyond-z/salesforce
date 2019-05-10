@@ -138,7 +138,7 @@ private class BZ_BulkAddController_TEST {
         PageReference pageRef = Page.BZ_BulkInvite;
         Test.setCurrentPage(pageRef);
 
-      BZ_BulkAddController controller = new BZ_BulkAddController(sc);
+    	BZ_BulkAddController controller = new BZ_BulkAddController(sc);
         String email1 = 'email@email.com';
         String email2 = 'brian.test2@example.com';
         String email3 = 'brian.test3@example.com';
@@ -190,7 +190,7 @@ private class BZ_BulkAddController_TEST {
         PageReference pageRef = Page.BZ_BulkInvite;
         Test.setCurrentPage(pageRef);
 
-      BZ_BulkAddController controller = new BZ_BulkAddController(sc);
+    	BZ_BulkAddController controller = new BZ_BulkAddController(sc);
         String email1 = 'email@email.com';
         String email2 = 'brian.test2@example.com';
         List<String> emailsToAdd = new List<String>{email1, email2};
@@ -233,7 +233,7 @@ private class BZ_BulkAddController_TEST {
         PageReference pageRef = Page.BZ_BulkInvite;
         Test.setCurrentPage(pageRef);
 
-      BZ_BulkAddController controller = new BZ_BulkAddController(sc);
+    	BZ_BulkAddController controller = new BZ_BulkAddController(sc);
         String email1 = 'email@email.com';
         String email2 = 'brian.test2@example.com';
         List<String> emailsToAdd = new List<String>{email1, email2};

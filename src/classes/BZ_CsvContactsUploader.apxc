@@ -1,13 +1,21 @@
 /**
- * Reads a CSV file of Contacts in the format: 
- * FirstName, LastName, Email, Phone, InteractionType, InteractionDescription, BZRegion
+ * Reads a CSV file of Contacts in the format for BulkAdd: 
+ * 
+ *     FirstName, LastName, Email, Phone, InteractionType, InteractionDescription, BZRegion 
+ * 
+ * OR for BulkInvite
+ * 
+ *     FirstName, LastName, Email, Phone, Major, Anticipated Graduation Date, InteractionType, InteractionDescription
+ * 
  * Only FirstName, LastName, Email are required.
  */
 public abstract class BZ_CsvContactsUploader extends BZ_CsvUploaderBase {
 
     private List<Contact> m_contactsToBulkInvite;
     private Set<String> m_bzregions;
-
+    
+    abstract Boolean isBulkInviteUpload();
+    abstract Boolean isBulkAddUpload();
     abstract void finishRead();
 
     public BZ_CsvContactsUploader(){
@@ -56,8 +64,21 @@ public abstract class BZ_CsvContactsUploader extends BZ_CsvUploaderBase {
                 {
                     c.Phone = rowValues[3].trim();
                 }
+                    
+                if (isBulkInviteUpload() )
+                {
+                    if (!String.isBlank(rowValues[4]))
+                    {
+                        c.Fields_Of_Study__c = rowValues[4].trim();
+                    }
+
+                    if (!String.isBlank(rowValues[5]))
+                    {
+                        c.Anticipated_Graduation__c = rowValues[5].trim();
+                    }
+                } 
                 
-                if (rowValues.size() >= 7)
+                if (isBulkAddUpload() && !String.isBlank(rowValues[6]))
                 {
                     String bz_region = rowValues[6].trim();
                     if (m_bzregions.contains(bz_region)){

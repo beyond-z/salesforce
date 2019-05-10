@@ -1,16 +1,18 @@
 /**
  * Reads a CSV file of Contacts in the format: 
- * FirstName, LastName, Email, Phone, InteractionType, InteractionDescription
- * Phone is the only optional value.
+ * FirstName, LastName, Email, Phone, Major, Anticipated Graduation Date, InteractionType, InteractionDescription
+ * Phone, Major, and Anticipated Graduation Date are optional values.
  */
 public abstract class BZ_CsvBulkInviteUploader extends BZ_CsvContactsUploader {
 
     abstract void finishRead();
+    protected virtual Boolean isBulkInviteUpload(){ return true; }
+    protected virtual Boolean isBulkAddUpload(){ return false; }
 
-    private Map<String, String[]> m_emailsToInteractionTypeMap;
+    private Map<String, String[]> m_emailsToInteractionTypeDescMajorGradDateMap;
 
     public BZ_CsvBulkInviteUploader(){
-        m_emailsToInteractionTypeMap = new Map<String, String[]>();
+        m_emailsToInteractionTypeDescMajorGradDateMap = new Map<String, String[]>();
     }
 
     /**
@@ -20,18 +22,22 @@ public abstract class BZ_CsvBulkInviteUploader extends BZ_CsvContactsUploader {
         try
         {
             super.ProcessRow(rowValues);
-            if (rowValues.size() >= 6)
+            if (rowValues.size() >= 8)
             {
                 System.debug('BZ_CsvBulkInviteUploader.ProcessRow(rowValues=['+rowValues+'])');
                 if (!String.isEmpty(rowValues[2].trim())){
 
+                    // TODO: update this to grab InteractionType and Desc from columns 7 and 8 instead of 5 and 6. 
+                    // Also pull out the Major and Ant. Grad. Date and set those in teh map
                     String email = rowValues[2].trim();
-                    if (!String.isEmpty(rowValues[4].trim()) && !String.isEmpty(rowValues[5].trim())){
-                        String interactionType = rowValues[4].trim();
-                        String interactionDescription = rowValues[5].trim();
+                    if (!String.isEmpty(rowValues[6].trim()) && !String.isEmpty(rowValues[7].trim())){
+                        String major = rowValues[4].trim(); // Optional
+                        String anticipatedGradDate = rowValues[5].trim(); // Optional
+                        String interactionType = rowValues[6].trim();
+                        String interactionDescription = rowValues[7].trim();
                         // We use toLowerCase b/c Salesforce stores all emails in lowercase and
                         // we don't want lookups to fail if mixed case emails are in the file
-                        m_emailsToInteractionTypeMap.put(email.toLowerCase(), new String[]{interactionType, interactionDescription});
+                        m_emailsToInteractionTypeDescMajorGradDateMap.put(email.toLowerCase(), new String[]{interactionType, interactionDescription, major, anticipatedGradDate});
                         return true;
                     }
                     else {
@@ -43,11 +49,11 @@ public abstract class BZ_CsvBulkInviteUploader extends BZ_CsvContactsUploader {
             }
             else
             {
-                System.debug('BZ_CsvBulkInviteUploader.ProcessRow(rowValues=['+rowValues+']) -- SKIPPING because there are not 6 columns');
+                System.debug('BZ_CsvBulkInviteUploader.ProcessRow(rowValues=['+rowValues+']) -- SKIPPING because there are not 8 columns');
             }
             return false;
         } catch (Exception e){
-            ApexPages.Message errormsg = new ApexPages.Message(ApexPages.severity.ERROR,'An error has occured reading the CSV file.  Format expected is FirstName, LastName, Email, Phone, InteractionType, Interaction Description where phone is the only optional value: '+e.getMessage());
+            ApexPages.Message errormsg = new ApexPages.Message(ApexPages.severity.ERROR,'An error has occured reading the CSV file.  Format expected is FirstName, LastName, Email, Phone, Major, Anticipated Graduation Date, InteractionType, Interaction Description where phone, major, and anticipated grad date are the only optional value: '+e.getMessage());
             ApexPages.addMessage(errormsg);
             return false;
         }
@@ -55,9 +61,9 @@ public abstract class BZ_CsvBulkInviteUploader extends BZ_CsvContactsUploader {
 
     /*
      * Returns a map of email addresses (all values are lowercase) to an array of 
-     * InteractionType and InteractionDescriptions.
+     * InteractionType, InteractionDescriptions, Major, Anticipated Grad Date.
      */
-    public Map<String, String[]> getInteractionInfoMap(){
-        return m_emailsToInteractionTypeMap;
+    public Map<String, String[]> getInfoMap(){
+        return m_emailsToInteractionTypeDescMajorGradDateMap;
     }
 }

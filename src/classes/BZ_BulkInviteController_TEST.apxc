@@ -6,16 +6,22 @@ private class BZ_BulkInviteController_TEST {
         Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
         contactsToInsert.add(campaignOwner);
         String existingEmail1 = 'brian.testexisting1@example.com';
-        Contact existingContact1 = new Contact(FirstName='Brian', LastName='xTestExisting1', Email=existingEmail1, OwnerId=userInfo.getUserId());
+        String existingMajor1 = 'Computer Science';
+        String existingAntGradDate1 = '2020';
+        Contact existingContact1 = new Contact(FirstName='Brian', LastName='xTestExisting1', Email=existingEmail1, Fields_Of_Study__c = existingMajor1, Anticipated_Graduation__c = existingAntGradDate1, OwnerId=userInfo.getUserId());
         contactsToInsert.add(existingContact1);
         String existingEmailInactiveCampaign1 = 'brian.testexistinginactivecampaign1@example.com';
-        Contact existingContactInactiveCampaign1 = new Contact(FirstName='Brian', LastName='xTestExistingInactiveCampaign1', Email=existingEmailInactiveCampaign1, OwnerId=userInfo.getUserId());
+        String existingMajorInactiveCampaign1 = 'Mathematics';
+        Contact existingContactInactiveCampaign1 = new Contact(FirstName='Brian', LastName='xTestExistingInactiveCampaign1', Email=existingEmailInactiveCampaign1, Fields_Of_Study__c = existingMajorInactiveCampaign1, OwnerId=userInfo.getUserId());
         contactsToInsert.add(existingContactInactiveCampaign1);
         String existingEmailActiveCampaign1 = 'brian.testexistingactivecampaign1@example.com';
-        Contact existingContactActiveCampaign1 = new Contact(FirstName='Brian', LastName='xTestExistingActiveCampaign1', Email=existingEmailActiveCampaign1, OwnerId=userInfo.getUserId());
+        String existingAntGradDateActiveCampaign1 = '2022';
+        Contact existingContactActiveCampaign1 = new Contact(FirstName='Brian', LastName='xTestExistingActiveCampaign1', Email=existingEmailActiveCampaign1, Anticipated_Graduation__c = existingAntGradDateActiveCampaign1, OwnerId=userInfo.getUserId());
         contactsToInsert.add(existingContactActiveCampaign1);
         String existingEmailAlreadyInCampaign1 = 'brian.testexistingaleadyincampaign1@example.com';
-        Contact existingContactAlreadyInCampaign1 = new Contact(FirstName='Brian', LastName='xTestExistingAlreadyInCampaign1', Email=existingEmailAlreadyInCampaign1, OwnerId=userInfo.getUserId());
+        String existingMajorAlreadyInCampaign1 = 'Nature';
+        String existingAntGradDateAlreadyInCampaign1 = '2023';
+        Contact existingContactAlreadyInCampaign1 = new Contact(FirstName='Brian', LastName='xTestExistingAlreadyInCampaign1', Email=existingEmailAlreadyInCampaign1, Fields_Of_Study__c = existingMajorAlreadyInCampaign1, Anticipated_Graduation__c = existingAntGradDateAlreadyInCampaign1, OwnerId=userInfo.getUserId());
         contactsToInsert.add(existingContactAlreadyInCampaign1);
         insert contactsToInsert;
 
@@ -69,15 +75,18 @@ private class BZ_BulkInviteController_TEST {
         String interactionDescription = 'Description of phone call';
         BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
         
+        String newContactMajor1 = 'Art';
+        String newContactAntGradDate1 = '2030';
+        
         // Note: we do a toUpperCase on the existing email b/c we want to make sure that bulk invite
         // doesn't create a duplicate contact if the case changes since SF stores emails in all lower.
-        String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
-            'Brian,xTest1,brian.test1@example.com,5554443333,Phone Call,'+interactionDescription+'\n'+
-            'Brian,xTest2,Brian.Test2@example.com,,Phone Call,'+interactionDescription+'\n'+
-            'Brian,xTestExisting1,'+existingEmail1.toUpperCase()+',5554443334,Phone Call,'+interactionDescription+'\n'+
-            'Brian,xTestExistingAlreadyInCampaign1,'+existingEmailAlreadyInCampaign1+',5554443334,Phone Call,'+interactionDescription+'\n'+
-            'Brian,xTestExistingInactiveCamapign1,'+existingEmailInactiveCampaign1+',5554443334,Phone Call,'+interactionDescription+'\n'+
-            'Brian,xTestExistingActiveCampaign1,'+existingEmailActiveCampaign1+',5554443334,Phone Call,'+interactionDescription+'\n';
+        String csvContents = 'FirstName,LastName,Email,Phone,Major,Anticipated Graduation Date,InteractionType,InterationDescription\n'+
+            'Brian,xTest1,brian.test1@example.com,5554443333,'+newContactMajor1+','+newContactAntGradDate1+',Phone Call,'+interactionDescription+'\n'+
+            'Brian,xTest2,Brian.Test2@example.com,,,,Phone Call,'+interactionDescription+'\n'+
+            'Brian,xTestExisting1,'+existingEmail1.toUpperCase()+',5554443334,'+existingMajor1+','+existingAntGradDate1+',Phone Call,'+interactionDescription+'\n'+
+            'Brian,xTestExistingAlreadyInCampaign1,'+existingEmailAlreadyInCampaign1+',5554443334,'+existingMajorAlreadyInCampaign1+','+existingAntGradDateAlreadyInCampaign1+',Phone Call,'+interactionDescription+'\n'+
+            'Brian,xTestExistingInactiveCamapign1,'+existingEmailInactiveCampaign1+',5554443334,'+existingMajorInactiveCampaign1+',,Phone Call,'+interactionDescription+'\n'+
+            'Brian,xTestExistingActiveCampaign1,'+existingEmailActiveCampaign1+',5554443334,,'+existingAntGradDateActiveCampaign1+',Phone Call,'+interactionDescription+'\n';
 
         String primaryAffiliationName = campaignToInviteTo.Program_Site__c;
         String undergradUniversityName = campaignToInviteTo.Program_Site__c;
@@ -103,7 +112,7 @@ private class BZ_BulkInviteController_TEST {
         System.assert(duplicateExsitingContacts.size() == 1, 'Expected 1 contact with email: ' + existingEmail1 + '.  Found: ' + duplicateExsitingContacts.size());
         Set<Id> contactIdsWithInitialConnectionSet = new Set<Id>();
         System.assert(controller.getContactsSkippedDisplay().contains(existingEmailAlreadyInCampaign1), 'Expected existing campaign member to be skipped.  Here are the ones skipped: ' + controller.getContactsSkippedDisplay() + ' -- which doesnt contain: ' + existingEmailAlreadyInCampaign1);
-        List<CampaignMember> campaignMembers = [SELECT Id, Name, FirstName, LastName, Email, Phone, ContactId, Undergrad_University__c FROM CampaignMember WHERE CampaignId = :campaignToInviteTo.Id AND ContactId <> :existingContactAlreadyInCampaign1.Id];
+        List<CampaignMember> campaignMembers = [SELECT Id, Name, FirstName, LastName, Email, Phone, ContactId, Major__c, Anticipated_Graduation__c, Undergrad_University__c FROM CampaignMember WHERE CampaignId = :campaignToInviteTo.Id AND ContactId <> :existingContactAlreadyInCampaign1.Id];
         System.Assert(campaignMembers.size() == 5, 'Expected 5 CampaignMembers. Found '+campaignMembers.size());
         for (CampaignMember cm : campaignMembers)
         {
@@ -114,6 +123,24 @@ private class BZ_BulkInviteController_TEST {
             System.assert(cm.Email.startsWith('brian.test'), 'CampaignMember with Email found not in list of expected members: Email = ' + cm.Email);
             System.assert(cm.Phone == null || cm.Phone == '' || cm.Phone == '5554443333' || cm.Phone == '5554443334' || cm.Phone == '5554443335', 
                           'CampaignMember with Phone found not in list of expected members: Phone = ' + cm.Phone);
+
+            if (cm.email == 'brian.test1@example.com'){
+                // Test for Major and Ant. Grad. Date for someone with both set
+                System.assert(cm.Anticipated_Graduation__c == newContactAntGradDate1, 'Anticipated Graduation not set to: ' + newContactAntGradDate1 + ' for: ' + cm.Email + '. Found '+cm.Anticipated_Graduation__c+'instead');
+                System.assert(cm.Major__c == newContactMajor1, 'Major not set to: ' + newContactMajor1 + ' for: ' + cm.Email + '. Found ' + cm.Major__c +'instead');
+            } else if (cm.email.toLowerCase() == 'brian.test2@example.com'){
+                // Test for Major and Ant. Grad. Date for someone with neither set
+                System.assert(String.isBlank(cm.Anticipated_Graduation__c), 'Anticipated Graduation set to: ' + cm.Anticipated_Graduation__c + ' for: ' + cm.Email + ' when it was expected to be blank.');
+                System.assert(String.isBlank(cm.Major__c), 'Major set to: ' + cm.Major__c + ' for: ' + cm.Email + ' when it was supposed to be blank');
+            } else if (cm.email == existingEmailInactiveCampaign1){
+                // Test for Major and Ant. Grad. Date for someone with only Major set
+                System.assert(cm.Major__c == existingMajorInactiveCampaign1, 'Major not set to: ' + existingMajorInactiveCampaign1 + ' for: ' + cm.Email + '. Found ' + cm.Major__c +'instead');
+                System.assert(String.isBlank(cm.Anticipated_Graduation__c), 'Anticipated Graduation set to: ' + cm.Anticipated_Graduation__c + ' for: ' + cm.Email + ' when it was expected to be blank.');
+            } else if (cm.email == existingEmailActiveCampaign1){
+                // Test for Major and Ant. Grad. Date for someone with only Ant. Grad. Date set
+                System.assert(String.isBlank(cm.Major__c), 'Major set to: ' + cm.Major__c + ' for: ' + cm.Email + ' when it was supposed to be blank');
+                System.assert(cm.Anticipated_Graduation__c == existingAntGradDateActiveCampaign1, 'Anticipated Graduation not set to: ' + existingAntGradDateActiveCampaign1 + ' for: ' + cm.Email + '. Found '+cm.Anticipated_Graduation__c+'instead');
+            }
                         
         }
         List<Task> tasks = [SELECT Id, Subject, WhoId, WhatId, Status, Interaction_Type__c, Description, EmailTemplate__c FROM Task WHERE WhatId = :campaignToInviteTo.Id AND WhoId <> :existingContactAlreadyInCampaign1.Id];
@@ -167,9 +194,11 @@ private class BZ_BulkInviteController_TEST {
         Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
         contactsToInsert.add(campaignOwner);
         String existingEmail1 = 'brian.testexisting1@example.com';
-        Contact existingContact1 = new Contact(FirstName='Brian', LastName='xTestExisting1', Email=existingEmail1, OwnerId=userInfo.getUserId());
+        String existingMajor1 = 'Computer Science';
+        String existingAntGradDate1 = '2020';
+        Contact existingContact1 = new Contact(FirstName='Brian', LastName='xTestExisting1', Email=existingEmail1, Fields_Of_Study__c = existingMajor1, Anticipated_Graduation__c = existingAntGradDate1, OwnerId=userInfo.getUserId());
         contactsToInsert.add(existingContact1);
-        Contact existingContact2 = new Contact(FirstName='Brian', LastName='xTestExisting1', Email=existingEmail1, OwnerId=userInfo.getUserId());
+        Contact existingContact2 = new Contact(FirstName='Brian', LastName='xTestExisting1', Email=existingEmail1, Fields_Of_Study__c = existingMajor1, Anticipated_Graduation__c = existingAntGradDate1, OwnerId=userInfo.getUserId());
         contactsToInsert.add(existingContact2);
         insert contactsToInsert;
 
@@ -192,8 +221,8 @@ private class BZ_BulkInviteController_TEST {
         String interactionDescription = 'Description of phone call';
         BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
         
-        String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
-            'Brian,xTestExisting1,'+existingEmail1+',5554443334,Phone Call,'+interactionDescription+'\n';
+        String csvContents = 'FirstName,LastName,Email,Phone,Major,Anticipated Graduation Date,InteractionType,InterationDescription\n'+
+            'Brian,xTestExisting1,'+existingEmail1+',5554443334,'+existingMajor1+','+existingAntGradDate1+',Phone Call,'+interactionDescription+'\n';
 
         Test.startTest();
         PageReference result = controller.ProcessFile(csvContents);
@@ -259,14 +288,16 @@ private class BZ_BulkInviteController_TEST {
         PageReference pageRef = Page.BZ_BulkInvite;
         Test.setCurrentPage(pageRef);
 
-      BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
-        String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
-            'Brian,xTest1,,5554443333,Phone Call,Description of phone call\n'+
-            'Brian,xTest5,email@email.com,badPhone,Phone Call,Description of phone call\n'+
-            'Brian,,brian.test2@example.com,,Phone Call,Description of phone call\n'+
-            ',,brian.test3@example.com,,Phone Call,Description of phone call\n'+
-            'Brian,xTest3\n'+
-            'Brian,xTest4,badEmail,badPhone,,\n'+
+    	BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
+        String csvContents = 'FirstName,LastName,Email,Phone,Major,Anticipated Graduation Date,InteractionType,InterationDescription\n'+
+            'Brian,xTest1,,5554443333,Computer Science,2017,Phone Call,Description of phone call\n'+ // Missing email
+            'Brian,xTest5,email@email.com,badPhone,,2017,Phone Call,Description of phone call\n'+ // badPhone
+            'Brian,,brian.test2@example.com,,,,Phone Call,Description of phone call\n'+ // missing last name
+            ',,brian.test3@example.com,,,,Phone Call,Description of phone call\n'+ // missing first and last name
+            'Brian,xTest6,brian.test6@example.com,5554443333,Phone Call,Description of phone call\n'+ // Old format, no major of anticipated grad date
+            'Brian,xTest7,brian.test7@example.com,5554443333,Computer Science,Phone Call,Description of phone call\n'+ // Only major column, no anticipated grad date
+            'Brian,xTest3\n'+ // just fubar'd
+            'Brian,xTest4,badEmail,badPhone,,\n'+ 
             'badRow\n';
 
         Boolean exceptionCaught = false;
@@ -305,10 +336,10 @@ private class BZ_BulkInviteController_TEST {
         PageReference pageRef = Page.BZ_BulkInvite;
         Test.setCurrentPage(pageRef);
 
-      BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
-        String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
-            'Brian,xTest1,email1@email.com,5554443333,Phone Call,Description of phone call\n'+
-            'Brian,xTest5,email2@email.com,5554443333,,\n';
+    	BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
+        String csvContents = 'FirstName,LastName,Email,Phone,Major,Anticipated Graduation Date,InteractionType,InterationDescription\n'+
+            'Brian,xTest1,email1@email.com,5554443333,Computer Science,2017,Phone Call,Description of phone call\n'+
+            'Brian,xTest5,email2@email.com,5554443333,Computer Science,2017,\n';
 
         Boolean exceptionCaught = false;
         Test.startTest();
@@ -348,9 +379,9 @@ private class BZ_BulkInviteController_TEST {
         try {
             BZ_BulkTexter.SimilateExceptionWhileSendingTexts = true;
             controller = new BZ_BulkInviteController(sc);
-            String csvContents = 'FirstName,LastName,Email,Phone,InteractionType,InterationDescription\n'+
-                'Brian,xTest1,email@email.com,5554443333,Phone Call,Description of phone call\n'+
-                'Brian,xTest2,email2@email.com,5554443334,Phone Call,Description of phone call\n';
+            String csvContents = 'FirstName,LastName,Email,Phone,Major,Anticipated Graduation Date,InteractionType,InterationDescription\n'+
+                'Brian,xTest1,email@email.com,5554443333,Computer Science,2019,Phone Call,Description of phone call\n'+
+                'Brian,xTest2,email2@email.com,5554443334,Mathematics,2019,Phone Call,Description of phone call\n';
             PageReference result = controller.ProcessFile(csvContents);
             Test.stopTest(); // This forces the background queued process to complete
             if (controller.getContactsLoaded() && !String.isEmpty(controller.getContactsToInviteDisplay()))
@@ -385,7 +416,7 @@ private class BZ_BulkInviteController_TEST {
         PageReference pageRef = Page.BZ_BulkInvite;
         Test.setCurrentPage(pageRef);
 
-      BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
+    	BZ_BulkInviteController controller = new BZ_BulkInviteController(sc);
         String csvContents = '';
 
         Test.startTest();
