@@ -11,7 +11,7 @@
         have them log back into their account instead of asking them to signup again.
         If they try to signup, it will say their email is already registered 
         or they will lose previous application information they already filled out if they 
-        signup with a new email. <font color="blue">Make sure the templates are set accordingly!</font>
+        signup with a new email. <font color="blue">Make sure the email templates are set accordingly!</font>
         <br/> <br/>
         <!--  Component to allow user to upload file from local machine -->
         <div style="border:2px solid red; padding:15px">
@@ -19,15 +19,25 @@
         <apex:commandButton action="{!ReadFile}" value="Invite Them!" id="uploadButton" style="width:150px;"/>
         </div>
         <br/> <br/>
-        <font color="red"> <b>Note: </b></font> the .csv should have 6 columns with the info below.
-        Please use <a href="https://drive.google.com/a/beyondz.org/file/d/0BxkyYmQz77njdHdpRk9IeXRlLVk/view?usp=sharing" target="_blank"> this template </a>.
-        <br/> <br/>
+        <font color="red"> <b>Note: </b></font> the .csv should have 8 columns with the info below. 
+        <br/><br/> To create one, simply 
+        <ol>
+            <li>Open Excel</li>
+            <li>Copy and paste the table below into a new worksheet</li>
+            <li>Add the users you want to invite</li>
+            <li>Choose File -> Save</li>
+            <li>Change the File Format to 'CSV UTF-8 (Comma delimited)(.csv)</li>
+            <li>And Save it!</li>
+        </ol>
+        <br/>
         <table border="1">
             <tr>
             <td style="padding:0 10px 0 10px;">First Name</td>
             <td style="padding:0 10px 0 10px;">Last Name</td>
             <td style="padding:0 10px 0 10px;">Email</td>
             <td style="padding:0 10px 0 10px;">Phone</td>
+            <td style="padding:0 10px 0 10px;">Major</td>
+            <td style="padding:0 10px 0 10px;">Anticipated Graduation Date</td>
             <td style="padding:0 10px 0 10px;">InteractionType</td>
             <td style="padding:0 10px 0 10px;">InteractionDescription</td>
             </tr>
@@ -116,7 +126,7 @@
         </apex:pageBlockSection>
         <apex:pageBlockSection columns="1" rendered="{!haveContactsBeenInvited==false}">
             <apex:pageBlockSectionItem >
-                <apex:outputPanel>
+                <apex:outputPanel >
                     <apex:commandButton action="{!cancel}" value="Ok"/>
                 </apex:outputPanel>
             </apex:pageBlockSectionItem>

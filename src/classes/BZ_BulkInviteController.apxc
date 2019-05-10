@@ -99,9 +99,11 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
                 contactsToAdd.put(c.Email.toLowerCase(), c);
             }
 
+            // TODO: handle phone numbers. E.g. if the email changed but the phone is the same, it 
+            // should be a contact that we skip
             Map<String, Contact> existingContactEmailToContactMap = new Map<String, Contact>();
             Map<Id, Contact> existingContacts = new Map<Id, Contact>(
-                [SELECT Id, Firstname, LastName, Email, Phone, npsp__Primary_Affiliation__c, Undergrad_University__c  
+                [SELECT Id, Firstname, LastName, Email, Phone, Anticipated_Graduation__c, npsp__Primary_Affiliation__c, Undergrad_University__c  
                 FROM Contact 
                 WHERE Email in :contactsToAdd.keySet()]);
 
@@ -116,8 +118,11 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
                         c.FirstName = updatedContact.FirstName;
                         c.LastName = updatedContact.LastName;
                         c.Phone = updatedContact.Phone;
+                        c.Fields_Of_Study__c = updatedContact.Fields_Of_Study__c;
+                        c.Anticipated_Graduation__c = updatedContact.Anticipated_Graduation__c;
                         contactsToAdd.remove(c.Email.toLowerCase());
                         existingContactEmailToContactMap.put(c.Email.toLowerCase(), c);
+                        System.debug('BZ_BulkInviteController.finishRead(): adding existing contact to update = '+c);
                     }
                     else {
                         // This contact has duplicate records in Salesforce with the same email
@@ -165,11 +170,11 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
             }
             m_contactsLoaded = true;
             
-            Map<String, String[]> interactionInfoMap = getInteractionInfoMap();
+            Map<String, String[]> infoMap = getInfoMap();
             
             m_queueableController = new BZ_BulkInviteControllerQueueable(
                 m_campaign, primaryAffiliationId, contactsToAdd, existingContacts.values(),
-                m_contactsToBulkInvite, interactionInfoMap);
+                m_contactsToBulkInvite, infoMap);
             
             m_jobId = System.enqueueJob(m_queueableController);
             hasStarted = true;
@@ -267,20 +272,20 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
         Map<String, Contact> m_contactsToAdd;
         List<Contact> m_existingContactsToUpdate;
         List<Contact> m_contactsToBulkInvite;
-        Map<String, String[]> m_interactionInfoMap;
+        Map<String, String[]> m_infoMap;
         
         public BZ_BulkInviteControllerQueueable(Campaign campaign, Id primaryAffiliationId, 
                                                 Map<String, Contact> contactsToAdd,
                                                 List<Contact> existingContactsToUpdate,
                                                 List<Contact> contactsToBulkInvite,
-                                                Map<String, String[]> interactionInfoMap)
+                                                Map<String, String[]> infoMap)
         {
             m_campaign = campaign;
             m_primaryAffiliationId = primaryAffiliationId;
             m_contactsToAdd = contactsToAdd;
             m_existingContactsToUpdate = existingContactsToUpdate;
             m_contactsToBulkInvite = contactsToBulkInvite;
-            m_interactionInfoMap = interactionInfoMap;
+            m_infoMap = infoMap;
         }
         
         public void execute(QueueableContext context)
@@ -302,11 +307,21 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
                 DateTime bulkInviteDateTime = DateTime.now();
                 for (Contact c : m_contactsToBulkInvite)
                 {
+                    String major;
+                    String[] info = m_infoMap.get(c.Email.toLowerCase());
+                    if (info != null){
+                        if (!String.isBlank(info[2])){
+                            major = info[2];
+                        }
+                    } else {
+                        throw new BZ_BulkInviteException('No Interaction Info found for "'+c.Email+'".  Please make sure to set the Interaction Info for everyone -- Bulk Invite failed!');
+                    }
+                    
                     CampaignMember cm;
                     if (m_campaign.Type == 'Program Participants' || m_campaign.Type == 'Pre-Accelerator Participants'){
-                        cm = new CampaignMember(ContactId=c.Id, campaignId=m_campaign.Id, Undergrad_University__c=m_campaign.Program_Site__c, Bulk_Invite_Date__c =bulkInviteDateTime);
+                        cm = new CampaignMember(ContactId=c.Id, campaignId=m_campaign.Id, Major__c=major, Undergrad_University__c=m_campaign.Program_Site__c, Bulk_Invite_Date__c=bulkInviteDateTime);
                     } else {
-                        cm = new CampaignMember(ContactId=c.Id, campaignId=m_campaign.Id, Bulk_Invite_Date__c =bulkInviteDateTime);
+                        cm = new CampaignMember(ContactId=c.Id, campaignId=m_campaign.Id, Major__c=major, Bulk_Invite_Date__c=bulkInviteDateTime);
                     }
                     cms.add(cm);
                     System.debug('BZ_BulkInviteControllerQueueable.execute(): Added the following CampaignMember: '+cm);
@@ -320,11 +335,17 @@ public class BZ_BulkInviteController extends BZ_CsvBulkInviteUploader {
                 List<Task> interactionTasksToAdd = BZ_TaskFactory.createTasks(cms, 'Interaction: How We Met {0}');
                 for (Task t : interactionTasksToAdd){
                     Contact c = contactsToCreateInteractionInfoFor.get(t.WhoId);
-                    String[] interactionInfo = m_interactionInfoMap.get(c.Email.toLowerCase());
-                    if (interactionInfo != null){
-                        t.Interaction_Type__c = interactionInfo[0];
-                        t.Description = interactionInfo[1];
-                        c.Initial_Connection__c = interactionInfo[1];
+                    String[] info = m_infoMap.get(c.Email.toLowerCase());
+                    if (info != null){
+                        t.Interaction_Type__c = info[0];
+                        t.Description = info[1];
+                        c.Initial_Connection__c = info[1];
+                        if (!String.isBlank(info[2])){
+                          c.Fields_Of_Study__c = info[2];
+                        }
+                        if (!String.isBlank(info[3])){
+                            c.Anticipated_Graduation__c = info[3];
+                        }
                     }
                     else {
                         throw new BZ_BulkInviteException('No Interaction Info found for "'+c.Email+'".  Please make sure to set the Interaction Info for everyone -- Bulk Invite failed!');

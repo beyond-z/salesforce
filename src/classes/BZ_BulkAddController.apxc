@@ -79,15 +79,15 @@ public class BZ_BulkAddController extends BZ_CsvBulkAddUploader {
             
             m_contactsToBulkAdd = new List<Contact>(contactsToAdd.values());
             System.debug('BZ_BulkInviteController.finishRead(): m_contactsToBulkAdd = '+m_contactsToBulkAdd);
-            Map<String, String[]> interactionInfoMap = getInteractionInfoMap();
+            Map<String, String[]> infoMap = getInfoMap();
             if (m_contactsToBulkAdd.size() > 0){
                 m_contactsToAddDisplay = '<table border="1"><tr><td style="padding:0 15px 0 15px;"><strong>Name</strong></td><td style="padding:0 15px 0 15px;"><strong>Email</strong></td><td style="padding:0 15px 0 15px;"><strong>Phone</strong></td></tr>';
                 for (Contact c : m_contactsToBulkAdd)
                 {
                     m_contactsToAddDisplay += '<tr><td style="padding:0 15px 0 15px;">' + c.FirstName + ' ' + c.LastName + '</td><td style="padding:0 15px 0 15px;">' + c.Email + '</td><td style="padding:0 15px 0 15px;">' + c.Phone + '</td></tr>';
-                    String[] interactionInfo = interactionInfoMap.get(c.Email.toLowerCase());
-                    if (interactionInfo != null){
-                        c.Initial_Connection__c = interactionInfo[1];
+                    String[] info = infoMap.get(c.Email.toLowerCase());
+                    if (info != null){
+                        c.Initial_Connection__c = info[1];
                     }
                     else {
                         throw new BZ_BulkAddException('No Interaction Info found for "'+c.Email+'".  Please make sure to set the Interaction Info for everyone -- Bulk Add failed!');
@@ -98,7 +98,7 @@ public class BZ_BulkAddController extends BZ_CsvBulkAddUploader {
             m_contactsLoaded = true;
             
             m_queueableController = new BZ_BulkAddControllerQueueable(
-                m_contactsToBulkAdd, interactionInfoMap);
+                m_contactsToBulkAdd, infoMap);
             
             m_jobId = System.enqueueJob(m_queueableController);
             hasStarted = true;
@@ -180,13 +180,13 @@ public class BZ_BulkAddController extends BZ_CsvBulkAddUploader {
     private class BZ_BulkAddControllerQueueable implements Queueable, Database.AllowsCallouts {
     
         List<Contact> m_contactsToAdd;
-        Map<String, String[]> m_interactionInfoMap;
+        Map<String, String[]> m_infoMap;
         
         public BZ_BulkAddControllerQueueable(List<Contact> contactsToAdd,
-                                                Map<String, String[]> interactionInfoMap)
+                                                Map<String, String[]> infoMap)
         {
             m_contactsToAdd = contactsToAdd;
-            m_interactionInfoMap = interactionInfoMap;
+            m_infoMap = infoMap;
         }
         
         public void execute(QueueableContext context)
@@ -210,7 +210,7 @@ public class BZ_BulkAddController extends BZ_CsvBulkAddUploader {
                     Contact c = contactsToCreateInteractionInfoFor.get(t.WhoId);
                     // Note: an interactionInfo is gauranteed to exist b/c we already checked in the
                     // finishRead method.
-                    String[] interactionInfo = m_interactionInfoMap.get(c.Email.toLowerCase());
+                    String[] interactionInfo = m_infoMap.get(c.Email.toLowerCase());
                     t.Interaction_Type__c = interactionInfo[0];
                     t.Description = interactionInfo[1];
                     t.Status = 'Completed';

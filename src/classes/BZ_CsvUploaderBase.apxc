@@ -8,6 +8,7 @@ public abstract class BZ_CsvUploaderBase {
     public string nameFile{get;set;}
     public Blob contentFile{get;set;}
     String[] filelines = new String[]{};
+    protected String[] m_headerValues;
 
     /**
      * Called for each row in the uploaded CSV so subclasses can process them.
@@ -39,6 +40,9 @@ public abstract class BZ_CsvUploaderBase {
             //Now sepatate every row of the excel file
             SSSCsvReader parser = new SSSCsvReader(fileContents);
             String[] lineParts = parser.readLine();
+            m_headerValues = lineParts;
+            // TODO remove this debug log
+                        System.debug('setting headervalues to '+m_headerValues);
             lineParts = parser.readLine(); // Skip header row.
             while (lineParts != null){
                 ProcessRow(lineParts);
@@ -123,7 +127,7 @@ public abstract class BZ_CsvUploaderBase {
                         next = line.length();
                     // NB in Substring, "endindex" is the index of the character AFTER the last index to get
                     parts.add(line.substring(0, next));
-                }   
+                }		
                 if(next == line.length() - 1)
                     // case of a terminating comma.
                     parts.add('');
