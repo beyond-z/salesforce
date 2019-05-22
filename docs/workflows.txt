@@ -46,3 +46,4 @@ BZ Copy Contact Info To Campaign Member - self explanatory
 BZ Set Preferred First Name - when first name is set, set preferred first name
 BZ Set IsNewsletterSignup - when IsNewsletterSignup is checked off, set the display version for use in export / import into Mailchimp
 Set 'All BZ Regions' - when Contact's Preferred BZ Region is set, add it to All BZ Regions too.
+BZ Candidate Status Confirmed Date - when we mark a Candidate as Confirmed, set the date it happened.

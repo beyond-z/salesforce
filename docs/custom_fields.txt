@@ -34,7 +34,8 @@
     Volunteer Opportunities
 
 	CAMPAIGN MEMBER
-		Date App Submitted
+		Candidate_Status_Confirmed__c
+    Date App Submitted
     Bulk Invite Date
 		Selected Timeslot
 		Company
