@@ -58,6 +58,9 @@ trigger BZ_CampaignCompleted on Campaign (before update) {
                     c.Mentor_Information__c = 'Former';
                 }
             }
+            //
+            // TODO: do we want to handle Mentee information as well?
+            // 
             update contactsToUpdate;
             
             // Now that these people are Alumni, turn of their email notifications on Braven

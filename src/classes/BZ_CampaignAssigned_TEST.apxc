@@ -258,7 +258,7 @@ private class BZ_CampaignAssigned_TEST {
                                      WHERE WhoId=:updatedCm.ContactId AND
                                            WhatId=:updatedCm.CampaignId AND
                                            Subject LIKE '%Send Intro Email%'];
-        System.assert(resultingTasks.size()==0, 'Expected NO Task to be created to Send Intro Email to Mentors');
+        System.assert(resultingTasks.size()==1, 'Expected 1 Task to be created to Send Intro Email to Mentors');
         
         Contact updatedContactConfirmed = [SELECT Id, Mentor_Information__c, Candidate_Status__c FROM Contact WHERE Id=:cmConfirmed.ContactId];
         System.assert(updatedContactConfirmed.Mentor_Information__c == 'Current', 'When a Confirmed Contact is Assigned to a Mentor campaign, their Mentor_Information__c should be set to Current.');
@@ -268,7 +268,7 @@ private class BZ_CampaignAssigned_TEST {
                                      WHERE WhoId=:updatedCmConfirmed.ContactId AND
                                            WhatId=:updatedCmConfirmed.CampaignId AND
                                            Subject LIKE '%Send Intro Email%'];
-        System.assert(resultingTasks.size()==0, 'Expected NO Task to be created to Send Intro Email to Mentors');
+        System.assert(resultingTasks.size()==1, 'Expected 1 Task to be created to Send Intro Email to Mentors');
         
         Contact updatedContactOptedOut = [SELECT Id, Mentor_Information__c, Candidate_Status__c FROM Contact WHERE Id=:cmOptedOut.ContactId];
         System.assert(updatedContactOptedOut.Mentor_Information__c == 'Opted Out', 'When a Opted Out Contact is Assigned to a Mentor campaign, their Mentor_Information__c should be set to Opted Out.');
@@ -278,7 +278,7 @@ private class BZ_CampaignAssigned_TEST {
                                      WHERE WhoId=:updatedCmOptedOut.ContactId AND
                                            WhatId=:updatedCmOptedOut.CampaignId AND
                                            Subject LIKE '%Send Intro Email%'];
-        System.assert(resultingTasks.size()==0, 'Expected NO Task to be created to Send Intro Email to Mentors');
+        System.assert(resultingTasks.size()==1, 'Expected 1 Task to be created to Send Intro Email to Mentors');
     }
     
     static testMethod void validateEventVolunteerCampaignAssigned() {

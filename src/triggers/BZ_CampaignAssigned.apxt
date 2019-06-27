@@ -149,7 +149,9 @@ trigger BZ_CampaignAssigned on CampaignMember (before insert) {
                 contact.Is_In_Active_Recruitment_Campaign__c = true;
             }
             isApplicableCampaign = true;
-            contactTypeThatGetsIntroEmail = false; // Invites and other emails happen through Mailchimp and Calendly.
+        //    
+        // TODO: do we want to handle Mentee's as well?
+        // 
         } else if (campaign.Type == 'Champion'){
             // Ditto on above comment.
             if (cm.Candidate_Status__c == 'Confirmed')
