@@ -32,6 +32,9 @@
 		Interview Scheduler
 		Sourcing Info Options
     Volunteer Opportunities
+    Postaccelerator_Qualtrics_Survey_ID__c
+    Preaccelerator_Qualtrics_Survey_ID__c
+    Docusign_Template_ID__c
 
 	CAMPAIGN MEMBER
 		Candidate_Status_Confirmed__c
