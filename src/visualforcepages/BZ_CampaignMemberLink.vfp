@@ -1,4 +1,4 @@
-<apex:page standardController="Task" extensions="BZ_CampaignMemberLinkController"> 
+<apex:page lightningStyleSheets="true" standardController="Task" extensions="BZ_CampaignMemberLinkController"> 
     <apex:form >
         <apex:pageBlock >
             <apex:pageBlockSection columns="1">
