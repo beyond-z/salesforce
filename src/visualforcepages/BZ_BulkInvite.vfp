@@ -1,5 +1,5 @@
 <!-- Page that handles the "Bulk Invite" button on a Campaign. -->
-<apex:page standardController="Campaign" extensions="BZ_BulkInviteController">
+<apex:page standardController="Campaign" lightningStyleSheets="true" extensions="BZ_BulkInviteController">
   <apex:form >
     <apex:pageMessages id="messages"/>
     <apex:pageBlock id="uploadSection" rendered="{!hasStarted==false}">
