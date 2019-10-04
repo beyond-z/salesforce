@@ -8,7 +8,7 @@
                         <apex:outputField value="{!task.CampaignMemberId__c}" rendered="false"/> <!-- Hidden, here to avoid: SObject row was retrieved via SOQL without querying error. -->
                         <apex:outputLink rendered="{!hasRelatedCampaignMember}"
                                          target="_top"
-                                         value="{!URLFOR($Action.CampaignMember.View,relatedCampaignMember.Id)}">
+                                         value="/lightning/r/CampaignMember/{!task.CampaignMemberId__c}/view">
                            {!relatedCampaignMember.Name}
                         </apex:outputLink>
                         <apex:outputText rendered="{!hasRelatedCampaignMember==false}">--None--</apex:outputText>     
