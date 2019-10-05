@@ -1,7 +1,8 @@
 <!-- This shows up as a field on a Task to control the EmailTemplate that will be sent
      when the "Send My Queued Emails" button is pressed for this campaign. -->
-<apex:page standardController="Task" extensions="BZ_EmailTemplateToSendField">
+<apex:page lightningStylesheets="true" standardController="Task" extensions="BZ_EmailTemplateToSendField">
     <apex:form >
+        <apex:slds >
         <apex:pageBlock >
             <style type="text/css">
                 .noWrap { white-space: nowrap; }
@@ -14,10 +15,13 @@
                         <apex:selectList size="1" value="{!emailTemplateToSend}">
                             <apex:selectoptions value="{!EmailTemplates}"/>
                         </apex:selectList>
+                        <div class="slds-p-top_large">
                         <apex:commandButton value="Save" action="{!save}"/>
+                        </div>
                     </apex:outputPanel>
                 </apex:pageblockSectionItem>
             </apex:pageBlockSection>
         </apex:pageBlock>
+        </apex:slds>
     </apex:form>
 </apex:page>
