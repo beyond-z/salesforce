@@ -8,6 +8,11 @@ public class BZ_ClonePlusController {
     public String               objectName      { get; set; }
     //public Id                   clonedObjectId  { get { return headClone.Id; } }
     
+    //The list of objects to clone
+    private Set<Id> m_objectListIds {get; set;}
+    
+    public List<SObject> m_SObjectsList = new List<SObject>();
+    
     // The ID of the object to clone
     private String m_objectId { get; set; }
     
@@ -36,6 +41,19 @@ public class BZ_ClonePlusController {
         m_objectId = objectId;
         m_childObjectTypes = childObjectTypes;
         initialiseObjectsForCloning();
+    }
+    
+    // Initialize the controller with a Set of objectIds to clone. E.g. this
+    // would clone a set of campaign members who's Id is in the set
+    // CampaignMember cm1 = new CampaignMember();
+    // CampaignMember cm2 = new CampaignMember();
+    // Set<Id> campaignMemberSet = new Set<Id>()
+    // campaignMemberSet.add(cm1.Id);
+    // // campaignMemberSet.add(cm2.Id);
+    // E.g. new BZ_ClonePlusController(campaignMemberSet);
+    public BZ_ClonePlusController(Set<Id> objectsToCloneIds) {
+        m_objectListIds = objectsToCloneIds;
+        cloneList();
     }
     
     // Initialisation method called when the clone plus page is loaded.
@@ -68,7 +86,7 @@ public class BZ_ClonePlusController {
         
         headSObject = Database.query(primaryObjectQueryString);
         objectName  = '' + headSObject.get('Name');
-        populateObjectChildren();
+        //populateObjectChildren();
         System.Debug('BZ_ClonePlusController.initialiseObjectsForCloning(): end.');
     }
     
@@ -140,6 +158,62 @@ public class BZ_ClonePlusController {
         System.Debug('BZ_ClonePlusController.populateObjectChildren(): end.');
     }
     
+    // Initialisation method called when the clone plus page 
+    // is loaded with a Set of Ids.
+    // Use the id page parameter to find out what kind of 
+    // object we are trying to clone.
+    // Then load the objects from the database.
+    public void cloneList() {
+        System.Debug('BZ_ClonePlusController.initialiseObjectsForCloning(): begin.');
+        
+        // Here we generate a keyprefixmap using the global describe 
+        // Then compare that to our object to determine type.  
+        Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe(); 
+        Map<String,String> keyPrefixMap = new Map<String,String>{};
+        List<relatedObjectRow> relatedObjectsCloneList = new List<relatedObjectRow>{}; 
+        objectChildren = new List<relatedObjects>{}; 
+            
+        for(String sObj : gd.keySet())
+        {
+            Schema.DescribeSObjectResult r =  gd.get(sObj).getDescribe();
+            keyPrefixMap.put(r.getKeyPrefix(), r.getName());
+        }
+        
+        String m_objectFirstId;
+        for(Id objectId : m_objectListIds) {
+            m_objectFirstId = objectId;
+            break;
+        }
+        String objectTypeKey = m_objectFirstId.subString(0,3);
+        objectTypeName = keyPrefixMap.get(objectTypeKey);
+        
+        String objectListQueryString = 'SELECT Id FROM '
+            + objectTypeName
+            + ' WHERE Id IN : m_objectListIds';
+        
+        System.Debug('BZ_ClonePlusController.cloneList(): objectListQueryString = '+objectListQueryString);
+        for (SObject objectToClone : Database.query(objectListQueryString)) {
+            relatedObjectsCloneList.add(new relatedObjectRow(objectToClone));
+            m_SObjectsList.add(objectToClone);
+        }
+        
+        if (!relatedObjectsCloneList.isEmpty()) {
+            objectChildren.add(new relatedObjects(relatedObjectsCloneList, 
+                                                  'CampaignMember', 
+                                                  'None'));
+        }
+        
+    }
+    
+    // Return a clone of the set of objectIds that haven't been
+    //  insert into the database yet.
+    public BZ_SObjectList getCloneList() {
+        BZ_SObjectList clonedObjects;
+     
+        clonedObjects = cloneObjects(m_SObjectsList);
+        return clonedObjects;
+    }
+    
     // Perform the cloning process.
     // First clone the parent, then all of the child objects. 
     // Then redirect the user to the new object page.
@@ -203,12 +277,12 @@ public class BZ_ClonePlusController {
             {
                 BZ_SObjectList clones = cloneObjects(selectedRelatedObjects); 
                 System.Debug('BZ_ClonePlusController.getSelectedObjectsClones(): clonedObjects = '+clonedObjects);
-                for (sObject clone : clones.objectList)
+                /*for (sObject clone : clones.objectList)
                 {
                     //System.Debug('BZ_ClonePlusController.getSelectedObjectsClones(): clone = '+clone + ', relatedObject = '+relatedObject + ', headClone = '+headClone);
                     System.Debug('BZ_ClonePlusController.getSelectedObjectsClones(): adding clone to list.');
                     clone.put(relatedObject.relatedFieldName, headClone.Id);  
-                }
+                }*/
                 clonedObjects.addAll(clones.objectList);
             }
         }

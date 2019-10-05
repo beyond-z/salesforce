@@ -41,23 +41,44 @@
                 </apex:pageBlockSectionItem>
                 <apex:pageBlockSectionItem >
                     <apex:outputLabel value="New Campaign Name" for="newCampaignNameField"/>
-                    <apex:inputText id="newCampaignNameField" required="true" value="{!newCampaignName}" size="50"/> 
+                    <apex:inputText id="newCampaignNameField" required="true" value="{!m_newCampaignName}" size="50"/> 
                 </apex:pageBlockSectionItem>
                 <apex:pageBlockSectionItem >
                     <apex:outputPanel >
                         <!-- Hidden, here to avoid: SObject row was retrieved via SOQL without querying error. -->
+                        
                         <apex:outputField value="{!campaign.StartDate}" rendered="false"/> 
                         <apex:outputField value="{!campaign.EndDate}" rendered="false"/>
+                        <apex:outputField value="{!campaign.Application_Type__c}" rendered="false"/>
                         <apex:outputField value="{!campaign.Meeting_Times__c}" rendered="false"/>
+                        <apex:outputField value="{!campaign.Section_Name_in_LMS_Coach_Course__c}" rendered="false"/>
+                        <apex:outputField value="{!campaign.Program_Title__c}" rendered="false"/>
+                        <apex:outputField value="{!campaign.Program_Site__c}" rendered="false"/>
                         <apex:outputField value="{!campaign.Previous_Candidate_New_Invite__c}" rendered="false"/>
                         <apex:outputField value="{!campaign.Program_Semester__c}" rendered="false"/>
+                        <apex:outputField value="{!campaign.BZ_Region__c}" rendered="false"/>
+                        <apex:outputField value="{!campaign.Section_Name_Site_Prefix__c}" rendered="false"/>
+                        <apex:outputField value="{!campaign.Volunteer_Opportunities__c}" rendered="false"/>
+                        <apex:outputField value="{!campaign.Sourcing_Info_Options__c}" rendered="false"/>
+                        <apex:outputField value="{!campaign.Invite_Email_Template__c}" rendered="false"/>
+              			<!-- Email Template Fields -->
+                        <apex:outputField value="{!campaign.Invite_Email_Template__c}" rendered="false"/>
+                        <apex:outputField value="{!campaign.Intro_Email_Template__c}" rendered="false"/>
+                        <apex:outputField value="{!campaign.App_Open_Email_Template__c}" rendered="false"/>
+                        <apex:outputField value="{!campaign.App_Rejected_Email_Template__c}" rendered="false"/>
+                        <apex:outputField value="{!campaign.App_Submit_Reminder_Template__c}" rendered="false"/>
+                        <apex:outputField value="{!campaign.App_Waitlisted_Email_Template__c}" rendered="false"/>
+                        <apex:outputField value="{!campaign.App_Not_Accepted_Email_Template__c}" rendered="false"/>
+                        <apex:outputField value="{!campaign.App_Interview_Requested_Email_Template__c}" rendered="false"/>
+                        <apex:outputField value="{!campaign.App_Accepted_Email_Template__c}" rendered="false"/>
+                        <!-- End of the Email Template Fields -->
                     </apex:outputPanel>
                 </apex:pageBlockSectionItem>
                 <apex:pageblockSectionItem helpText="Email template sent to Waitlisted and Opted Out users to try and rengage them for the upcoming program">
                     <apex:outputLabel value="Email Template To Queue Up" styleClass="noWrap"/>
                     <apex:outputPanel layout="block">
 						<apex:outputPanel layout="block"/>
-                        <apex:selectList size="1" value="{!prevCandidateEmailTemplate}">
+                        <apex:selectList size="1" value="{!m_prevCandidateEmailTemplate}">
                             <apex:selectoptions value="{!EmailTemplates}"/>
                         </apex:selectList>
                     </apex:outputPanel>
@@ -66,7 +87,7 @@
                     <apex:outputLabel value="Program Semester" styleClass="noWrap"/>
                     <apex:outputPanel layout="block">
 						<apex:outputPanel layout="block"/>
-                        <apex:selectList size="1" value="{!newProgramSemester}">
+                        <apex:selectList size="1" value="{!m_newProgramSemester}">
                             <apex:selectoptions value="{!ProgramSemesters}"/>
                         </apex:selectList>
                     </apex:outputPanel>
@@ -79,13 +100,21 @@
                     <apex:outputLabel value="End Date" for="newCampaignEndDateField"/>
                     <apex:inputField id="newCampaignEndDateField" required="true" showDatePicker="true" value="{!campaign.EndDate}"/>
                 </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem rendered="{!campaign.Type == 'Program Participants' || campaign.Type == 'Leadership Coaches'}">
+                    <apex:outputLabel value="Student Course Id" for="newStudentCourseIdField"/>
+                    <apex:inputField id="newStudentCourseIdField" required="{!campaign.Type == 'Program Participants' || campaign.Type == 'Leadership Coaches'}" value="{!campaign.Target_Course_ID_In_LMS__c}"/>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem rendered="{!campaign.Type == 'Leadership Coaches'}">
+                    <apex:outputLabel value="Coach Course Id" for="newCoachCourseIdField"/>
+                    <apex:inputField id="newCoachCourseIdField" required="{!campaign.Type == 'Leadership Coaches'}" value="{!campaign.Coach_Course_ID__c}"/>
+                </apex:pageBlockSectionItem>
                 <apex:pageBlockSectionItem ><br/></apex:pageBlockSectionItem>
                 <apex:pageBlockSectionItem >
                     <apex:outputLabel value="Please adjust the Available Meeting Times below, if necessary"/>
                 </apex:pageBlockSectionItem>
                 <apex:pageBlockSectionItem >
                     <apex:outputLabel value="Available Meeting Times" for="newCampaignAvailMeetingTimesField"/>
-                    <apex:inputTextArea id="newCampaignAvailMeetingTimesField" required="true" value="{!newAvailableMeetingTimes}" cols="50" rows="5"/>
+                    <apex:inputTextArea id="newCampaignAvailMeetingTimesField" required="true" value="{!m_newAvailableMeetingTimes}" cols="50" rows="5"/>
                 </apex:pageBlockSectionItem>
                 <apex:pageBlockSectionItem >                
                     <apex:commandButton action="{!run}" value="Run"/>
@@ -97,7 +126,7 @@
             <apex:outputText value="Close Recruitment is running.  It may take a minute or two.  The status will be shown when it finishes.<br/><br/>" escape="false" rendered="{!hasStarted&&hasCompleted==false}"/>
             <apex:outputText value="{!progressString}" id="progress" escape="false"/>
             <apex:outputText value="<br/><br/>Important note: if it completes successfully, it still may take up to a minute for the changes to show up.  So just wait a bit after it's done :)." escape="false"/>
-            <apex:actionPoller enabled="{!hasStarted&&hasCompleted==false}" action="{!checkComplete}" interval="5" reRender="processStatus,progress"/>
+            <!--<apex:actionPoller enabled="{!hasStarted&&hasCompleted==false}" action="{!checkComplete}" interval="5" reRender="processStatus,progress"/>-->
         </apex:pageBlock>
     </apex:form>
 </apex:page>

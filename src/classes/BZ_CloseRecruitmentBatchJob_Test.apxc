@@ -1,0 +1,128 @@
+@isTest
+public class BZ_CloseRecruitmentBatchJob_Test {
+
+    static testmethod void test() {
+        
+        List<Contact> contactsToInsert = new List<Contact>();
+        Contact campaignOwner = new Contact(FirstName='Test', LastName='CampaignOwner', OwnerId=userInfo.getUserId());
+        contactsToInsert.add(campaignOwner);
+        Contact contactWaitlist = new Contact(FirstName='Test', LastName='UserWaitlisted', Volunteer_Information__c='LC Pipeline');
+        contactsToInsert.add(contactWaitlist);
+        Contact contactOptedOutDropped = new Contact(FirstName='Test', LastName='UserOptedOutDropped', Volunteer_Information__c='LC Pipeline');
+        contactsToInsert.add(contactOptedOutDropped);
+        Contact contactOptedOutNoTime = new Contact(FirstName='Test', LastName='UserOptedOutNoTime', Volunteer_Information__c='LC Pipeline');
+        contactsToInsert.add(contactOptedOutNoTime);
+        Contact contactConfirmed = new Contact(FirstName='Test', LastName='UserConfirmed', Volunteer_Information__c='Current LC');
+        contactsToInsert.add(contactConfirmed);
+        insert contactsToInsert;
+        
+        Campaign closedCampaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        String campaignBeingClosedName = 'campaignBeingClosed';
+        closedCampaign.name=campaignBeingClosedName;
+        String reinviteEmailTemplateName = 'reinviteEmailTemplate';
+        closedCampaign.Previous_Candidate_New_Invite__c = reinviteEmailTemplateName;
+        closedCampaign.StartDate=Date.today();
+        closedCampaign.EndDate=Date.today();
+        insert closedCampaign;
+                        
+        Campaign campaign = BZ_CampaignFactory_TEST.create(campaignOwner.OwnerId, 'Leadership Coaches');
+        String newCampaigName = 'New Campaign';
+        campaign.name = newCampaigName;
+        String newReinviteEmailTemplateName = 'reinviteEmailTemplate';
+        campaign.Previous_Candidate_New_Invite__c = newReinviteEmailTemplateName;
+        campaign.ParentId = closedCampaign.Id;
+        campaign.Recruitment_Closed__c=True;
+        campaign.ProcessType__c='Create';  
+        campaign.StartDate=Date.today();
+        campaign.EndDate=Date.today();
+        insert campaign;
+        
+        List<CampaignMember> campaignMembersToInsert = new List<CampaignMember>();
+        CampaignMember cmWaitlist = new CampaignMember();
+        cmWaitlist.CampaignId=closedCampaign.Id;
+        cmWaitlist.ContactId=contactWaitlist.Id;
+        cmWaitlist.Candidate_Status__c = 'Waitlisted';
+        cmWaitlist.Application_Status__c = 'Submitted';
+        campaignMembersToInsert.add(cmWaitlist);
+        
+        CampaignMember cmOptedOutDropped = new CampaignMember();
+        cmOptedOutDropped.CampaignId = closedCampaign.Id;
+        cmOptedOutDropped.ContactId = contactOptedOutDropped.Id;
+        cmOptedOutDropped.Candidate_Status__c = 'Opted Out';
+        cmOptedOutDropped.Opted_Out_Reason__c = 'Dropped - During Program';
+        cmOptedOutDropped.Application_Status__c = 'Submitted';
+        campaignMembersToInsert.add(cmOptedOutDropped);
+        
+        CampaignMember cmOptedOutNoTime = new CampaignMember();
+        cmOptedOutNoTime.CampaignId = closedCampaign.Id;
+        cmOptedOutNoTime.ContactId = contactOptedOutNoTime.Id;
+        cmOptedOutNoTime.Candidate_Status__c = 'Opted Out';
+        cmOptedOutNoTime.Opted_Out_Reason__c = 'No Time';
+        cmOptedOutNoTime.Application_Status__c = 'Submitted';
+        campaignMembersToInsert.add(cmOptedOutNoTime);
+        
+        CampaignMember cmConfirmed = new CampaignMember();
+        cmConfirmed.CampaignId = closedCampaign.Id;
+        cmConfirmed.ContactId = contactConfirmed.Id;
+        cmConfirmed.Candidate_Status__c = 'Confirmed';
+        cmConfirmed.Application_Status__c = 'Submitted';
+        campaignMembersToInsert.add(cmConfirmed);
+        
+        insert campaignMembersToInsert;
+        
+        List<Task> tasksToInsert = new List<Task>();
+        Task tWaitlist = new Task(Subject='Test CampaignWaitlist', CampaignMemberId__c=cmWaitlist.Id, WhoId=contactWaitlist.Id, WhatId=closedCampaign.Id);
+        tasksToInsert.add(tWaitlist);
+        Task tOptedOutDropped = new Task(Subject='Test CampaignOptedOutDropped', CampaignMemberId__c=cmOptedOutDropped.Id, WhoId=contactOptedOutDropped.Id, WhatId=closedCampaign.Id);
+        tasksToInsert.add(tOptedOutDropped);
+        Task tOptedOutNoTime = new Task(Subject='Test CampaignOptedOutNoTime', CampaignMemberId__c=cmOptedOutNoTime.Id, WhoId=contactOptedOutNoTime.Id, WhatId=closedCampaign.Id);
+        tasksToInsert.add(tOptedOutNoTime);
+        Task tConfirm = new Task(Subject='Test CampaignConfirm', CampaignMemberId__c=cmConfirmed.Id, WhoId=contactConfirmed.Id, WhatId=closedCampaign.Id);
+        tasksToInsert.add(tConfirm);
+        
+        insert tasksToInsert;
+        
+        Test.startTest();
+        String query = 'Select Id, Name,ParentId,Recruitment_Closed__c,ProcessType__c From Campaign WHERE Recruitment_Closed__c =true AND ProcessType__c=\'Create\'';
+          
+        BZ_CloseRecruitmentBatchJob uca = new BZ_CloseRecruitmentBatchJob(query);
+        Id batchId = Database.executeBatch(uca);
+        Test.stopTest();
+    
+        List<CampaignMember> campaignMembersNotPurged = [SELECT Id, Name, Status, CampaignId, ContactId, Candidate_Status__c FROM CampaignMember WHERE CampaignId = :campaign.Id];
+        System.Assert(campaignMembersNotPurged.size() == 2, 'Expected 2 CampaignMember to not be purged. Found '+campaignMembersNotPurged.size());
+       
+        List<Task> tasksNotPurged = [SELECT Id, WhoId, Subject, EmailTemplate__c FROM Task WHERE WhatId = :campaign.Id];
+        Boolean foundWaitlistTask = false;
+        Boolean foundNoTimeTask = false;
+        Boolean foundWaitlistReinviteTask = false;
+        Boolean foundNoTimeReinviteTask = false;
+        for (Task t : tasksNotPurged)
+        {
+            if (t.WhoId != contactWaitlist.Id && t.WhoId != contactOptedOutNoTime.Id)
+            {
+                System.Assert(false, 'Only tasks for contactWaitlist and contactOptedOutNoTime should be left on campaign.  Found task = '+t);    
+            }
+            
+            if (t.Subject == tWaitlist.Subject) {
+                foundWaitlistTask = true;
+            }
+            
+            if (t.WhoId == contactWaitlist.Id && t.EmailTemplate__c != null && t.EmailTemplate__c == reinviteEmailTemplateName){
+                foundWaitlistReinviteTask = true;
+            }
+            if (t.Subject == tOptedOutNoTime.Subject) {
+                foundNoTimeTask = true;
+            }
+            
+            if (t.WhoId == contactOptedOutNoTime.Id && t.EmailTemplate__c != null && t.EmailTemplate__c == reinviteEmailTemplateName){
+                foundNoTimeReinviteTask = true;
+            }
+        }
+        System.Assert(foundWaitlistTask, 'tWaitlist not found in campaign');
+        System.Assert(foundNoTimeTask, 'tOptedOutNoTime not found in campaign');
+        System.Assert(foundWaitlistReinviteTask, 'Task to reinvite Waitlisted member to apply not found in campaign');
+        System.Assert(foundNoTimeReinviteTask, 'Task to reinvite Opted Out No Time member to apply not found in campaign');
+     }
+    
+}

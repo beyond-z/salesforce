@@ -1,0 +1,217 @@
+/**
+* Handles BZ_CloseRecruitmentController actions of the campaign related CampaignMembers processing for large records.
+*/
+public class BZ_CloseRecruitmentBatchJob implements Database.Batchable<sObject>, Database.AllowsCallouts, Database.Stateful {
+    private Final String m_query;
+    private List<Campaign> campaignsList = new List<Campaign>();
+    private Map<Id, List<Id>> mapMembertContactIdsNotToPurge = new Map<Id, List<Id>>();
+    private Set<Id> memberContactIdsNotToPurge = new Set<Id>();
+    private List<Id> memberContactIdsNotToPurgeList = new List<Id>();
+    
+    /**
+	* Initialize the constructor for use campaign query.
+	*/
+    public BZ_CloseRecruitmentBatchJob(String campaignQuery)
+    {
+        m_query = campaignQuery;
+    }
+    /**
+	* Used to collect the records or objects to be passed to the interface method execute for processing.
+	*/
+    public Database.QueryLocator start(Database.BatchableContext batchableContext){
+        return Database.getQueryLocator(m_query);
+    }
+    /**
+	* Processing the campaign related campaignMembers
+	* Ex.getting the all Waitlisted Campaign Members from old Campaign and inserting to new Campaign.
+	* process each batch of records
+	*/
+    public void execute( Database.BatchableContext batchableContext, List<Campaign> campaigns) {
+       
+        List<Campaign> updatedCampaignList = new List<Campaign>();
+        List<CampaignMember> membersNotPurged  = new List<CampaignMember>();
+        List<CampaignMember> newCampaignMembers = new List<CampaignMember>();
+        List<Task> taskToTransferToNewCampaign = new List<Task>();
+    	
+        //Set<Id> memberContactIdsNotToPurge = new Set<Id>();
+        Set<Id> oldCampaignIds = new Set<Id>();
+        Set<Id> membersNotPurgedIdSet = new Set<Id>();
+        Set<Id> tasksToCopyIdSet = new Set<Id>();
+        
+        //Map a campaign's member contact with it's current campaign Id 
+        Map<Id, Id> contactIdMap = new Map<Id,Id>();
+        //Map ID of closed recuritment campaign with the Id of the new campaign
+        Map<Id, Id> campaignIdMap = new Map<Id,Id>();
+        
+        try {        
+            //Check if campaign members List is not null and size is greater than zero
+            if(campaigns != null && campaigns.size() > 0) {
+                System.Debug('BZ_CloseRecruitmentBatchJob.execute(): campaigns list size --> '+campaigns.size());
+                System.Debug('BZ_CloseRecruitmentBatchJob.execute(): campaigns list --> '+campaigns);
+                for(Campaign camp : campaigns) {
+                    // Checking the campaign ProcessType__c and Recruitment_Closed__c
+                    if(camp.Recruitment_Closed__c = true && camp.ProcessType__c == 'Create') {
+                        oldCampaignIds.add(camp.ParentId);
+                        campaignsList.add(camp);
+                        camp.ProcessType__c = 'Clone';
+                        updatedCampaignList.add(camp);
+                        campaignIdMap.put(camp.ParentId, camp.Id);	//Mapping ID of closed recuritment campaign with the Id of the new campaign
+                    }
+                }
+            }
+            
+            // Getting the list of campaign Members to clone 
+            if (oldCampaignIds != null && !oldCampaignIds.isEmpty()){
+                membersNotPurged  = [SELECT Id, ContactId, CampaignId, Candidate_Status__c, Opted_Out_Reason__c,
+                                     Apply_Button_Enabled__c,Section_Name_In_LMS__c, Selected_Timeslot__c,Application_Status__c 
+                                     FROM CampaignMember 
+                                     WHERE CampaignId IN: oldCampaignIds AND
+                                     (Candidate_Status__c = 'Waitlisted' OR
+                                      (
+                                          Candidate_Status__c = 'Opted Out' AND 
+                                          (
+                                              Opted_Out_Reason__c = 'No Time' OR
+                                              Opted_Out_Reason__c = 'No Available Units' OR
+                                              Opted_Out_Reason__c = 'No Interest Right Now'
+                                          )
+                                      )
+                                     )];
+            }
+            
+            if (membersNotPurged  != null && !membersNotPurged.isEmpty()) {
+                System.debug('BZ_CloseRecruitmentBatchJob.execute(): membersNotPurged  list size --> ' + membersNotPurged.size());
+                for (CampaignMember campaignMem : membersNotPurged ) {
+                    //Adding all contacts with related campaign to a list to update server with campagin change. 
+                    //(Key = Campaign Id, Value = List of Contacts in same campaign)
+                    if(mapMembertContactIdsNotToPurge.containsKey(campaignMem.CampaignId)) {
+                        mapMembertContactIdsNotToPurge.get(campaignMem.CampaignId).add(campaignMem.ContactId); 
+                    }
+                    else {
+                        mapMembertContactIdsNotToPurge.put(campaignMem.CampaignId, new List<Id>{campaignMem.ContactId});
+                    }
+                    memberContactIdsNotToPurge.add(campaignMem.ContactId);
+                    memberContactIdsNotToPurgeList.add(campaignMem.ContactId);
+                    contactIdMap.put(campaignMem.ContactId, campaignMem.CampaignId);	//Mapping a campaign's member contact with it's current campaign Id 
+                    membersNotPurgedIdSet.add(campaignMem.Id);
+                }
+                
+                //Clone Campaign Membrs
+                BZ_ClonePlusController cloneCampaignMember = new BZ_ClonePlusController(membersNotPurgedIdSet);
+                BZ_SObjectList clonedCampaignMemberList = cloneCampaignMember.getCloneList();
+                
+                //Update cloned campaign members campaignId and fields
+                for(sObject campaignMem : clonedCampaignMemberList.objectList) {
+                                        
+                    CampaignMember campaignMemberNotPurged = (CampaignMember) campaignMem;
+                    Id newCampaignId = campaignIdMap.get(campaignMemberNotPurged.CampaignId);
+                    System.debug('BZ_CloseRecruitmentBatchJob.execute(): newCampaignId ' + newCampaignId);
+    				campaignMemberNotPurged.CampaignId = newCampaignId;
+    				campaignMemberNotPurged.Added_From_Previous_Campaign__c = True;
+                    campaignMemberNotPurged.Application_Decision_Sent__c = false;
+                    campaignMemberNotPurged.Apply_Button_Enabled__c = true;
+                    campaignMemberNotPurged.Section_Name_In_LMS__c = null;
+                    campaignMemberNotPurged.Selected_Timeslot__c = null;
+                    campaignMemberNotPurged.Candidate_Status__c = null;
+                    if (campaignMemberNotPurged.Application_Status__c == 'Submitted') {
+                        campaignMemberNotPurged.Application_Status__c = 'Started';            
+                    }
+    				newCampaignMembers.add(campaignMemberNotPurged);
+                }                
+            }
+            
+            //Tasks to clone
+            List<Task> taskToCopyOver = [Select Id, WhatId, WhoId From Task
+                                          Where WhoId IN : memberContactIdsNotToPurge
+                                          AND WhatId IN : oldCampaignIds];
+            System.debug('BZ_CloseRecruitmentBatchJob.execute(): taskToCopiedOver' + taskToCopyOver);
+            
+            //Collecting tasks' ID to clone
+            for(Task taskToTransfer : taskToCopyOver) {
+                tasksToCopyIdSet.add(taskToTransfer.Id);            
+            }
+            
+            //Clone all tasks of cloned campaign memmbers
+            BZ_ClonePlusController cloneTask = new BZ_ClonePlusController(tasksToCopyIdSet);
+            BZ_SObjectList clonedTaskList = cloneTask.getCloneList();
+            
+            //Associating cloned Tasks with new campagin (WhatId)
+            for(sObject sObjTask : clonedTaskList.objectList) {
+                Task taskCloned = (Task) sObjTask;
+                
+                Id previousCampaignId = contactIdMap.get(taskCloned.WhoId);
+                Id newCampaignId = campaignIdMap.get(previousCampaignId);
+                
+                taskCloned.WhatId = newCampaignId;
+				taskToTransferToNewCampaign.add(taskCloned);
+            }
+                        
+            //Inserting cloned campaign members
+            if (newCampaignMembers != null && newCampaignMembers.size() > 0) {
+                
+                System.debug('BZ_CloseRecruitmentBatchJob.execute(): Before inserting, newCampaignMembers list size--'
+                             + newCampaignMembers.size()); 
+                insert newCampaignMembers;
+            }
+            
+            //Updating campaigns
+            if (updatedCampaignList != null && updatedCampaignList.size()>0) {
+                System.debug('BZ_CloseRecruitmentBatchJob.execute(): Before inserting, updatedCampaignList size--> ' 
+                             + updatedCampaignList.size());    
+                update updatedCampaignList;
+            }
+            
+            //Inserting cloned tasks
+            if (taskToTransferToNewCampaign != null && taskToTransferToNewCampaign.size() > 0) {
+                System.debug('BZ_CloseRecruitmentBatchJob.execute(): Before inserting, taskToTransferToNewCampaign list size--'
+                             + taskToTransferToNewCampaign.size());
+                insert taskToTransferToNewCampaign;
+            }
+            
+        } catch(Exception ex) {
+            System.debug('BZ_CloseRecruitmentBatchJob.execute(): Inserting Campaign Members Error : ' + ex.getMessage());
+        }
+    }
+    /**
+	* Calling the mapping class and passing oldCampaignId,newCampaignId,list of membersNotToPurge
+	* Execute any post-processing operations
+	*/
+    public void finish(Database.BatchableContext batchableContext){
+        
+        //Updating the server that Contacts have moved to a new campaign
+        for(Campaign camp : campaignsList) {
+            List<Id> contactIds = mapMembertContactIdsNotToPurge.get(camp.ParentId);
+            Id oldCampaignId = camp.ParentId;
+            Id newCampaignId = camp.Id;
+            
+            BZ_Settings__c settings = BZ_Settings__c.getInstance('bz'); 
+            if(Test.isRunningTest()) return;
+            if(contactIds.isEmpty()){
+                System.Debug('BZ_CloseRecruitmentBatchJob.finish(): contactIds is empty.  NOOP.');
+                return;
+            }
+            
+            String base_url = settings.base_url__c; 
+            String magic_token = settings.magic_token__c; 
+            Http http = new Http(); 
+            HttpRequest request = new HttpRequest();
+            String contactIdsString = '';
+            for (Id i : contactIds){
+                contactIdsString += ',' + i;
+            }
+            contactIdsString = contactIdsString.substring(1);
+            System.Debug('BZ_CloseRecruitmentBatchJob.finish(): calling change_campaigns with contactIds = ' + contactIdsString);
+            request.setEndpoint(base_url + '/salesforce/change_campaigns');
+            request.setBody('magic_token='+magic_token+'&contactIds=' + contactIdsString +'&oldCampaignId=' + oldCampaignId + '&newCampaignId=' + newCampaignId); 
+            //request.setCompressed(true); // The ruby side throws an invalid UTF-8 byte sequence error.
+            request.setMethod('POST'); 
+            HttpResponse response = http.send(request); 
+            String responseBody = response.getBody();
+            if (response.getStatusCode() != 200)
+            {
+                throw new BZ_CloseRecruitmentBatchJobException('BZ_CloseRecruitmentBatchJob: finish() failed for call to ' + request.getEndpoint() + '\n response: ' + responseBody);
+            }
+        }        
+    }
+    
+    public class BZ_CloseRecruitmentBatchJobException extends Exception {}
+}
