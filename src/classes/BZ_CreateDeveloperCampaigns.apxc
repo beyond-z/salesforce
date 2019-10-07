@@ -19,8 +19,10 @@ public class BZ_CreateDeveloperCampaigns {
      * by someong else, pass the ownerId as a param.
      */
     public static void refreshDevCampaigns(){
-        // TODO: make sure we're running in the Dev Sandbox and throw and exception otherwise.
-        // 
+        if (!runningInSandbox){
+            throw new BZ_SandboxOnlyException('The refreshDevCampaigns() method can only be run in a Sandbox.');
+        }
+
         // THOUGHTS: an even better approach to refreshing the dev env would be to write a
         // generic class that calls into prod and pulls the values of all fields that you 
         // specify (or just all fields) and then writes them to a local object and saves that
@@ -280,7 +282,7 @@ public class BZ_CreateDeveloperCampaigns {
             when SanJoseState { return 'San Francisco Bay Area, San Jose'; }
             when NationalLouis { return 'Chicago'; }
             when LehmanCollege { return 'New York City, NY'; }
-            when BravenX { return 'National'; }
+            when BravenX { return 'Chicago'; }
             when BravenNetwork { return 'National'; }
             when else { throw new BZ_UnrecognizedProgramException('Program "' + program + '"" is unrecognized');}
         }
@@ -366,6 +368,16 @@ public class BZ_CreateDeveloperCampaigns {
             when else { throw new BZ_UnrecognizedProgramException('Program "' + program + '"" is unrecognized');}
         }
     }
+    
+    private static Boolean runningInSandbox {
+        get {
+            if (runningInSandbox == null) {
+                runningInSandbox = [SELECT IsSandbox FROM Organization LIMIT 1].IsSandbox;
+            }
+            return runningInSandbox;
+        }
+    set;
+}
    
     /////////////////////////////////////////////////////////////
     // Constants
@@ -391,4 +403,5 @@ public class BZ_CreateDeveloperCampaigns {
     
     public class BZ_UnrecognizedRoleException extends Exception {}
     public class BZ_UnrecognizedProgramException extends Exception {}
+    public class BZ_SandboxOnlyException extends Exception {}
 }
