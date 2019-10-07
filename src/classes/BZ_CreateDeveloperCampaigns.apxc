@@ -1,0 +1,346 @@
+/**
+ * This is a helper class to create a set of Campaigns that we can use in the 
+ * software development environment for dev/testing. The set of Campaigns is
+ * intended to mimic the real values/state of all active recruitment campaigns
+ * (for fellows, leadership coaches, mentors, mentees, referrals, braven network, etc)
+ */
+public class BZ_CreateDeveloperCampaigns {
+
+    public enum Program {Rutgers, SanJoseState, NationalLouis, BravenX, BravenNetwork, LehmanCollege}
+    public enum Role {Fellow, LeadershipCoach, EventVolunteer, Mentor, Mentee, BravenNetwork} // TODO: all the referrel roles
+    
+    /** 
+     * Creates all dev Campaigns and returns them (doesn't save them).
+     * To save them, run: 
+     *   List<Campaign> campaigns = createAll(ownerId); 
+     *   update campaigns;
+     * 
+     * Note: they will be owned by the current user. To have them ownerd 
+     * by someong else, pass the ownerId as a param.
+     */
+    public static void refreshDevCampaigns(){
+        // TODO: make sure we're running in the Dev Sandbox and throw and exception otherwise.
+        // 
+        // THOUGHTS: an even better approach to refreshing the dev env would be to write a
+        // generic class that calls into prod and pulls the values of all fields that you 
+        // specify (or just all fields) and then writes them to a local object and saves that
+        // This approach will still be useful to setting up new sites/locations though b/c
+        // it essentially documents what needs to be set for each Campaign type.
+
+
+        // E.g. imagine having an endpoint like: 
+        //   https://<prodinstance>.salesforce.com/services/apexrest/Campaign/<campaignId>
+        // which returns a JSON object with a list of all field_name : field_value 
+        // which we can then use to create a local CampaignObject and loop over all field_names, setting their values?!?
+        // See:
+        //   - https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_rest_intro.htm
+        //   - https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_rest_code_sample_basic.htm
+        //   - https://developer.salesforce.com/forums/?id=906F000000099zbIAA
+        //   - BZ_ClonePlusController.apxc for an example of how to use an object's metadata (e.g. getSObjectType().getDescribe())
+        //     to read it
+  
+        verifyEmailTemplateExists(INVITE_EMAIL_TEMPLATE);
+        verifyEmailTemplateExists(INTRO_EMAIL_TEMPLATE);
+        verifyEmailTemplateExists(INTERVIEW_EMAIL_TEMPLATE);
+        verifyEmailTemplateExists(ACCEPTED_EMAIL_TEMPLATE);
+        verifyEmailTemplateExists(NOT_ACCEPTED_EMAIL_TEMPLATE);
+        verifyEmailTemplateExists(WAITLISTED_EMAIL_TEMPLATE);
+        verifyEmailTemplateExists(REINVITE_EMAIL_TEMPLATE);
+
+        // TODO: loop through all existing campaigns and 
+        //    1) if they match the name of one in campaignsToCreate, delete them before saving campaignsToCreate.
+        //    2) otherwise, marke them InActive. This is to handle the fact that over time we'll want to
+        //       set the new ones up to accurately reflect the current semester and we need the dev env
+        //       to be able to choose which Program/Role campaign is the Active one.
+
+        List<Campaign> campaignsToCreate = createAll();
+        insert campaignsToCreate;
+    }
+    
+    /** 
+     * Creates all dev Campaigns and returns them (doesn't save them).
+     * To save them, run: 
+     *   List<Campaign> campaigns = createAll(ownerId); 
+     *   insert campaigns;
+     * 
+     * Note: they will be owned by the current user. To have them ownerd 
+     * by someong else, pass the ownerId as a param.
+     */
+    public static List<Campaign> createAll(){
+        return createAll(userInfo.getUserId());
+    }
+
+    /** 
+     * Creates all dev Campaigns and returns them (doesn't save them).
+     * To save them, run: 
+     *   List<Campaign> campaigns = createAll(ownerId); 
+     *   insert campaigns;
+     */
+    public static List<Campaign> createAll(Id ownerId){
+        // TODO: check meta data and don't run if this isn't the dev sandbox.
+        
+        // TODO: what if people accidentally run this twice? Or put in a script?
+        // Or just generally, what is the process for "resetting" the dev env
+        // by running this again?
+        // 
+        // Make sure it's not going to dupe all over ourselves.
+        // 
+        // Thoughts: the local dev env setup should loop over all Active campaigns 
+        // and choose an arbitrary one per combo of: Type, BZ_Region
+        // Subsequent runs of this will both delete and recreate the campaigns 
+        // (if the Type/Name matches) and set all other campaigns not in this script 
+        // to Complete status instead of Active. That way, running this script has the effect
+        // of resetting the dev env and the dev env can discover the campaign IDs it should
+        // be mapping using the Type/BZ_Region combo. Eh eh?
+        
+        // TODO: just get this one working and the dev env able to auto-map it before doing
+        // all the others... 
+        List<Campaign> campaignsToCreate = new List<Campaign>();
+        campaignsToCreate.addAll(createAll(ownerId, Program.Rutgers));
+        // TODO: implement the rest once you've confirmed it works for one.        
+        /*campaignsToCreate.addAll(createAll(ownerId, Program.SanJoseState));
+        campaignsToCreate.addAll(createAll(ownerId, Program.NationalLouis));
+        campaignsToCreate.addAll(createAll(ownerId, Program.LehmanCollege));*/
+        // TODO: BravenX and BravenNetwork may be a different set. Figure that out.
+
+        return campaignsToCreate;
+    }
+    
+    /** 
+     * Creates all dev Campaigns and returns them (doesn't save them).
+     * 
+     * This is in anticipation of adapting this class to be used to setup 
+     * a new site / program with all the necessary Campaigns as we exdpand.
+     */
+    public static List<Campaign> createAll(Id ownerId, Program program){
+        List<Campaign> campaigns = new List<Campaign>();
+        campaigns.add(create(ownerId, program, Role.Fellow));
+        // TODO: implement the rest of the roles once we'vfe verified it works for one.
+        return campaigns;
+    }
+    
+    public static Campaign create(Program program, Role role){
+        return create(userInfo.getUserId(), program, role);
+    }
+    
+    public static Campaign create(Id ownerId, Program program, Role role){
+        switch on role {
+            when Fellow {
+                return createForFellow(ownerId, program);
+            }
+            when LeadershipCoach {
+                // TODO: implement the rest once you've confirmed it works for one.
+                return null;
+            }
+            when else {
+                throw new BZ_UnrecognizedRoleException('### Cant create Campaign for "' + role + '". Dont know with Type to use.');
+            }
+        }
+    }
+    
+    public static Campaign createForFellow(Id ownerId, Program program){
+
+        return new Campaign(Name=getCampaignName(program, role.Fellow),
+                            OwnerId=ownerId,
+                            IsActive=true,
+                            Status='In Progress',
+                            StartDate=Date.today(),
+                            EndDate=Date.today().addMonths(3),
+                            Invite_Email_Template__c=INVITE_EMAIL_TEMPLATE,
+                            Intro_Email_Template__c=INTRO_EMAIL_TEMPLATE,
+                            App_Interview_Requested_Email_Template__c =INTERVIEW_EMAIL_TEMPLATE,
+                            App_Accepted_Email_Template__c= ACCEPTED_EMAIL_TEMPLATE,
+                            App_Waitlisted_Email_Template__c=WAITLISTED_EMAIL_TEMPLATE,
+                            App_Not_Accepted_Email_Template__c=NOT_ACCEPTED_EMAIL_TEMPLATE,
+                            Previous_Candidate_New_Invite__c=REINVITE_EMAIL_TEMPLATE,
+                            Type=getCampaignType(Role.Fellow),
+                            Application_Type__c='student', 
+                            Contact_Email__c='tech+salesforcedevcontact@bebraven.org',
+                            Program_Title__c='Braven Leadership and Career Accelerator', 
+                            Program_Site__c=getProgramSite(program),
+                            Program_Semester__c=SEMESTER,
+                            BZ_Region__c=getRegion(program),
+                            Target_Course_ID_In_LMS__c=getCourseId(program, Role.Fellow),
+                            Sourcing_Info_Options__c='option1:\noption2:',
+                            Section_Name_Site_Prefix__c=getSectionNameSitePrefix(program),
+                            Interview_Scheduler__c='https://youcanbook.me/fakelink',
+                            Default_Timezone__c=getTimezone(program),
+                            Meeting_Times__c = LL_MEETING_TIMES,
+                            Request_Availability__c=false,
+                            Request_Student_Id__c=true,
+                            Student_ID_Format__c=getStudentIdFormat(program),
+                            Student_ID_Format_Help__c=getStudentIdFormatHelp(program),
+                            Student_ID_Excluded_Chars__c=getStudentIdExcludedChars(program),
+                            Require_High_School__c=false,
+                            Registration_Instructions__c='Dev Registration Instructions'
+                            // TODO: how do we want to handle these in the dev env?
+                            //Docusign_Template_ID__c
+                            //Postaccelerator_Qualtrics_Survey_ID__c
+                            //Preaccelerator_Qualtrics_Survey_ID__c
+                           );
+    }
+    
+    public static Campaign createForLC(Id ownerId, Program program){
+        // TODO: implement me
+        //     Coach_Course_ID__c = '3',
+        // Section_Name_in_LMS_Coach_Course__c = 'CoachSection1',
+        throw new BZ_UnrecognizedRoleException('Note Implemented Yet!');
+    }
+    
+    /**
+     * Throws an exception if the specified email template doesn't exist.
+     */
+    private static void verifyEmailTemplateExists(String developername){
+        try {
+            Id i = [select id, name from EmailTemplate where developername = :developername].id;
+        }
+        catch (Exception e){
+          throw new BZ_EmailException ('Email Template "'+ developername + '" doesnt exist.');
+        }
+    }
+    
+    /////////////////////////////////////////////////////
+    // Get values specific to a Program and/or Role
+    /////////////////////////////////////////////////////
+    // NOTE: A better way to do most of the static mapping methods below is to create a
+    // class (or classes) that hold the info unique for a particular program/role 
+    // combo and have a factory method to get the instance for that program/role combo.
+    // That way, you just see all the values in one place for a particular campaign instead of
+    // spread across a bunch of methods all switching on the same thing.
+
+    // E.g. Rutgers Newark - Participants Fall 2019    
+    private static string getCampaignName(Program program, Role role) {        
+        return getProgramSite(program) + ' - ' + getCampaignType(role) + ' - ' + SEASON_YEAR;
+    }
+    
+    private static string getCourseId(Program program, Role role) {        
+        Map<Program, Map<Role, String>> programToRoleToCourseIdMap = new Map<Program, Map<Role, String>>{
+            BZ_CreateDeveloperCampaigns.Program.Rutgers => new Map<Role, String> { 
+                BZ_CreateDeveloperCampaigns.Role.Fellow => '73',
+                BZ_CreateDeveloperCampaigns.Role.LeadershipCoach => '79'},
+            BZ_CreateDeveloperCampaigns.Program.SanJoseState => new Map<Role, String> { 
+                BZ_CreateDeveloperCampaigns.Role.Fellow => '71',
+                BZ_CreateDeveloperCampaigns.Role.LeadershipCoach => '69'}
+            // TODO: the rest
+        };
+        return programToRoleToCourseIdMap.get(program).get(role);
+    }
+    
+    private static string getRegion(Program program) {
+        switch on program {
+            when Rutgers { return 'Newark, NJ'; }
+            when SanJoseState { return 'San Francisco Bay Area, San Jose'; }
+            when NationalLouis { return 'Chicago'; }
+            when LehmanCollege { return 'New York City, NY'; }
+            when BravenX { return 'National'; }
+            when BravenNetwork { return 'National'; }
+            when else { throw new BZ_UnrecognizedProgramException('Program "' + program + '"" is unrecognized');}
+        }
+    }
+    
+    private static string getProgramSite(Program program) {
+        switch on program {
+            when Rutgers { return 'Rutgers Newark'; }
+            when SanJoseState { return 'San José State University'; }
+            when NationalLouis { return 'National Louis University'; }
+            when LehmanCollege { return 'Lehman College'; }
+            when BravenX { return 'BravenX-Pilot'; }
+            when BravenNetwork { return 'Braven Network'; }
+            when else { throw new BZ_UnrecognizedProgramException('Program "' + program + '"" is unrecognized');}
+        }
+    }
+
+    private static string getSectionNameSitePrefix(Program program) {
+        switch on program {
+            when Rutgers { return 'RU-N'; }
+            when SanJoseState { return 'SJSU'; }
+            when NationalLouis { return 'NLU'; }
+            when LehmanCollege { return 'CUNY-LEH'; }
+            when BravenX { return null; }
+            when BravenNetwork { return null; }
+            when else { throw new BZ_UnrecognizedProgramException('Program "' + program + '"" is unrecognized');}
+        }
+    }
+    
+    private static string getCampaignType(Role role) {
+        switch on role {
+            when Fellow { return 'Program Participants';}
+            when LeadershipCoach { return 'Leadership Coaches';}
+            // TODO: the rest
+            when else { throw new BZ_UnrecognizedRoleException('Role "' + role + '" is unrecognized');}
+        }
+    }
+    
+    private static string getTimezone(Program program) {
+        switch on program {
+            when Rutgers { return 'America/New_York'; }
+            when SanJoseState { return 'America/Los_Angeles'; }
+            when NationalLouis { return 'America/Chicago'; }
+            when LehmanCollege { return 'America/New_York'; }
+            when BravenX { return 'America/Chicago'; }
+            when BravenNetwork { return null; }
+            when else { throw new BZ_UnrecognizedProgramException('Program "' + program + '"" is unrecognized');}
+        }
+    }
+    
+    private static string getStudentIdFormat(Program program) {
+        switch on program {
+            when Rutgers { return '^[0-9]{9}$'; }
+            when SanJoseState { return '^[0-9]{9}$'; }
+            when NationalLouis { return '^N004[0-9]{5}$'; }
+            when LehmanCollege { return 'TODO'; }
+            when BravenX { return null; }
+            when BravenNetwork { return null; }
+            when else { throw new BZ_UnrecognizedProgramException('Program "' + program + '"" is unrecognized');}
+        }
+    }
+    
+    private static string getStudentIdFormatHelp(Program program) {
+        switch on program {
+            when Rutgers { return 'Example: 123456789'; }
+            when SanJoseState { return 'Example: 012345678'; }
+            when NationalLouis { return 'Example: N00412345'; }
+            when LehmanCollege { return 'TODO'; }
+            when BravenX { return null; }
+            when BravenNetwork { return null; }
+            when else { throw new BZ_UnrecognizedProgramException('Program "' + program + '"" is unrecognized');}
+        }
+    }
+    
+    private static string getStudentIdExcludedChars(Program program) {
+        switch on program {
+            when Rutgers { return '[\\- ]'; } // This is actually '[\- ]' but the \ had to be escaped.
+            when SanJoseState { return '[\\- ]'; } 
+            when NationalLouis { return '[\\- ]'; }
+            when LehmanCollege { return 'TODO'; }
+            when BravenX { return null; }
+            when BravenNetwork { return null; }
+            when else { throw new BZ_UnrecognizedProgramException('Program "' + program + '"" is unrecognized');}
+        }
+    }
+   
+    /////////////////////////////////////////////////////////////
+    // Constants
+    /////////////////////////////////////////////////////////////
+
+    private static final string SEASON_YEAR = 'Spring 2020';
+    private static final string SEMESTER = 'Fall 2019';
+    private static final string LL_MEETING_TIMES = 
+        'Tuesday, 6-8p\n' +
+        'Wednesday, 6-8p\n' +
+        SEMESTER;
+    
+    private static final string INVITE_EMAIL_TEMPLATE = 'BZ_INVITE_Dev';
+    private static final string INTRO_EMAIL_TEMPLATE = 'BZ_INTRO_Dev';
+    private static final string INTERVIEW_EMAIL_TEMPLATE = 'BZ_INTERVIEW_REQUEST_Dev';
+    private static final string ACCEPTED_EMAIL_TEMPLATE = 'BZ_ACCEPTED_Dev';
+    private static final string NOT_ACCEPTED_EMAIL_TEMPLATE = 'BZ_NOT_ACCEPTED_Dev';
+    private static final string WAITLISTED_EMAIL_TEMPLATE = 'BZ_WAITLISTED_Dev';
+    private static final string REINVITE_EMAIL_TEMPLATE = 'BZ_REINVITE_Dev';
+    // This is obsolete bc we have rolling apps all year now and don't open it at a certain time.
+    //private static string APP_OPEN_EMAIL_TEMPLATE = 'BZ APP OPEN: Dev'; 
+    //Also, this is obsolete and rename to NotAccepted: App_Rejected_Email_Template__c
+    
+    public class BZ_UnrecognizedRoleException extends Exception {}
+    public class BZ_UnrecognizedProgramException extends Exception {}
+}
