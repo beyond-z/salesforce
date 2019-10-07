@@ -46,6 +46,16 @@ public class BZ_CreateDeveloperCampaigns {
         verifyEmailTemplateExists(NOT_ACCEPTED_EMAIL_TEMPLATE);
         verifyEmailTemplateExists(WAITLISTED_EMAIL_TEMPLATE);
         verifyEmailTemplateExists(REINVITE_EMAIL_TEMPLATE);
+        
+        // TODO: handle this being run a second time. Make sure it's not going to dupe all over ourselves.
+        // 
+        // Thoughts: the local dev env setup should loop over all Active campaigns 
+        // and choose an arbitrary one per combo of: Type, BZ_Region
+        // Subsequent runs of this will both delete and recreate the campaigns 
+        // (if the Type/Name matches) and set all other campaigns not in this script 
+        // to Complete status instead of Active. That way, running this script has the effect
+        // of resetting the dev env and the dev env can discover the campaign IDs it should
+        // be mapping using the Type/BZ_Region combo. Eh eh?
 
         // TODO: loop through all existing campaigns and 
         //    1) if they match the name of one in campaignsToCreate, delete them before saving campaignsToCreate.
@@ -79,26 +89,12 @@ public class BZ_CreateDeveloperCampaigns {
     public static List<Campaign> createAll(Id ownerId){
         // TODO: check meta data and don't run if this isn't the dev sandbox.
         
-        // TODO: what if people accidentally run this twice? Or put in a script?
-        // Or just generally, what is the process for "resetting" the dev env
-        // by running this again?
-        // 
-        // Make sure it's not going to dupe all over ourselves.
-        // 
-        // Thoughts: the local dev env setup should loop over all Active campaigns 
-        // and choose an arbitrary one per combo of: Type, BZ_Region
-        // Subsequent runs of this will both delete and recreate the campaigns 
-        // (if the Type/Name matches) and set all other campaigns not in this script 
-        // to Complete status instead of Active. That way, running this script has the effect
-        // of resetting the dev env and the dev env can discover the campaign IDs it should
-        // be mapping using the Type/BZ_Region combo. Eh eh?
-        
-        // TODO: just get this one working and the dev env able to auto-map it before doing
-        // all the others... 
         List<Campaign> campaignsToCreate = new List<Campaign>();
         campaignsToCreate.addAll(createAll(ownerId, Program.Rutgers));
-        // TODO: implement the rest once you've confirmed it works for one.        
-        /*campaignsToCreate.addAll(createAll(ownerId, Program.SanJoseState));
+        campaignsToCreate.addAll(createAll(ownerId, Program.SanJoseState));
+        
+        // TODO: implement the rest once you've confirmed it works for the above.        
+        /*
         campaignsToCreate.addAll(createAll(ownerId, Program.NationalLouis));
         campaignsToCreate.addAll(createAll(ownerId, Program.LehmanCollege));*/
         // TODO: BravenX and BravenNetwork may be a different set. Figure that out.
@@ -115,7 +111,8 @@ public class BZ_CreateDeveloperCampaigns {
     public static List<Campaign> createAll(Id ownerId, Program program){
         List<Campaign> campaigns = new List<Campaign>();
         campaigns.add(create(ownerId, program, Role.Fellow));
-        // TODO: implement the rest of the roles once we'vfe verified it works for one.
+        campaigns.add(create(ownerId, program, Role.LeadershipCoach));
+        // TODO: implement the rest
         return campaigns;
     }
     
@@ -129,7 +126,11 @@ public class BZ_CreateDeveloperCampaigns {
                 return createForFellow(ownerId, program);
             }
             when LeadershipCoach {
-                // TODO: implement the rest once you've confirmed it works for one.
+                return createForLC(ownerId, program);
+            }
+            when EventVolunteer {
+                // TODO: implement the rest:
+                // Mentor, Mentee, BravenNetwork, ... Referrels?
                 return null;
             }
             when else {
@@ -139,7 +140,6 @@ public class BZ_CreateDeveloperCampaigns {
     }
     
     public static Campaign createForFellow(Id ownerId, Program program){
-
         return new Campaign(Name=getCampaignName(program, role.Fellow),
                             OwnerId=ownerId,
                             IsActive=true,
@@ -155,7 +155,7 @@ public class BZ_CreateDeveloperCampaigns {
                             Previous_Candidate_New_Invite__c=REINVITE_EMAIL_TEMPLATE,
                             Type=getCampaignType(Role.Fellow),
                             Application_Type__c='student', 
-                            Contact_Email__c='tech+salesforcedevcontact@bebraven.org',
+                            Contact_Email__c='tech+salesforcedevcontactfellow@bebraven.org',
                             Program_Title__c='Braven Leadership and Career Accelerator', 
                             Program_Site__c=getProgramSite(program),
                             Program_Semester__c=SEMESTER,
@@ -181,10 +181,40 @@ public class BZ_CreateDeveloperCampaigns {
     }
     
     public static Campaign createForLC(Id ownerId, Program program){
-        // TODO: implement me
-        //     Coach_Course_ID__c = '3',
-        // Section_Name_in_LMS_Coach_Course__c = 'CoachSection1',
-        throw new BZ_UnrecognizedRoleException('Note Implemented Yet!');
+          return new Campaign(Name=getCampaignName(program, role.LeadershipCoach),
+                            OwnerId=ownerId,
+                            IsActive=true,
+                            Status='In Progress',
+                            StartDate=Date.today(),
+                            EndDate=Date.today().addMonths(3),
+                            Invite_Email_Template__c=INVITE_EMAIL_TEMPLATE,
+                            Intro_Email_Template__c=INTRO_EMAIL_TEMPLATE,
+                            App_Interview_Requested_Email_Template__c =INTERVIEW_EMAIL_TEMPLATE,
+                            App_Accepted_Email_Template__c= ACCEPTED_EMAIL_TEMPLATE,
+                            App_Waitlisted_Email_Template__c=WAITLISTED_EMAIL_TEMPLATE,
+                            App_Not_Accepted_Email_Template__c=NOT_ACCEPTED_EMAIL_TEMPLATE,
+                            Previous_Candidate_New_Invite__c=REINVITE_EMAIL_TEMPLATE,
+                            Type=getCampaignType(Role.LeadershipCoach),
+                            Application_Type__c='coach', 
+                            Contact_Email__c='tech+salesforcedevcontactcoach@bebraven.org',
+                            Program_Title__c='Braven Accelerator', 
+                            Program_Site__c=getProgramSite(program),
+                            Program_Semester__c=SEMESTER,
+                            BZ_Region__c=getRegion(program),
+                            Target_Course_ID_In_LMS__c=getCourseId(program, Role.Fellow),
+                            Coach_Course_ID__c=getCourseId(program, Role.LeadershipCoach),
+                            Sourcing_Info_Options__c='option1:\noption2:',
+                            Section_Name_Site_Prefix__c=getSectionNameSitePrefix(program),
+                            Section_Name_in_LMS_Coach_Course__c = getSectionNameSitePrefix(program) + ' ' + SEASON_YEAR,
+                            Interview_Scheduler__c='https://youcanbook.me/fakelink',
+                            Default_Timezone__c=getTimezone(program),
+                            Meeting_Times__c = LL_MEETING_TIMES,
+                            Request_Availability__c=true
+                            // TODO: how do we want to handle these in the dev env?
+                            //Docusign_Template_ID__c
+                            //Postaccelerator_Qualtrics_Survey_ID__c
+                            //Preaccelerator_Qualtrics_Survey_ID__c
+                           );
     }
     
     /**
