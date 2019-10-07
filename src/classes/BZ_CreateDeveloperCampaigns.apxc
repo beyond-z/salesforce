@@ -95,17 +95,15 @@ public class BZ_CreateDeveloperCampaigns {
      *   insert campaigns;
      */
     public static List<Campaign> createAll(Id ownerId){
-        // TODO: check meta data and don't run if this isn't the dev sandbox.
-        
         List<Campaign> campaignsToCreate = new List<Campaign>();
         campaignsToCreate.addAll(createAll(ownerId, Program.Rutgers));
         campaignsToCreate.addAll(createAll(ownerId, Program.SanJoseState));
-        
-        // TODO: implement the rest once you've confirmed it works for the above.        
-        /*
         campaignsToCreate.addAll(createAll(ownerId, Program.NationalLouis));
+        
+        // TODO: implement the rest 
+        /*
         campaignsToCreate.addAll(createAll(ownerId, Program.LehmanCollege));*/
-        // TODO: BravenX and BravenNetwork may be a different set. Figure that out.
+        // Note: BravenX and BravenNetwork may be a different set. Figure that out.
 
         return campaignsToCreate;
     }
@@ -251,15 +249,27 @@ public class BZ_CreateDeveloperCampaigns {
         return getProgramSite(program) + ' - ' + getCampaignType(role) + ' - ' + SEASON_YEAR;
     }
     
+    // Note: we really need a central mapping of the current course IDs instead of 
+    // hardcoding them all over tarnation.
     private static string getCourseId(Program program, Role role) {        
         Map<Program, Map<Role, String>> programToRoleToCourseIdMap = new Map<Program, Map<Role, String>>{
             BZ_CreateDeveloperCampaigns.Program.Rutgers => new Map<Role, String> { 
                 BZ_CreateDeveloperCampaigns.Role.Fellow => '73',
-                BZ_CreateDeveloperCampaigns.Role.LeadershipCoach => '79'},
+                BZ_CreateDeveloperCampaigns.Role.LeadershipCoach => '79'
+            },
             BZ_CreateDeveloperCampaigns.Program.SanJoseState => new Map<Role, String> { 
                 BZ_CreateDeveloperCampaigns.Role.Fellow => '71',
-                BZ_CreateDeveloperCampaigns.Role.LeadershipCoach => '69'}
-            // TODO: the rest
+                BZ_CreateDeveloperCampaigns.Role.LeadershipCoach => '69'
+            },
+            BZ_CreateDeveloperCampaigns.Program.NationalLouis => new Map<Role, String> { 
+                BZ_CreateDeveloperCampaigns.Role.Fellow => '56',
+                BZ_CreateDeveloperCampaigns.Role.LeadershipCoach => '61'
+            },
+            BZ_CreateDeveloperCampaigns.Program.BravenX => new Map<Role, String> { 
+                BZ_CreateDeveloperCampaigns.Role.Fellow => '81',
+                BZ_CreateDeveloperCampaigns.Role.LeadershipCoach => '84'
+            }
+            // TODO: Lehman, once we have it.
         };
         return programToRoleToCourseIdMap.get(program).get(role);
     }
