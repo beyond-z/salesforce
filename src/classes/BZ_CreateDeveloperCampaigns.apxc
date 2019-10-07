@@ -27,7 +27,6 @@ public class BZ_CreateDeveloperCampaigns {
         // This approach will still be useful to setting up new sites/locations though b/c
         // it essentially documents what needs to be set for each Campaign type.
 
-
         // E.g. imagine having an endpoint like: 
         //   https://<prodinstance>.salesforce.com/services/apexrest/Campaign/<campaignId>
         // which returns a JSON object with a list of all field_name : field_value 
@@ -46,24 +45,33 @@ public class BZ_CreateDeveloperCampaigns {
         verifyEmailTemplateExists(NOT_ACCEPTED_EMAIL_TEMPLATE);
         verifyEmailTemplateExists(WAITLISTED_EMAIL_TEMPLATE);
         verifyEmailTemplateExists(REINVITE_EMAIL_TEMPLATE);
-        
-        // TODO: handle this being run a second time. Make sure it's not going to dupe all over ourselves.
-        // 
-        // Thoughts: the local dev env setup should loop over all Active campaigns 
-        // and choose an arbitrary one per combo of: Type, BZ_Region
-        // Subsequent runs of this will both delete and recreate the campaigns 
-        // (if the Type/Name matches) and set all other campaigns not in this script 
-        // to Complete status instead of Active. That way, running this script has the effect
-        // of resetting the dev env and the dev env can discover the campaign IDs it should
-        // be mapping using the Type/BZ_Region combo. Eh eh?
-
-        // TODO: loop through all existing campaigns and 
-        //    1) if they match the name of one in campaignsToCreate, delete them before saving campaignsToCreate.
-        //    2) otherwise, marke them InActive. This is to handle the fact that over time we'll want to
-        //       set the new ones up to accurately reflect the current semester and we need the dev env
-        //       to be able to choose which Program/Role campaign is the Active one.
+               
+        // When setting up/refreshing the dev env, we want only ONE active campaign per 
+        // location / type combo. E.g. Only one Rutgers / Fellow campaign. That way, the dev env
+        // can auto-map the campaigns (in the docker-compose/scripts/setup_dev_env.sh script). 
+        // So on a refresh, set everything else to be InActive which means devs in the middle 
+        // of using a temporary / second active campaign will have it's state changed.
+        // Sorry #notsorry.
+        List<Campaign> allActiveCampaigns = [SELECT Id, IsActive, Name, Status FROM Campaign Where IsActive = true];
+        for (Campaign c : allActiveCampaigns) {
+            c.IsActive = false;
+            c.Status = 'Completed';
+        }
+        update allActiveCampaigns;
 
         List<Campaign> campaignsToCreate = createAll();
+        // Before actually saving the new campaigns, go delete any existing ones with
+        // matching names. Remember, this is a dev refresh, so all testing/dev state is being
+        // blown away and we don't want dupes.
+        // Another option would be to rename them to something like: Name + Date and only 
+        // delete really old ones. We'll see how this plays out in practice first.
+        Set<String> campaignNamesToCreate = new Set<String>();
+        for (Campaign c : campaignsToCreate) {
+            campaignNamesToCreate.add(c.Name);
+        }
+        List<Campaign> campaignsToDelete = [SELECT Id, Name FROM Campaign WHERE Name in :campaignNamesToCreate];
+        delete campaignsToDelete;
+        
         insert campaignsToCreate;
     }
     
