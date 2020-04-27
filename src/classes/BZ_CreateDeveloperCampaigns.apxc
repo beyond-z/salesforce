@@ -120,6 +120,7 @@ public class BZ_CreateDeveloperCampaigns {
         List<Campaign> campaigns = new List<Campaign>();
         campaigns.add(create(ownerId, program, Role.Fellow));
         campaigns.add(create(ownerId, program, Role.LeadershipCoach));
+        campaigns.add(create(ownerId, program, Role.Mentor));
         // TODO: implement the rest
         return campaigns;
     }
@@ -135,6 +136,9 @@ public class BZ_CreateDeveloperCampaigns {
             }
             when LeadershipCoach {
                 return createForLC(ownerId, program);
+            }
+			when Mentor {
+                return createForMentor(ownerId, program);
             }
             when EventVolunteer {
                 // TODO: implement the rest:
@@ -218,6 +222,39 @@ public class BZ_CreateDeveloperCampaigns {
                             Default_Timezone__c=getTimezone(program),
                             Meeting_Times__c = LL_MEETING_TIMES,
                             Request_Availability__c=true
+                            // TODO: how do we want to handle these in the dev env?
+                            //Docusign_Template_ID__c
+                            //Postaccelerator_Qualtrics_Survey_ID__c
+                            //Preaccelerator_Qualtrics_Survey_ID__c
+                           );
+    }
+    
+    public static Campaign createForMentor(Id ownerId, Program program){
+          return new Campaign(Name=getCampaignName(program, role.LeadershipCoach),
+                            OwnerId=ownerId,
+                            IsActive=true,
+                            Status='In Progress',
+                            StartDate=Date.today(),
+                            EndDate=Date.today().addMonths(3),
+                            Invite_Email_Template__c=INVITE_EMAIL_TEMPLATE,
+                            Intro_Email_Template__c=INTRO_EMAIL_TEMPLATE,
+                            App_Interview_Requested_Email_Template__c =INTERVIEW_EMAIL_TEMPLATE,
+                            App_Accepted_Email_Template__c= ACCEPTED_EMAIL_TEMPLATE,
+                            App_Waitlisted_Email_Template__c=WAITLISTED_EMAIL_TEMPLATE,
+                            App_Not_Accepted_Email_Template__c=NOT_ACCEPTED_EMAIL_TEMPLATE,
+                            Previous_Candidate_New_Invite__c=REINVITE_EMAIL_TEMPLATE,
+                            Type=getCampaignType(Role.Mentor),
+                            Application_Type__c='volunteer', 
+                            Contact_Email__c='tech+salesforcedevcontactmentor@bebraven.org',
+                            Program_Title__c='Professional Mentor', 
+                            Program_Site__c=getProgramSite(program),
+                            Program_Semester__c=SEMESTER,
+                            BZ_Region__c=getRegion(program),
+                            Target_Course_ID_In_LMS__c=getCourseId(program, Role.Fellow), // Same as Fellow
+                            Sourcing_Info_Options__c='option1:\noption2:',
+                            Interview_Scheduler__c='https://youcanbook.me/fakelink',
+                            Default_Timezone__c=getTimezone(program),
+                            Meeting_Times__c = LL_MEETING_TIMES
                             // TODO: how do we want to handle these in the dev env?
                             //Docusign_Template_ID__c
                             //Postaccelerator_Qualtrics_Survey_ID__c
@@ -316,6 +353,7 @@ public class BZ_CreateDeveloperCampaigns {
         switch on role {
             when Fellow { return 'Program Participants';}
             when LeadershipCoach { return 'Leadership Coaches';}
+            when Mentor { return 'Mentor'; }
             // TODO: the rest
             when else { throw new BZ_UnrecognizedRoleException('Role "' + role + '" is unrecognized');}
         }
