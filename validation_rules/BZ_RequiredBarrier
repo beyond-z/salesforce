@@ -1,0 +1,12 @@
+Name: BZ_RequiredBarrier
+
+Object: Task
+
+Description: When "Likelihood to apply" is set to "Won't apply" or "Unlikely" in student recruitment, a reason must be specified.
+
+Formula:
+AND( 
+ISBLANK(  Barriers__c  ), 
+OR( 
+ISPICKVAL( Likelihood_to_Apply__c , 'Won’t Apply'), 
+ISPICKVAL( Likelihood_to_Apply__c , 'Unlikely')))

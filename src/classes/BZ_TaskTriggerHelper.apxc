@@ -1,0 +1,41 @@
+/*
+ * When a task is created or updated, all campaign members related to the Contact (Relate to) 
+ * should be updated according to the task.
+ * 
+ * Created By: MST
+ * 
+ */
+public class BZ_TaskTriggerHelper {
+    
+    public static void updateCampaignMember(List<Task> newTaskList) {
+        Set<Id> setWhoId = new Set<Id>();
+        Map<Id, Task> mapTasksInTrigger = new Map<Id, Task>();
+        List<CampaignMember> campaignMemberToUpdate = new List<CampaignMember>();
+        
+        //Collecting the Related Contacts of the Task to retrive all campaign members related to those contacts
+        for(Task currentTask : newTaskList) {
+            setWhoId.add(currentTask.WhoId);
+            mapTasksInTrigger.put(currentTask.WhoId, currentTask);
+        }
+        
+        //Collecting all campaign members 
+        List<CampaignMember> campaignMemberList = [SELECT Id, Likelihood_to_Apply__c, Opt_out_Reason__c, ContactId 
+                                                   FROM CampaignMember 
+                                                   Where ContactId In : setWhoId];
+        
+        //Updating campaign member's according to the task
+        for(CampaignMember currentCM : campaignMemberList) {
+            Task taskFromTrigger = mapTasksInTrigger.get(currentCM.ContactId);
+            
+            currentCM.Likelihood_to_Apply__c = taskFromTrigger.Likelihood_to_Apply__c;
+            currentCm.Opt_out_Reason__c = taskFromTrigger.Barriers__c;
+            //currentCm.Cultivation_Level__c = 'Met';
+            
+            campaignMemberToUpdate.add(currentCM);
+        }
+        
+        if(campaignMemberToUpdate.size() > 0) {
+            update campaignMemberToUpdate;
+        }
+    }
+}

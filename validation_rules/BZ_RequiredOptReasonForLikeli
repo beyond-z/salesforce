@@ -1,0 +1,17 @@
+Rule Name:	BZ_RequiredOptReasonForLikeli
+
+Object: CampaignMember
+
+Error Condition Formula:
+
+AND(
+ISBLANK( Opt_out_Reason__c ),
+OR(
+ISPICKVAL( Likelihood_to_Apply__c , 'Won’t Apply'),
+ISPICKVAL( Likelihood_to_Apply__c , 'Unlikely')),
+OR(
+ISPICKVAL( Campaign.Type , 'Pre-Accelerator Participants'),
+ISPICKVAL( Campaign.Type , 'Program Participants') ) )
+
+Error Message:	When setting Likelihood to Apply to "Won't Apply" or "Unlikely", a reason must be specified.	Error Location	Top of Page
+Description:	When "Likelihood to apply" is set to "Won't apply" or "Unlikely" in student recruitment, a reason must be specified.
