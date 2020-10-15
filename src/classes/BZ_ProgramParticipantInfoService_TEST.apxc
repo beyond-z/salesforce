@@ -1,0 +1,38 @@
+@isTest
+private class BZ_ProgramParticipantInfoService_TEST {
+    @isTest static void doGet_TEST(){
+        RecordType courseRT=[SELECT id FROM RecordType WHERE sObjectType='Program__c' AND name= 'Course' LIMIT 1];
+        RecordType partRT=[SELECT id FROM RecordType WHERE sObjectType='Participant__c' AND name= 'Fellow' LIMIT 1];
+        RecordType canRT=[SELECT id FROM RecordType WHERE sObjectType='Candidate__c' AND name= 'Fellow' LIMIT 1];
+        RecordType schoolRT=[SELECT id FROM RecordType WHERE sObjectType='Account' AND name= 'School' LIMIT 1];
+        RecordType educationRT=[SELECT id FROM RecordType WHERE sObjectType='npe5__Affiliation__c' AND name= 'Education' LIMIT 1];
+
+        Contact c= new Contact(firstname='testy', lastname='tester', email='tester@test.com');
+        insert c;
+
+        Account a= new Account(name='TestSchool', ActiveProgram__c=true, type='College or University');
+        insert a;
+        
+        npe5__Affiliation__c aff= new npe5__Affiliation__c(npe5__contact__c=c.Id, npe5__Organization__c=a.Id, recordtypeid=educationRT.Id, student_ID__c='12321');
+	    insert aff;
+        
+        Program__c pr= new Program__c(school__c=a.Id, recordtypeid=courseRT.Id, name='test', recruitment_start_date__c=Date.today(), recruitment_end_date__c=Date.today(), recruitment_status__c='Current', Program_start_date__c=Date.today(), Program_end_date__c=Date.today(), status__c='Current', default_timezone__c='America/New_York', Docusign_Template_ID__c='testdocusignid', Target_Course_Id_In_LMS__c='targetcourseid', LMS_Coach_Course_Id__c='26', Section_Name_In_LMS_Coach_Course__c='sectionnameinlmscoachcourse', Preaccelerator_Qualtrics_Survey_ID__c='presurveyid', Postaccelerator_Qualtrics_Survey_ID__c='postsurveyid'   );
+        insert pr;
+
+        Cohort__c ch= new Cohort__c(name='cohortname', program__c=pr.Id);
+        insert ch;
+
+        Candidate__c can= new Candidate__c(name='test', recordtypeid=canRT.Id,contact__c=c.Id, registered__c=true, status__c='Fully Confirmed', Program__c=pr.Id);
+        insert can;
+
+        insert new Participant__c(name='test', recordtypeid=partRT.Id,contact__c=c.Id, Candidate__c=can.Id, cohort__c=ch.Id, Program__c=pr.Id, status__c='Enrolled');
+        RestRequest request= new RestRequest();
+        request.requestURI= URL.getSalesforceBaseUrl()+'/services/apexrest/participants/currentandfuture/';
+  		request.httpMethod= 'GET';
+        RestContext.request= request;
+        
+        BZ_ProgramParticipantInfoService.doGet();
+        
+        
+    }
+}
