@@ -1,0 +1,67 @@
+// Responsible for notifying Braven Platform when there is a change to a Contact
+// record that needs to be synced to Canvas. E.g. the email changes so their
+// login email across our systems needed to be updated.
+//
+// This is invocable from a Process Builder flow by choosing Apex as the action and
+// selecting the "Sync To LMS - Contacts" method
+public inherited sharing class BZ_SyncContactsToCanvas {
+
+    @InvocableMethod(label='Sync To LMS - Contacts' description='syncs any Contact changes needed back to Canvas')
+    public static void notifyPlatform(List<Contact> contacts) {
+        System.debug('BEGIN - BZ_SyncContactsToCanvas.notifyPlatform(' + contacts + ')');
+        // Ideally, we would synchronously call this and wait for success so that
+        // the record fails to save if the email doesn't update, but that leads to
+        // CalloutException('You have uncommitted work pending. Please commit or rollback before calling out')
+        // which seems to be an SF limitation.
+        Id userMakingChangeId = UserInfo.getUserId();
+        System.enqueueJob(new RestApiCall(contacts, userMakingChangeId));
+    }
+
+    public class RestApiCall implements System.Queueable, Database.AllowsCallouts {
+        List<Contact> m_contacts = new List<Contact>();
+        Id m_userMakingChangeId;
+
+        public RestApiCall(List<Contact> contacts, Id userMakingChangeId){
+            this.m_contacts = contacts ;
+            this.m_userMakingChangeId = userMakingChangeId;
+        }
+
+        public void execute(System.QueueableContext ctx) {
+            System.debug('BEGIN - BZ_SyncContactsToCanvas.RestApiCall.execute(' + m_contacts + ', userMakingChangeId = '+m_userMakingChangeId+')');
+            User userMakingChange = [SELECT Email from User Where Id = :m_userMakingChangeId];
+            String body = '{' +
+                '"staff_email":"' + userMakingChange.Email + '",' +
+                '"contacts":'+ JSON.serialize(m_contacts, true) +
+                '}';
+            System.debug('BZ_SyncContactsToCanvas.RestApiCall.execute() - body = ' + body);
+            Http http = new Http();
+            HttpRequest request = new HttpRequest();
+
+            // To edit the values pulled from Braven_Platform_Settings__c below, go to
+            // Setup -> Custom Settings and click "Manage -> Edit" to set the values
+            Braven_Platform_Settings__c settings = Braven_Platform_Settings__c.getInstance();
+            // E.g. 'https://platformweb/salesforce/update_contacts.json'
+            request.setEndpoint(settings.Platform_URL__c);
+            request.setHeader('Access-Key', settings.Platform_Access_Token__c);
+
+            request.setHeader('Content-Type', 'application/json;charset=UTF-8');
+            request.setMethod('POST');
+            request.setBody(body);
+            HttpResponse response = http.send(request);
+            if (response.getStatusCode() == 204) {
+                System.debug('BZ_SyncContactsToCanvas.RestApiCall.execute() - SUCCESS');
+
+                // We don't use the result, but here as an example of how
+                // you could process the response and take action in Salesforce
+                // Map<String, Object> results = (Map<String, Object>) JSON.deserializeUntyped(response.getBody());
+                // map to salesforce object
+                // update object
+            } else {
+                // Nothing to do here. In order to find these errors, you need to turn trace
+                // logging on, which we'll never do. The platform always returns success, so
+                // as long as you have a valid access token and the server is up it will work.
+                System.debug('BZ_SyncContactsToCanvas.RestApiCall.execute() - ERROR: ' + response);
+            }
+        }
+    }
+}
