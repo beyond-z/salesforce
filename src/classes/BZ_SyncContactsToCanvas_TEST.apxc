@@ -1,17 +1,17 @@
 @isTest
 private class BZ_SyncContactsToCanvas_TEST {
-    
+
     @isTest static void doNotify_TEST(){
         Braven_Platform_Settings__c testSettings = new Braven_Platform_Settings__c();
         testSettings.Platform_URL__c = 'https://example.com';
         testSettings.Platform_Access_Token__c = 'faketoken';
         insert testSettings;
-        
+
         List<Contact> contactsToInsert = new List<Contact>();
-        Contact changedContact = new Contact(FirstName='TestSyncContact', LastName='lastname', Email='TestSyncContact.lastname@example.com');
+        Contact changedContact = new Contact(Canvas_Cloud_User_ID__c=1234.0, FirstName='TestSyncContact', LastName='lastname', Email='TestSyncContact.lastname@example.com');
         contactsToInsert.add(changedContact);
         insert contactsToInsert;
-        
+
         Test.startTest();
         BZ_SyncContactsToCanvas.notifyPlatform(contactsToInsert);
         Test.stopTest();

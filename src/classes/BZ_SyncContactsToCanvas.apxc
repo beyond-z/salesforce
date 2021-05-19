@@ -17,6 +17,22 @@ public inherited sharing class BZ_SyncContactsToCanvas {
         System.enqueueJob(new RestApiCall(contacts, userMakingChangeId));
     }
 
+    // Customizable class to specify what to return as JSON.
+    // Important Note: don't add Personally Identifiable Information here.
+    // These values come through in the Platform logs, so nothing sensitive
+    // like their demographic info or address should be sent if we can help it.
+    // If we *really* need that info for some valid reason, we need to add a filter
+    // in Papertrail to drop these logs (and maybe filter them from Honeycomb and Sentry too).
+    public class SyncContactJson{
+        public Id ContactId;
+        public Integer CanvasUserId;
+        public String Email;
+        public String FirstName;
+        public String LastName;
+        public DateTime LastModifiedDate;
+        public SyncContactJson(){}
+    }
+
     public class RestApiCall implements System.Queueable, Database.AllowsCallouts {
         List<Contact> m_contacts = new List<Contact>();
         Id m_userMakingChangeId;
@@ -29,9 +45,20 @@ public inherited sharing class BZ_SyncContactsToCanvas {
         public void execute(System.QueueableContext ctx) {
             System.debug('BEGIN - BZ_SyncContactsToCanvas.RestApiCall.execute(' + m_contacts + ', userMakingChangeId = '+m_userMakingChangeId+')');
             User userMakingChange = [SELECT Email from User Where Id = :m_userMakingChangeId];
+            List<SyncContactJson> contactList = new List<SyncContactJson>();
+            for(Contact c : m_contacts){
+                SyncContactJson sc = new SyncContactJson();
+                sc.ContactId = c.Id;
+                sc.CanvasUserId = (Integer)c.Canvas_Cloud_User_ID__c;
+                sc.Email = c.Email;
+                sc.FirstName = c.FirstName;
+                sc.LastName = c.LastName;
+                sc.LastModifiedDate = c.LastModifiedDate;
+                contactList.add(sc);
+            }
             String body = '{' +
                 '"staff_email":"' + userMakingChange.Email + '",' +
-                '"contacts":'+ JSON.serialize(m_contacts, true) +
+                '"contacts":'+ JSON.serialize(contactList, true) +
                 '}';
             System.debug('BZ_SyncContactsToCanvas.RestApiCall.execute() - body = ' + body);
             Http http = new Http();
@@ -47,20 +74,23 @@ public inherited sharing class BZ_SyncContactsToCanvas {
             request.setHeader('Content-Type', 'application/json;charset=UTF-8');
             request.setMethod('POST');
             request.setBody(body);
-            HttpResponse response = http.send(request);
-            if (response.getStatusCode() == 204) {
-                System.debug('BZ_SyncContactsToCanvas.RestApiCall.execute() - SUCCESS');
 
-                // We don't use the result, but here as an example of how
-                // you could process the response and take action in Salesforce
-                // Map<String, Object> results = (Map<String, Object>) JSON.deserializeUntyped(response.getBody());
-                // map to salesforce object
-                // update object
-            } else {
-                // Nothing to do here. In order to find these errors, you need to turn trace
-                // logging on, which we'll never do. The platform always returns success, so
-                // as long as you have a valid access token and the server is up it will work.
-                System.debug('BZ_SyncContactsToCanvas.RestApiCall.execute() - ERROR: ' + response);
+            if(!Test.isRunningTest()){
+                HttpResponse response = http.send(request);
+                if (response.getStatusCode() == 204) {
+                    System.debug('BZ_SyncContactsToCanvas.RestApiCall.execute() - SUCCESS');
+
+                    // We don't use the result, but here as an example of how
+                    // you could process the response and take action in Salesforce
+                    // Map<String, Object> results = (Map<String, Object>) JSON.deserializeUntyped(response.getBody());
+                    // map to salesforce object
+                    // update object
+                } else {
+                    // Nothing to do here. In order to find these errors, you need to turn trace
+                    // logging on, which we'll never do. The platform always returns success, so
+                    // as long as you have a valid access token and the server is up it will work.
+                    System.debug('BZ_SyncContactsToCanvas.RestApiCall.execute() - ERROR: ' + response);
+                }
             }
         }
     }
