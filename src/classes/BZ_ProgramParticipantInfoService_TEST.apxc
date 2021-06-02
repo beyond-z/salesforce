@@ -7,7 +7,7 @@ private class BZ_ProgramParticipantInfoService_TEST {
         RecordType schoolRT=[SELECT id FROM RecordType WHERE sObjectType='Account' AND name= 'School' LIMIT 1];
         RecordType educationRT=[SELECT id FROM RecordType WHERE sObjectType='npe5__Affiliation__c' AND name= 'Education' LIMIT 1];
 
-        Contact c= new Contact(firstname='testy', lastname='tester', email='tester@test.com');
+        Contact c= new Contact(firstname='testy', lastname='tester', email='tester@test.com', Discord_User_ID__c='testDiscordUserId');
         insert c;
 
         Account a= new Account(name='TestSchool', ActiveProgram__c=true, type='College or University', RecordTypeId=schoolRT.Id);
@@ -28,7 +28,7 @@ private class BZ_ProgramParticipantInfoService_TEST {
         Candidate__c can= new Candidate__c(name='test', recordtypeid=canRT.Id,contact__c=c.Id, registered__c=true, status__c='Fully Confirmed', Program__c=pr.Id);
         insert can;
 
-        insert new Participant__c(name='test', recordtypeid=partRT.Id,contact__c=c.Id, Candidate__c=can.Id, cohort__c=ch.Id, Program__c=pr.Id, status__c='Enrolled');
+        insert new Participant__c(name='test', recordtypeid=partRT.Id,contact__c=c.Id, Candidate__c=can.Id, cohort__c=ch.Id, Program__c=pr.Id, status__c='Enrolled', Discord_Invite_Code__c='testDiscordInviteCode');
         RestRequest request= new RestRequest();
         request.requestURI= URL.getSalesforceBaseUrl()+'/services/apexrest/participants/currentandfuture/';
   		request.httpMethod= 'GET';
