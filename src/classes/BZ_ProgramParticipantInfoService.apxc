@@ -113,7 +113,7 @@ global without sharing class BZ_ProgramParticipantInfoService
             ps.ZoomMeetingId1=part.Cohort_Schedule__r.Webinar_Registration_1__c;
             ps.ZoomMeetingId2=part.Cohort_Schedule__r.Webinar_Registration_2__c;
             ps.ZoomMeetingLink1=part.Webinar_Access_1__c;
-            ps.ZoomMeetingLink2=part.Webinar_Access_1__c;
+            ps.ZoomMeetingLink2=part.Webinar_Access_2__c;
 
             //get student id for participant's program
             if(contactIdToMapOfAccountIdAndStudentId.get(part.Contact__c) != null){
