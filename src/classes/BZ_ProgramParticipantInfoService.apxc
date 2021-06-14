@@ -7,11 +7,13 @@ global without sharing class BZ_ProgramParticipantInfoService
     // API to get Program information since it's the same for all Participants in the program.
     // This is only participant specific info.
     global class ParticipantService{
+        public Id Id; // The variable is called Id and is of type Id
         public Id ProgramId;
         public Id ContactId;
         public String Email;
         public DateTime LastModifiedDate;
         public String Role;
+        public String VolunteerRole;
         public String FirstName;
         public String LastName;
         public String CandidateStatus;
@@ -21,6 +23,11 @@ global without sharing class BZ_ProgramParticipantInfoService
         public String CohortScheduleDayTime;
         public String DiscordInviteCode;
         public String DiscordUserId;
+        public String ZoomMeetingId1;
+        public String ZoomMeetingId2;
+        public String ZoomMeetingLink1;
+        public String ZoomMeetingLink2;
+
         public ParticipantService(){}
     }
 
@@ -49,8 +56,14 @@ global without sharing class BZ_ProgramParticipantInfoService
         String programId = req.params.get('program_id');
         String contactId = req.params.get('contact_id');
 
+
         List<RecordType> rts=[SELECT id FROM RecordType WHERE sObjectType='Program__c' AND name IN ('Course', 'Booster')];
-        String query = 'SELECT Contact__c, Contact__r.email, LastModifiedDate, RecordType.name, Contact__r.firstName, Contact__r.lastName, Candidate__r.status__c, status__c, Cohort__r.name, Program__r.Default_Timezone__c, Program__r.Docusign_Template_ID__c, Program__r.Target_Course_Id_In_LMS__c,Program__r.LMS_Coach_Course_Id__c,Program__r.Section_Name_In_LMS_Coach_Course__c, Program__r.Preaccelerator_Qualtrics_Survey_ID__c, Program__r.Postaccelerator_Qualtrics_Survey_ID__c, Program__r.school__c, Cohort_Schedule__r.DayTime__c, Discord_Invite_Code__c, Contact__r.Discord_User_ID__c ' +
+        String query = 'SELECT Id, Contact__c, Contact__r.email, LastModifiedDate, RecordType.name, Contact__r.firstName, Contact__r.lastName, ' +
+                       'Candidate__r.status__c, status__c, Volunteer_Role__c, Program__r.school__c, ' +
+                       'Discord_Invite_Code__c, Contact__r.Discord_User_ID__c, ' +
+                       'Cohort__r.name, Cohort_Schedule__r.DayTime__c, ' +
+                       'Cohort_Schedule__r.Webinar_Registration_1__c, Cohort_Schedule__r.Webinar_Registration_2__c, ' +
+                       'Webinar_Access_1__c, Webinar_Access_2__c ' +
                        'FROM Participant__c ' +
                        'WHERE (Program__r.status__c=\'Current\' OR Program__r.status__c=\'Future\') AND ' +
                               'Program__r.recordtypeid IN :rts AND LastModifiedDate > :lastModifiedSince';
@@ -82,11 +95,13 @@ global without sharing class BZ_ProgramParticipantInfoService
         List<ParticipantService> resultList= new List<ParticipantService>();
         for(Participant__c part:result){
             ParticipantService ps= new ParticipantService();
+            ps.Id = part.Id;
             ps.ProgramId = part.Program__r.Id;
             ps.ContactId=part.Contact__c;
             ps.Email=part.Contact__r.email;
             ps.LastModifiedDate=part.LastModifiedDate;
             ps.Role= (part.RecordType.name == 'Booster Student' ? 'Fellow' : part.RecordType.name);
+            ps.VolunteerRole=part.Volunteer_Role__c;
             ps.FirstName=part.Contact__r.firstName;
             ps.LastName=part.Contact__r.lastName;
             ps.CandidateStatus=part.Candidate__r.status__c;
@@ -95,6 +110,10 @@ global without sharing class BZ_ProgramParticipantInfoService
             ps.CohortName=part.Cohort__r.name;
             ps.DiscordInviteCode=part.Discord_Invite_Code__c;
             ps.DiscordUserId=part.Contact__r.Discord_User_ID__c;
+            ps.ZoomMeetingId1=part.Cohort_Schedule__r.Webinar_Registration_1__c;
+            ps.ZoomMeetingId2=part.Cohort_Schedule__r.Webinar_Registration_2__c;
+            ps.ZoomMeetingLink1=part.Webinar_Access_1__c;
+            ps.ZoomMeetingLink2=part.Webinar_Access_2__c;
 
             //get student id for participant's program
             if(contactIdToMapOfAccountIdAndStudentId.get(part.Contact__c) != null){
