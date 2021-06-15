@@ -23,6 +23,7 @@ global without sharing class BZ_ProgramParticipantInfoService
         public String CohortScheduleDayTime;
         public String DiscordInviteCode;
         public String DiscordUserId;
+        public String ZoomPrefix;
         public String ZoomMeetingId1;
         public String ZoomMeetingId2;
         public String ZoomMeetingLink1;
@@ -61,7 +62,7 @@ global without sharing class BZ_ProgramParticipantInfoService
         String query = 'SELECT Id, Contact__c, Contact__r.email, LastModifiedDate, RecordType.name, Contact__r.firstName, Contact__r.lastName, ' +
                        'Candidate__r.status__c, status__c, Volunteer_Role__c, Program__r.school__c, ' +
                        'Discord_Invite_Code__c, Contact__r.Discord_User_ID__c, ' +
-                       'Cohort__r.name, Cohort_Schedule__r.DayTime__c, ' +
+                       'Cohort__r.name, Cohort__r.Zoom_Prefix__c, Cohort_Schedule__r.DayTime__c, ' +
                        'Cohort_Schedule__r.Webinar_Registration_1__c, Cohort_Schedule__r.Webinar_Registration_2__c, ' +
                        'Webinar_Access_1__c, Webinar_Access_2__c ' +
                        'FROM Participant__c ' +
@@ -110,6 +111,7 @@ global without sharing class BZ_ProgramParticipantInfoService
             ps.CohortName=part.Cohort__r.name;
             ps.DiscordInviteCode=part.Discord_Invite_Code__c;
             ps.DiscordUserId=part.Contact__r.Discord_User_ID__c;
+            ps.ZoomPrefix = part.Cohort__r.Zoom_Prefix__c;
             ps.ZoomMeetingId1=part.Cohort_Schedule__r.Webinar_Registration_1__c;
             ps.ZoomMeetingId2=part.Cohort_Schedule__r.Webinar_Registration_2__c;
             ps.ZoomMeetingLink1=part.Webinar_Access_1__c;
