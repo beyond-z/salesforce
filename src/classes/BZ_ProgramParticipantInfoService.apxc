@@ -17,9 +17,12 @@ global without sharing class BZ_ProgramParticipantInfoService
         public String FirstName;
         public String LastName;
         public String CandidateStatus;
+        public String CandidateId;
         public String ParticipantStatus;
         public String CohortName;
+        public String CohortId;
         public String StudentId;
+        public String CohortScheduleId;
         public String CohortScheduleDayTime;
         public String DiscordInviteCode;
         public String DiscordUserId;
@@ -60,9 +63,9 @@ global without sharing class BZ_ProgramParticipantInfoService
 
         List<RecordType> rts=[SELECT id FROM RecordType WHERE sObjectType='Program__c' AND name IN ('Course', 'Booster')];
         String query = 'SELECT Id, Contact__c, Contact__r.email, LastModifiedDate, RecordType.name, Contact__r.firstName, Contact__r.lastName, ' +
-                       'Candidate__r.status__c, status__c, Volunteer_Role__c, Program__r.school__c, ' +
+                       'Candidate__r.Id, Candidate__r.status__c, status__c, Volunteer_Role__c, Program__r.school__c, ' +
                        'Discord_Invite_Code__c, Contact__r.Discord_User_ID__c, ' +
-                       'Cohort__r.name, Cohort__r.Zoom_Prefix__c, Cohort_Schedule__r.DayTime__c, ' +
+                       'Cohort__r.name, Cohort__r.Id, Cohort__r.Zoom_Prefix__c, Cohort_Schedule__r.Id, Cohort_Schedule__r.DayTime__c, ' +
                        'Cohort_Schedule__r.Webinar_Registration_1__c, Cohort_Schedule__r.Webinar_Registration_2__c, ' +
                        'Webinar_Access_1__c, Webinar_Access_2__c ' +
                        'FROM Participant__c ' +
@@ -105,10 +108,13 @@ global without sharing class BZ_ProgramParticipantInfoService
             ps.VolunteerRole=part.Volunteer_Role__c;
             ps.FirstName=part.Contact__r.firstName;
             ps.LastName=part.Contact__r.lastName;
+            ps.CandidateId=part.Candidate__r.Id;
             ps.CandidateStatus=part.Candidate__r.status__c;
             ps.ParticipantStatus=part.status__c;
+            ps.CohortScheduleId=part.Cohort_Schedule__r.Id;
             ps.CohortScheduleDayTime=part.Cohort_Schedule__r.DayTime__c;
             ps.CohortName=part.Cohort__r.name;
+            ps.CohortId=part.Cohort__r.Id;
             ps.DiscordInviteCode=part.Discord_Invite_Code__c;
             ps.DiscordUserId=part.Contact__r.Discord_User_ID__c;
             ps.ZoomPrefix = part.Cohort__r.Zoom_Prefix__c;
