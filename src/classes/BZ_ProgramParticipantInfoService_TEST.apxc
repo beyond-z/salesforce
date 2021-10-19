@@ -16,7 +16,8 @@ private class BZ_ProgramParticipantInfoService_TEST {
         npe5__Affiliation__c aff= new npe5__Affiliation__c(npe5__contact__c=c.Id, npe5__Organization__c=a.Id, recordtypeid=educationRT.Id, student_ID__c='12321');
 	    insert aff;
 
-        Program__c pr= new Program__c(school__c=a.Id, recordtypeid=courseRT.Id, name='test', recruitment_start_date__c=Date.today(), recruitment_end_date__c=Date.today(), recruitment_status__c='Current', Program_start_date__c=Date.today(), Program_end_date__c=Date.today(), status__c='Current', default_timezone__c='America/New_York', Docusign_Template_ID__c='testdocusignid', Target_Course_Id_In_LMS__c='targetcourseid', LMS_Coach_Course_Id__c='26', Section_Name_In_LMS_Coach_Course__c='sectionnameinlmscoachcourse', Preaccelerator_Qualtrics_Survey_ID__c='presurveyid', Postaccelerator_Qualtrics_Survey_ID__c='postsurveyid'   );
+        Program__c pr= new Program__c(school__c=a.Id, recordtypeid=courseRT.Id, name='test', recruitment_start_date__c=Date.today(), recruitment_end_date__c=Date.today(), recruitment_status__c='Current', Program_start_date__c=Date.today(), Program_end_date__c=Date.today(), status__c='Current', default_timezone__c='America/New_York', Docusign_Template_ID__c='testdocusignid', Target_Course_Id_In_LMS__c='targetcourseid', LMS_Coach_Course_Id__c='26', Section_Name_In_LMS_Coach_Course__c='sectionnameinlmscoachcourse',
+                                      Preaccelerator_Qualtrics_Survey_ID__c='presurveyid', Postaccelerator_Qualtrics_Survey_ID__c='postsurveyid', Discord_Server_Id__c='897655555');
         insert pr;
 
         CohortSchedule__c cs= new CohortSchedule__c(name='cohortschedulename', program__c=pr.Id);
