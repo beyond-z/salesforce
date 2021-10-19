@@ -29,7 +29,7 @@ private class BZ_ProgramParticipantInfoService_TEST {
         Candidate__c can= new Candidate__c(name='test', recordtypeid=canRT.Id,contact__c=c.Id, registered__c=true, status__c='Fully Confirmed', Program__c=pr.Id);
         insert can;
 
-        insert new Participant__c(name='test', recordtypeid=partRT.Id,contact__c=c.Id, Candidate__c=can.Id, cohort__c=ch.Id, Program__c=pr.Id, status__c='Enrolled', Discord_Invite_Code__c='testDiscordInviteCode');
+        insert new Participant__c(name='test', recordtypeid=partRT.Id,contact__c=c.Id, Candidate__c=can.Id, cohort__c=ch.Id, cohort_schedule__c=cs.Id, Program__c=pr.Id, status__c='Enrolled', Discord_Invite_Code__c='testDiscordInviteCode');
         RestRequest request= new RestRequest();
         request.requestURI= URL.getSalesforceBaseUrl()+'/services/apexrest/participants/currentandfuture/';
   		request.httpMethod= 'GET';
