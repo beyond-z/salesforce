@@ -1,0 +1,36 @@
+/**
+ * Customizable class to specify what to return as JSON from the
+ * various Participant services exposed as a @RestResource endpoints
+ */
+global class BZ_ParticipantService {
+    public Id Id; // The variable is called Id and is of type Id
+    public Id ProgramId;
+    public Id ContactId;
+    public String Email;
+    public DateTime LastModifiedDate;
+    public String Role;
+    public String VolunteerRole;
+    public String FirstName;
+    public String LastName;
+    public String Accelerator_Course_Id;
+    public String LC_Playbook_Course_Id;
+    public String CandidateStatus;
+    public String CandidateId;
+    public String ParticipantStatus;
+    public String CohortName;
+    public String CohortId;
+    public String StudentId;
+    public String CohortScheduleId;
+    public String CohortScheduleDayTime;
+    public String DiscordInviteCode;
+    public String DiscordUserId;
+    public String DiscordServerId;
+    public List<String> TeachingAssistantSections;
+    public String ZoomPrefix;
+    public String ZoomMeetingId1;
+    public String ZoomMeetingId2;
+    public String ZoomMeetingLink1;
+    public String ZoomMeetingLink2;
+
+    public BZ_ParticipantService(){}
+}

@@ -1,49 +1,22 @@
+// TODO: can I get rid of this class? We use it a ton
+// to directly query for a particular participant. So maybe we still abstract it
+// and change that end-point to be more direct for the use cases that aren't a sync?
+//
+
 @RestResource(urlMapping='/participants/currentandfuture/*')
 global without sharing class BZ_ProgramParticipantInfoService
 {
-    // Customizable class to specify what to return as JSON
-    //
-    // Note: the client side switched to call directly into the: /services/data/v48.0/query?q=blah
-    // API to get Program information since it's the same for all Participants in the program.
-    // This is only participant specific info.
-    global class ParticipantService{
-        public Id Id; // The variable is called Id and is of type Id
-        public Id ProgramId;
-        public Id ContactId;
-        public String Email;
-        public DateTime LastModifiedDate;
-        public String Role;
-        public String VolunteerRole;
-        public String FirstName;
-        public String LastName;
-        public String CandidateStatus;
-        public String CandidateId;
-        public String ParticipantStatus;
-        public String CohortName;
-        public String CohortId;
-        public String StudentId;
-        public String CohortScheduleId;
-        public String CohortScheduleDayTime;
-        public String DiscordInviteCode;
-        public String DiscordUserId;
-        public String DiscordServerId;
-        public List<String> TeachingAssistantSections;
-        public String ZoomPrefix;
-        public String ZoomMeetingId1;
-        public String ZoomMeetingId2;
-        public String ZoomMeetingLink1;
-        public String ZoomMeetingLink2;
-
-        public ParticipantService(){}
-    }
-
     // Returns a list of Participant objects for current and future Programs.
     // Takes 3 optional params:
     //   program_id: if specified, filters the participants down to just that program
     //   contact_id: if specified, filters the participants down to just that contact
     //   last_modified_date: if specified, filters the participants down to only those edited after this date.
+    //
+    // Note: the client side switched to call directly into the: /services/data/v48.0/query?q=blah
+    // API to get Program information since it's the same for all Participants in the program.
+    // This is only participant specific info.
     @HttpGet
-    global static List<ParticipantService> doGet(){
+    global static List<BZ_ParticipantService> doGet(){
         RestRequest req= RestContext.request;
         RestResponse res= RestContext.response;
 
@@ -55,132 +28,33 @@ global without sharing class BZ_ProgramParticipantInfoService
         // https://support.workato.com/support/solutions/articles/1000236426-salesforce-object-query-language-soql-basic-syntax-and-common-search-terms
         // https://nextgensalesforce.wordpress.com/2015/11/30/dynamic-soql-query-results-in-local-time/
         // valueOfGmt() method here: https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_methods_system_datetime.htm
-        String lastModifiedSinceParam = req.params.get('last_modified_since');
-        DateTime lastModifiedSince = DateTime.now().addYears(-1); // Default to get all records over a year old.
-        if (lastModifiedSinceParam != null) lastModifiedSince = DateTime.valueOfGmt(lastModifiedSinceParam);
+        //
+        // UPDATE: the last_modified_since param was never implemented, but we did default
+        // to only getting Participants modified within the past year. I put that
+        // logic inside the BZ_ParticipantServiceFactory.getParticipants() method below
+        // and am just throwing away this param for now. If we ever do decide to implement this,
+        // go fix this up. When passing a WHERE clause to the factory, can't use variables like
+        // ' AND LastModifiedDate > :lastModifiedSince' for example, so we either need to convert to
+        // string or pass the variables as params to the factory method and have it evaluate them.
+        // Here is the error returned if you try and pass the above condition in the WHERE clause:
+        // "[{\"errorCode\":\"APEX_ERROR\",\"message\":\"System.QueryException: line 1:1063 no viable alternative at character '<EOF>'\\n\\nClass.BZ_ParticipantServiceFactory.getParticipants: line 37, column 1\\nClass.BZ_ProgramParticipantInfoService.doGet: line 43, column 1\"}]"
+        //
+        //String lastModifiedSinceParam = req.params.get('last_modified_since');
+        //DateTime lastModifiedSince = DateTime.now().addYears(-1); // Default to get all records modified within the last year.
+        //if (lastModifiedSinceParam != null) lastModifiedSince = DateTime.valueOfGmt(lastModifiedSinceParam);
 
         String programId = req.params.get('program_id');
         String contactId = req.params.get('contact_id');
 
+        String whereClause = '(Program__r.status__c=\'Current\' OR Program__r.status__c=\'Future\')';
+        if (contactId != null) whereClause += ' AND Contact__r.Id = \'' + contactId + '\'';
+        if (programId != null) whereClause += ' AND Program__r.Id = \'' + programId + '\'';
 
-        List<RecordType> rts=[SELECT id FROM RecordType WHERE sObjectType='Program__c' AND name IN ('Course', 'Booster')];
-        String query = 'SELECT Id, Contact__c, Contact__r.email, LastModifiedDate, RecordType.name, Contact__r.firstName, Contact__r.lastName, ' +
-                       'Candidate__r.Id, Candidate__r.status__c, status__c, Volunteer_Role__c, Program__r.school__c, ' +
-                       'Discord_Invite_Code__c, Contact__r.Discord_User_ID__c, Program__r.Discord_Server_ID__c, ' +
-                       'Cohort__r.name, Cohort__r.Id, Cohort__r.Zoom_Prefix__c, Cohort_Schedule__r.Id, Cohort_Schedule__r.DayTime__c, ' +
-                       'Cohort_Schedule__r.Webinar_Registration_1__c, Cohort_Schedule__r.Webinar_Registration_2__c, ' +
-                       'Webinar_Access_1__c, Webinar_Access_2__c, ' +
-                       '(' +
-                         'SELECT TA_Participant__r.Contact__r.firstName, TA_Participant__r.Contact__r.lastName '+
-                         'FROM TA_Assignments__r'+
-                       '), ' +
-                       '(' +
-                         'SELECT Id FROM TA_Caseload__r LIMIT 1'+ // We only need to know if a TA has a Caseload. Note that count() doesnt work in dynamic SOQL.
-                       ') ' +
-                       'FROM Participant__c ' +
-                       'WHERE (Program__r.status__c=\'Current\' OR Program__r.status__c=\'Future\') AND ' +
-                              'Program__r.recordtypeid IN :rts AND LastModifiedDate > :lastModifiedSince';
-        if (programId != null) query += ' AND Program__r.Id = :programId';
-        if (contactId != null) query += ' AND Contact__r.Id = :contactId';
-        //DebugLogUntruncated('Database.query: ' + query);
-        List<Participant__c> result=Database.query(query);
+        List<Participant__c> participants = BZ_ParticipantServiceFactory.getParticipants(whereClause);
 
-        //for each Participant, we want the studentid added to the result set, so first we have
-        //to create a map of contact ids that maps to a map of the school ids and the student id strings associated
-        Set<Id>organizations= new Set<Id>();
-        Set<Id>contacts= new Set<Id>();
-        for(Participant__c p:result){
-            organizations.add(p.program__r.school__c);
-            contacts.add(p.contact__c);
-        }
-        Map<Id,Map<Id,String>> contactIdToMapOfAccountIdAndStudentId= new Map<Id,Map<Id,String>>();
-        RecordType eduaffrt=[SELECT id FROM RecordType WHERE sObjectType='npe5__Affiliation__c' AND name='Education' LIMIT 1];
-        List<npe5__Affiliation__c> eduaffs= [SELECT npe5__contact__c, student_id__c, npe5__Organization__c FROM npe5__Affiliation__c WHERE recordtypeid=:eduaffrt.Id AND npe5__Organization__c in :organizations AND npe5__Contact__c in :contacts AND student_id__c <> null];
-
-        for(npe5__Affiliation__c aff:eduaffs){
-            Map<Id,String> orgIdToStudentId= new Map<Id,String>();
-            if(contactIdToMapOfAccountIdAndStudentId.get(aff.npe5__contact__c) != null) orgIdToStudentId=contactIdToMapOfAccountIdAndStudentId.get(aff.npe5__contact__c);
-            orgIdToStudentId.put(aff.npe5__organization__c,aff.student_id__c);
-            contactIdToMapOfAccountIdAndStudentId.put(aff.npe5__contact__c, orgIdToStudentId);
-        }
-
-        //now map through the results and create json object that adds the student id or whatever else we want to the response
-        List<ParticipantService> resultList= new List<ParticipantService>();
-        for(Participant__c part:result){
-            ParticipantService ps= new ParticipantService();
-            ps.Id = part.Id;
-            ps.ProgramId = part.Program__r.Id;
-            ps.ContactId=part.Contact__c;
-            ps.Email=part.Contact__r.email;
-            ps.LastModifiedDate=part.LastModifiedDate;
-            ps.Role= (part.RecordType.name == 'Booster Student' ? 'Fellow' : part.RecordType.name);
-            ps.VolunteerRole=part.Volunteer_Role__c;
-            ps.FirstName=part.Contact__r.firstName;
-            ps.LastName=part.Contact__r.lastName;
-            ps.CandidateId=part.Candidate__r.Id;
-            ps.CandidateStatus=part.Candidate__r.status__c;
-            ps.ParticipantStatus=part.status__c;
-            ps.CohortScheduleId=part.Cohort_Schedule__r.Id;
-            ps.CohortScheduleDayTime=part.Cohort_Schedule__r.DayTime__c;
-            ps.CohortName=part.Cohort__r.name;
-            ps.CohortId=part.Cohort__r.Id;
-            ps.DiscordInviteCode=part.Discord_Invite_Code__c;
-            ps.DiscordUserId=part.Contact__r.Discord_User_ID__c;
-            ps.DiscordServerId=part.Program__r.Discord_Server_Id__c;
-            ps.ZoomPrefix = part.Cohort__r.Zoom_Prefix__c;
-            ps.ZoomMeetingId1=part.Cohort_Schedule__r.Webinar_Registration_1__c;
-            ps.ZoomMeetingId2=part.Cohort_Schedule__r.Webinar_Registration_2__c;
-            ps.ZoomMeetingLink1=part.Webinar_Access_1__c;
-            ps.ZoomMeetingLink2=part.Webinar_Access_2__c;
-
-            //get student id for participant's program
-            if(contactIdToMapOfAccountIdAndStudentId.get(part.Contact__c) != null){
-           	 	Map<Id,String> thisContactsEduAffiliations= contactIdToMapOfAccountIdAndStudentId.get(part.Contact__c);
-            	if(thisContactsEduAffiliations.get(part.Program__r.school__c) !=null)
-                    ps.StudentId=thisContactsEduAffiliations.get(part.Program__r.school__c);
-            }
-
-            // Get the list of Canvas sections that this Participant should be added to in order
-            // to group them by their TA Assignment. For Fellows, this could be a list of TA names.
-            // For TA's, if they have Fellows assigned to them it will just be their own name.
-            // We do that for TA's so that we don't have to create Canvas sections for TA's that have
-            // no assignments.
-            List<String> taNamesForCanvasTaSections = new List<String>();
-            if (part.TA_Assignments__r.size() > 0) {
-                for(TA_Assignment__c tas:part.TA_Assignments__r){
-                    taNamesForCanvasTaSections.add(tas.TA_Participant__r.Contact__r.firstName + ' ' + tas.TA_Participant__r.Contact__r.lastName);
-                }
-            } else if (part.TA_Caseload__r.size() > 0) {
-                taNamesForCanvasTaSections.add(part.Contact__r.firstName + ' ' + part.Contact__r.lastName);
-            }
-            ps.TeachingAssistantSections = taNamesForCanvasTaSections;
-
-            resultList.add(ps);
-        }
-
-        return resultList;
+        // Turn the Participant__c sObjects into Apex objects representing the JSON to return.
+        List<BZ_ParticipantService> participantServices =
+            BZ_ParticipantServiceFactory.getParticipantServices(participants);
+        return participantServices;
     }
-
-    // System.debug() truncates logs to like 500 chars. Use this to print out the full log in multiple
-    // calls to System.debug()
-    public static void DebugLogUntruncated(String sMsg) {
-        for (Integer i = 0; i < sMsg.length(); i=i+300) {
-            Integer iEffectiveEnd = (i+300 > (sMsg.length()-1) ? sMsg.length()-1 : i+300);
-            System.debug(sMsg.substring(i,iEffectiveEnd));
-        }
-    }
-
-    // Note: if you wanted to switch to a POST for security reasons or URL encoding reasons, here is how you would do that.
-    // POST https://instance.salesforce.com/services/apexrest/participants/currentandfuture
-    // {
-    //   "courseId" : "73",
-    //   "last_modified_since" : "<TODO: figure out format and give example>"
-    // }
-    /*@HttpPost
-    global static List<Participant__c> doPost(String courseId, String last_modified_since){
-        if (courseId == null) throw new InvalidParameterValueException('courseId', courseId);
-        // TODO: remove this method if we don't end up needing a POST option. But this is how you would
-        // expose it. This needs to be called with Content-Type: application/json
-    }*/
-
 }

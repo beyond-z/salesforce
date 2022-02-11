@@ -1,0 +1,135 @@
+/**
+  * Factory to create BZ_ParticipantService objects that are returned
+  * as JSON from the various Participant services exposed as a @RestResource
+  * endpoint
+  */
+global class BZ_ParticipantServiceFactory {
+
+    /**
+     * Query for the fields required on a Participant__c when using
+     * BZ_ParticipantServiceFactory.getParticipantServices() to return
+     * them as JSON to the Platform. Be careful to pass a WHERE clause
+     * that limits the results here to something reasonable.
+     */
+    public static List<Participant__c> getParticipants(String participantsWhereClause){
+        List<RecordType> rts=[SELECT id FROM RecordType WHERE sObjectType='Program__c' AND name IN ('Course')];
+        // Failsafe to only get Participants modified within the last year. Older ones would
+        // likely be b/c of some cleanup we're doing in Salesforce
+        DateTime lastModifiedSince = DateTime.now().addYears(-1);
+        String query = 'SELECT Id, RecordType.name, Needs_Sync__c, status__c, LastModifiedDate, ' +
+            'Discord_Invite_Code__c, Volunteer_Role__c, Webinar_Access_1__c, Webinar_Access_2__c, ' +
+            'Contact__c, Contact__r.email, Contact__r.firstName, Contact__r.lastName, ' +
+            'Contact__r.Discord_User_ID__c, ' +
+            'Candidate__r.Id, Candidate__r.status__c,  ' +
+            'Program__r.Canvas_Cloud_Accelerator_Course_ID__c, Program__r.Canvas_Cloud_LC_Playbook_Course_ID__c, ' +
+            'Program__r.school__c, Program__r.Discord_Server_ID__c, ' +
+            'Cohort__r.name, Cohort__r.Id, Cohort__r.Zoom_Prefix__c, ' +
+            'Cohort_Schedule__r.Id, Cohort_Schedule__r.DayTime__c, ' +
+            'Cohort_Schedule__r.Webinar_Registration_1__c, Cohort_Schedule__r.Webinar_Registration_2__c, ' +
+            '(' +
+            'SELECT TA_Participant__r.Contact__r.firstName, TA_Participant__r.Contact__r.lastName '+
+            'FROM TA_Assignments__r'+
+            '), ' +
+            '(' +
+            'SELECT Id FROM TA_Caseload__r LIMIT 1'+ // We only need to know if a TA has a Caseload. Note that count() doesnt work in dynamic SOQL.
+            ') ' +
+            'FROM Participant__c ' +
+            'WHERE Program__r.recordtypeid IN :rts AND LastModifiedDate > :lastModifiedSince AND ' +
+            participantsWhereClause;
+
+        //DebugLogUntruncated('Database.query: ' + query);
+        return Database.query(query);
+    }
+
+    /**
+     * Turn a List<Participant__c> into a List<BZ_ParticipantService> suitable for return
+     * as JSON by the various ParticipantService @RestResource endpoints. Use
+     * BZ_ParticipantServiceFactory.getParticipants()
+     * to get the list with the proper columns selected.
+     */
+    public static List<BZ_ParticipantService> getParticipantServices(List<Participant__c> participants)
+    {
+        //for each Participant, we want the studentid added to the result set, so first we have
+        //to create a map of contact ids that maps to a map of the school ids and the student id strings associated
+        Set<Id>organizations= new Set<Id>();
+        Set<Id>contacts= new Set<Id>();
+        for(Participant__c p:participants){
+            organizations.add(p.program__r.school__c);
+            contacts.add(p.contact__c);
+        }
+        Map<Id,Map<Id,String>> contactIdToMapOfAccountIdAndStudentId= new Map<Id,Map<Id,String>>();
+        RecordType eduaffrt=[SELECT id FROM RecordType WHERE sObjectType='npe5__Affiliation__c' AND name='Education' LIMIT 1];
+        List<npe5__Affiliation__c> eduaffs= [SELECT npe5__contact__c, student_id__c, npe5__Organization__c FROM npe5__Affiliation__c WHERE recordtypeid=:eduaffrt.Id AND npe5__Organization__c in :organizations AND npe5__Contact__c in :contacts AND student_id__c <> null];
+
+        for(npe5__Affiliation__c aff:eduaffs){
+            Map<Id,String> orgIdToStudentId= new Map<Id,String>();
+            if(contactIdToMapOfAccountIdAndStudentId.get(aff.npe5__contact__c) != null) orgIdToStudentId=contactIdToMapOfAccountIdAndStudentId.get(aff.npe5__contact__c);
+            orgIdToStudentId.put(aff.npe5__organization__c,aff.student_id__c);
+            contactIdToMapOfAccountIdAndStudentId.put(aff.npe5__contact__c, orgIdToStudentId);
+        }
+
+        List<BZ_ParticipantService> resultList = new List<BZ_ParticipantService>();
+        for(Participant__c part:participants){
+            BZ_ParticipantService ps= new BZ_ParticipantService();
+            ps.Id = part.Id;
+            ps.ProgramId = part.Program__r.Id;
+            ps.ContactId=part.Contact__c;
+            ps.Email=part.Contact__r.email;
+            ps.LastModifiedDate=part.LastModifiedDate;
+            ps.Role= (part.RecordType.name == 'Booster Student' ? 'Fellow' : part.RecordType.name);
+            ps.VolunteerRole=part.Volunteer_Role__c;
+            ps.FirstName=part.Contact__r.firstName;
+            ps.LastName=part.Contact__r.lastName;
+            ps.Accelerator_Course_Id=part.Program__r.Canvas_Cloud_Accelerator_Course_ID__c;
+            ps.LC_Playbook_Course_Id=part.Program__r.Canvas_Cloud_LC_Playbook_Course_ID__c;
+            ps.CandidateId=part.Candidate__r.Id;
+            ps.CandidateStatus=part.Candidate__r.status__c;
+            ps.ParticipantStatus=part.status__c;
+            ps.CohortScheduleId=part.Cohort_Schedule__r.Id;
+            ps.CohortScheduleDayTime=part.Cohort_Schedule__r.DayTime__c;
+            ps.CohortName=part.Cohort__r.name;
+            ps.CohortId=part.Cohort__r.Id;
+            ps.DiscordInviteCode=part.Discord_Invite_Code__c;
+            ps.DiscordUserId=part.Contact__r.Discord_User_ID__c;
+            ps.DiscordServerId=part.Program__r.Discord_Server_Id__c;
+            ps.ZoomPrefix = part.Cohort__r.Zoom_Prefix__c;
+            ps.ZoomMeetingId1=part.Cohort_Schedule__r.Webinar_Registration_1__c;
+            ps.ZoomMeetingId2=part.Cohort_Schedule__r.Webinar_Registration_2__c;
+            ps.ZoomMeetingLink1=part.Webinar_Access_1__c;
+            ps.ZoomMeetingLink2=part.Webinar_Access_2__c;
+
+            //get student id for participant's program
+            if(contactIdToMapOfAccountIdAndStudentId.get(part.Contact__c) != null){
+           	 	Map<Id,String> thisContactsEduAffiliations= contactIdToMapOfAccountIdAndStudentId.get(part.Contact__c);
+            	if(thisContactsEduAffiliations.get(part.Program__r.school__c) !=null)
+                    ps.StudentId=thisContactsEduAffiliations.get(part.Program__r.school__c);
+            }
+
+            // Get the list of Canvas sections that this Participant should be added to in order
+            // to group them by their TA Assignment. For Fellows, this could be a list of TA names.
+            // For TA's, if they have Fellows assigned to them it will just be their own name.
+            // We do that for TA's so that we don't have to create Canvas sections for TA's that have
+            // no assignments.
+            List<String> taNamesForCanvasTaSections = new List<String>();
+            if (part.TA_Assignments__r.size() > 0) {
+                for(TA_Assignment__c tas:part.TA_Assignments__r){
+                    taNamesForCanvasTaSections.add(tas.TA_Participant__r.Contact__r.firstName + ' ' + tas.TA_Participant__r.Contact__r.lastName);
+                }
+            } else if (part.TA_Caseload__r.size() > 0) {
+                taNamesForCanvasTaSections.add(part.Contact__r.firstName + ' ' + part.Contact__r.lastName);
+            }
+            ps.TeachingAssistantSections = taNamesForCanvasTaSections;
+            resultList.add(ps);
+        }
+        return resultList;
+    }
+
+    // System.debug() truncates logs to like 500 chars. Use this to print out the full log in multiple
+    // calls to System.debug()
+    public static void DebugLogUntruncated(String sMsg) {
+        for (Integer i = 0; i < sMsg.length(); i=i+300) {
+            Integer iEffectiveEnd = (i+300 > (sMsg.length()-1) ? sMsg.length()-1 : i+300);
+            System.debug(sMsg.substring(i,iEffectiveEnd));
+        }
+    }
+}

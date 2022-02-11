@@ -1,0 +1,48 @@
+/**
+ * Get's a list of Participants with the "Needs Sync?" field
+ * checked off and unchecks them all in an atomic operation.
+ *
+ * The intention is that a Process Builder flow will monitor for
+ * changes that require a sync from Salesforce to other applications
+ * like Platform, Canvas, and Zoom and check off this field if there
+ * are changes. Then Platform will poll this endpoint every X minutes
+ * (balancing concerns about the number of API calls, bulk operations
+ * updating Participants and not wanting to sync a Participant in the
+ * middle of a multi-step update, and the need for changes to take
+ * effect relatively soon). At the time of launch, this is polled every
+ * 10 minutes for a total of 144 API calls per day for this check.
+ */
+@RestResource(urlMapping='/participants/needssync/*')
+global without sharing class BZ_ParticipantSyncService
+{
+    // Example:
+    // PATCH https://instance.salesforce.com/services/apexrest/participants/needssync
+    // body: { }
+    @HttpPatch
+    global static List<BZ_ParticipantService> doPatch(){
+        RestRequest req= RestContext.request;
+        RestResponse res= RestContext.response;
+
+        // Note: the "FOR UPDATE" clause locks the selected Participants (and related SELECTed records, like Contact)
+        // until this operation finishes. If this isn't lightning fast, think about other options
+        // b/c no other person or process can edit these objects until the lock is released.
+        // See: https://developer.salesforce.com/docs/atlas.en-us.soql_sosl.meta/soql_sosl/sforce_api_calls_soql_select_for_update.htm
+        List<Participant__c> participants =
+            BZ_ParticipantServiceFactory.getParticipants('Needs_Sync__c = true FOR UPDATE');
+        // TODO: do we need to limit to current and future programs here? I think so.
+        // TODO: does Needs Sync? need to be on Candidate? We need to add a Process Builder
+        // action on the Contact and update this value but there is no direct reference b/n
+        // Contact and Participant. It goes through Candidate
+
+        for(Participant__c part:participants){
+            part.Needs_Sync__c = false;
+        }
+        update participants; // Releases the lock
+
+        // Turn the Participant__c sObjects into Apex objects representing the JSON to return.
+        List<BZ_ParticipantService> participantServices =
+            BZ_ParticipantServiceFactory.getParticipantServices(participants);
+
+        return participantServices;
+    }
+}
