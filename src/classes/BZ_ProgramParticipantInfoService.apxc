@@ -33,6 +33,7 @@ global without sharing class BZ_ProgramParticipantInfoService
         public String ZoomMeetingId2;
         public String ZoomMeetingLink1;
         public String ZoomMeetingLink2;
+        public String ZoomMeetingLink3;
 
         public ParticipantService(){}
     }
@@ -69,7 +70,7 @@ global without sharing class BZ_ProgramParticipantInfoService
                        'Discord_Invite_Code__c, Contact__r.Discord_User_ID__c, Program__r.Discord_Server_ID__c, ' +
                        'Cohort__r.name, Cohort__r.Id, Cohort__r.Zoom_Prefix__c, Cohort_Schedule__r.Id, Cohort_Schedule__r.DayTime__c, ' +
                        'Cohort_Schedule__r.Webinar_Registration_1__c, Cohort_Schedule__r.Webinar_Registration_2__c, ' +
-                       'Webinar_Access_1__c, Webinar_Access_2__c, ' +
+                       'Webinar_Access_1__c, Webinar_Access_2__c, Webinar_Access_3__c, ' +
                        '(' +
                          'SELECT TA_Participant__r.Contact__r.firstName, TA_Participant__r.Contact__r.lastName '+
                          'FROM TA_Assignments__r'+
@@ -132,11 +133,12 @@ global without sharing class BZ_ProgramParticipantInfoService
             ps.ZoomMeetingId2=part.Cohort_Schedule__r.Webinar_Registration_2__c;
             ps.ZoomMeetingLink1=part.Webinar_Access_1__c;
             ps.ZoomMeetingLink2=part.Webinar_Access_2__c;
+            ps.ZoomMeetingLink3=part.Webinar_Access_3__c;
 
             //get student id for participant's program
             if(contactIdToMapOfAccountIdAndStudentId.get(part.Contact__c) != null){
-           	 	Map<Id,String> thisContactsEduAffiliations= contactIdToMapOfAccountIdAndStudentId.get(part.Contact__c);
-            	if(thisContactsEduAffiliations.get(part.Program__r.school__c) !=null)
+                Map<Id,String> thisContactsEduAffiliations= contactIdToMapOfAccountIdAndStudentId.get(part.Contact__c);
+                if(thisContactsEduAffiliations.get(part.Program__r.school__c) !=null)
                     ps.StudentId=thisContactsEduAffiliations.get(part.Program__r.school__c);
             }
 
